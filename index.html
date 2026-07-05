@@ -158,6 +158,38 @@
             <p class="touch-hint">화면을 터치해서 시작하기</p>
         </div>
     </div>
+<!-- 고도 합계 표시 영역 -->
+<div style="background: #e8f5e9; padding: 15px; border-radius: 10px; margin: 15px 0; text-align: center; border: 1px solid #c8e6c9;">
+    <div style="color: #2E7D32; font-size: 0.9em; font-weight: bold;">누적 등반 고도</div>
+    <div id="totalAlt" style="font-size: 1.8em; font-weight: 900; color: #1b5e20;">0m</div>
+</div>
+function renderAll() {
+    markerLayerGroup.clearLayers();
+    groupedMarkers = {};
+    document.getElementById('recordList').innerHTML = '';
+
+    // [추가] 고도 합계 계산
+    let totalAltitude = 0;
+    
+    const groups = {};
+    allRecords.forEach(record => {
+        // [추가] 숫자형으로 변환하여 합산 (정보 없음은 0으로 처리)
+        const altValue = parseInt(record.alt) || 0;
+        totalAltitude += altValue;
+
+        const key = `${record.lat.toFixed(4)},${record.lng.toFixed(4)}`;
+        if(!groups[key]) groups[key] = { key: key, name: record.name, alt: record.alt, lat: record.lat, lng: record.lng, climbs: [], earliestDate: record.date };
+        groups[key].climbs.push(record);
+        if(new Date(record.date) < new Date(groups[key].earliestDate)) groups[key].earliestDate = record.date;
+    });
+
+    // [추가] 화면에 숫자 반영 (천 단위 콤마 추가)
+    document.getElementById('totalAlt').innerText = totalAltitude.toLocaleString() + "m";
+
+    // ... (이후 기존 renderAll 로직 동일)
+    const groupsArray = Object.values(groups);
+    // ...
+}
 
     <!-- 사진 확대 오버레이 -->
     <div id="photoOverlay" onclick="closePhoto(event)">
