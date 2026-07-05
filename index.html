@@ -78,14 +78,15 @@
             #sidebarContent { padding: 0 16px 24px 16px; }
         }
 
-        /* 💡 메인 스플래시 인트로 (터치 없이 자동 진행) */
+        /* 💡 메인 스플래시 인트로 (터치 및 자동 진행 로직 포함) */
         #splash { 
             position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999; 
             background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&q=80') no-repeat center center/cover;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.8s;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out;
+            cursor: pointer;
         }
-        #splash::before { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.55); }
-        .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1.2s cubic-bezier(0.2, 0.8, 0.2, 1); width: 100%; }
+        #splash::before { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.65); }
+        .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1s cubic-bezier(0.2, 0.8, 0.2, 1); width: 100%; }
         
         .splash-title { 
             font-size: 3.5rem; margin: 0; font-weight: 900; letter-spacing: -2px;
@@ -95,29 +96,32 @@
         @media (max-width: 768px) { .splash-title { font-size: 3rem; } }
         .splash-subtitle { font-size: 1.2rem; margin-top: 15px; font-weight: 400; letter-spacing: 1px; text-shadow: 1px 2px 5px rgba(0,0,0,0.5); }
         
-        /* 💡 타이틀 아래 뜨는 누적고도 카운터 스타일 */
+        /* 💡 타이틀 바로 아래 누적고도 카운터 */
         #splashCounterContainer {
-            opacity: 0; transform: translateY(20px); margin-top: 50px; text-align: center;
+            opacity: 0; transform: translateY(20px); margin-top: 40px; text-align: center;
             transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         #splashCounterContainer.show { opacity: 1; transform: translateY(0); }
         
-        .splash-alt-label { font-size: 1.2rem; color: #A5D6A7; font-weight: bold; margin-bottom: 5px; text-shadow: 1px 2px 4px rgba(0,0,0,0.5); }
+        .splash-alt-label { font-size: 1.1rem; color: #A5D6A7; font-weight: bold; margin-bottom: 5px; text-shadow: 1px 2px 4px rgba(0,0,0,0.5); letter-spacing: 1px; }
         .splash-alt-number { 
-            font-size: 4.5rem; font-weight: 900; color: #ffffff; letter-spacing: -2px; 
+            font-size: 4.8rem; font-weight: 900; color: #ffffff; letter-spacing: -3px; 
             text-shadow: 2px 4px 15px rgba(0,0,0,0.6); display: inline-block;
         }
-        .splash-alt-unit { font-size: 1.8rem; margin-left: 5px; color: #A5D6A7; }
-
-        @keyframes popIn { 0% { opacity: 0; transform: scale(0.9) translateY(30px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+        .splash-alt-unit { font-size: 1.5rem; margin-left: 5px; color: #A5D6A7; font-weight: bold; }
         
-        /* 카운팅 끝났을 때 팡! 터지는 시각 효과 */
+        .touch-hint { font-size: 0.9rem; margin-top: 50px; color: rgba(255,255,255,0.6); animation: blinkHint 2s infinite; }
+
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.9) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes blinkHint { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+        
+        /* 카운팅 끝났을 때 빛나는 효과 */
         @keyframes popFinish { 
-            0% { transform: scale(1); filter: drop-shadow(0 0 0px #4CAF50); }
-            50% { transform: scale(1.15); color: #FFEB3B; filter: drop-shadow(0 0 20px #FFEB3B); }
-            100% { transform: scale(1); color: #ffffff; filter: drop-shadow(0 0 5px #4CAF50); }
+            0% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(76,175,80,0)); }
+            50% { transform: scale(1.15); color: #FFEB3B; filter: drop-shadow(0 0 25px rgba(255,235,59,0.8)); }
+            100% { transform: scale(1); color: #ffffff; filter: drop-shadow(0 0 10px rgba(76,175,80,0.8)); }
         }
-        .pop-effect { animation: popFinish 0.6s ease-out forwards; }
+        .pop-effect { animation: popFinish 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 
         /* 핀 애니메이션 및 기타 UI 스타일 */
         .custom-leaflet-icon { background: transparent; border: none; }
@@ -170,7 +174,7 @@
 </head>
 <body>
 
-    <!-- 1. 메인 스플래시 화면 (오버레이 없이 여기서 바로 카운팅) -->
+    <!-- 💡 1. 메인 스플래시 화면 -->
     <div id="splash">
         <div class="splash-content">
             <h1 class="splash-title">나의 등산기</h1>
@@ -181,6 +185,8 @@
                 <div class="splash-alt-label">🔥 나의 누적 등반 고도</div>
                 <div class="splash-alt-number" id="splashCounter">0</div><span class="splash-alt-unit">m</span>
             </div>
+
+            <p class="touch-hint">화면을 터치하면 바로 시작합니다</p>
         </div>
     </div>
 
@@ -266,10 +272,10 @@
         `;
         let mountainIcon;
         let map, markerLayerGroup;
-        let isAppStarted = false;
-        let totalAltitudeData = 0; // 초기 누적 고도 계산용
+        let totalAltitudeData = 0; // 초기 스플래시 고도 계산용
 
         window.addEventListener('load', () => {
+            // 맵 초기화
             map = L.map('map', { zoomControl: false }).setView([36.5, 127.8], 7);
             L.control.zoom({ position: 'topright' }).addTo(map);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
@@ -284,7 +290,7 @@
                 tooltipAnchor: [0, -36]
             });
 
-            // 페이지 로드 직후 바로 DB 연동 시작 (인트로 자동화를 위해)
+            // 💡 앱 켜자마자 바로 DB 로드 시작 (스플래시 애니메이션 연결)
             initDB();
         });
 
@@ -305,7 +311,7 @@
         const states = ['collapsed', 'half', 'full'];
 
         handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
-        handle.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); // 브라우저 스크롤/튕김 완전 방지
+        handle.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); // 브라우저 튕김 방지
 
         handle.addEventListener('touchend', e => {
             const endY = e.changedTouches[0].clientY;
@@ -330,26 +336,6 @@
             else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
         }
 
-        // 💡 콜백 기능이 포함된 애니메이션 함수 (숫자가 다다다닥 올라가게)
-        function animateCounter(id, start, end, duration, callback) {
-            const obj = document.getElementById(id);
-            if (!obj) return;
-            let startTimestamp = null;
-            const step = (timestamp) => {
-                if (!startTimestamp) startTimestamp = timestamp;
-                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-                obj.innerText = Math.floor(easeProgress * (end - start) + start).toLocaleString();
-                
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
-                } else {
-                    if (callback) callback(); // 카운팅이 완전히 끝나면 콜백 실행
-                }
-            };
-            window.requestAnimationFrame(step);
-        }
-
         // DB 초기화 및 로딩
         let db;
         function initDB() {
@@ -370,12 +356,11 @@
             request.onsuccess = function() {
                 allRecords = request.result;
                 
-                // 앱 처음 켤 때: 메인 타이틀 스플래시 자동 플로우 시작
+                // 앱 첫 실행 시: 메인 타이틀 & 누적고도 애니메이션 실행
                 if (isFirstLoad) {
                     calculateTotalAltOnly();
                     playSplashIntro();
                 } else {
-                    // 데이터 추가/삭제 시 일반 렌더링
                     renderAll(); 
                 }
             };
@@ -389,40 +374,77 @@
             });
         }
 
-        // 💡 메인 타이틀 스플래시 자동 애니메이션 흐름 통제 함수
+        // 💡 메인 스플래시 제어 로직 (카운팅, 1초 대기, 터치 시 즉시 건너뛰기)
+        let splashSkipTriggered = false;
+
         function playSplashIntro() {
-            // 메인 타이틀이 확실히 보인 후 0.8초 뒤에 숫자판 등장
-            setTimeout(() => {
-                const counterContainer = document.getElementById('splashCounterContainer');
-                counterContainer.classList.add('show');
+            const splash = document.getElementById('splash');
+            const counterContainer = document.getElementById('splashCounterContainer');
+            const counterObj = document.getElementById('splashCounter');
+
+            // ✋ 터치 시 바로 건너뛰는 이벤트 등록
+            splash.addEventListener('click', skipSplash);
+            splash.addEventListener('touchstart', skipSplash, {passive: true});
+
+            function skipSplash() {
+                if (splashSkipTriggered) return;
+                splashSkipTriggered = true; // 중복 실행 방지
                 
-                // 숫자판 등장 후 0.4초 뒤에 카운팅 시작 (1.2초 동안 아주 빠르게 상승)
+                // 수치를 즉시 최종값으로 변경하고 팡 터지는 효과 적용
+                counterObj.innerText = totalAltitudeData.toLocaleString();
+                counterObj.classList.add('pop-effect');
+                
+                // 대기 없이 즉시 화면 전환
+                finishSplashAndStart();
+            }
+
+            // ⏱️ 자동 진행 흐름 (터치 안 했을 경우)
+            setTimeout(() => {
+                if (splashSkipTriggered) return;
+                counterContainer.classList.add('show'); // 타이틀 아래 카운터 등장
+                
                 setTimeout(() => {
-                    animateCounter('splashCounter', 0, totalAltitudeData, 1200, () => {
+                    if (splashSkipTriggered) return;
+                    
+                    // 숫자 카운팅 시작
+                    let startTimestamp = null;
+                    const duration = 1200; // 1.2초 동안 다이나믹하게 올라감
+                    
+                    const step = (timestamp) => {
+                        if (splashSkipTriggered) return; // 터치하면 애니메이션 즉시 중지
                         
-                        // 카운팅 완료 시 시각적인 팝핑(반짝) 효과 부여
-                        document.getElementById('splashCounter').classList.add('pop-effect');
+                        if (!startTimestamp) startTimestamp = timestamp;
+                        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                        const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+                        counterObj.innerText = Math.floor(easeProgress * totalAltitudeData).toLocaleString();
                         
-                        // 1초간 정지하며 성취감 극대화 후 화면 전환
-                        setTimeout(() => {
-                            finishSplashAndStart();
-                        }, 1000); 
-
-                    });
-                }, 400);
-
-            }, 800);
+                        if (progress < 1) {
+                            window.requestAnimationFrame(step);
+                        } else {
+                            // 카운팅 도달 시 반짝이는 효과
+                            counterObj.classList.add('pop-effect');
+                            
+                            // 1초간 멈춰서 성취감 제공 후 화면 전환
+                            setTimeout(() => {
+                                if (!splashSkipTriggered) finishSplashAndStart();
+                            }, 1000); 
+                        }
+                    };
+                    window.requestAnimationFrame(step);
+                }, 300); // 카운터 창 뜨고 0.3초 뒤 시작
+            }, 600); // 타이틀 뜨고 0.6초 뒤 카운터 창 등장
         }
 
+        // 스플래시 종료 및 메인 지도/사이드바 호출
         function finishSplashAndStart() {
             const splash = document.getElementById('splash');
-            splash.style.opacity = '0';
+            splash.style.opacity = '0'; // 부드럽게 투명화
             
             setTimeout(() => {
-                splash.style.display = 'none';
+                splash.style.display = 'none'; // 완전히 숨김
                 if (map) map.invalidateSize(); 
-                renderAll(); // 지도에 핀 찍고 사이드바 부드럽게 올리기
-            }, 800);
+                renderAll(); // 지도에 핀 찍고 사이드바 올리기
+            }, 500); 
         }
 
         function createGroupMarker(group) {
@@ -490,23 +512,25 @@
 
             const groupsArray = Object.values(groups);
             
-            // 첫 진입 시 마커 순차 렌더링 후 사이드바 올라오기
-            if (isFirstLoad) {
-                groupsArray.sort((a,b) => new Date(a.earliestDate) - new Date(b.earliestDate));
-                let delay = 0;
-                
-                groupsArray.forEach(group => {
+            // 지도에 마커 뿌리기
+            groupsArray.sort((a,b) => new Date(a.earliestDate) - new Date(b.earliestDate));
+            let delay = 0;
+            groupsArray.forEach(group => {
+                if (isFirstLoad) {
                     setTimeout(() => { createGroupMarker(group); }, delay);
-                    delay += 200; 
-                });
+                    delay += 100; // 스킵했을 때 더 빠르게 떨어지도록 핀 간격 축소
+                } else {
+                    createGroupMarker(group);
+                }
+            });
 
+            // 스플래시 종료 직후 사이드바 올리기
+            if (isFirstLoad) {
                 setTimeout(() => {
                     sidebar.classList.remove('hidden');
                     isFirstLoad = false;
-                }, delay + 200);
-
+                }, delay + 100);
             } else {
-                groupsArray.forEach(group => createGroupMarker(group));
                 sidebar.classList.remove('hidden');
             }
 
@@ -534,7 +558,7 @@
             });
         }
 
-        // 🔍 검색 기능 및 디바운스
+        // 🔍 검색 기능
         let debounceTimer;
         function handleEnter(e) {
             clearTimeout(debounceTimer);
