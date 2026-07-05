@@ -24,7 +24,6 @@
 
     <style>
         * { box-sizing: border-box; }
-        /* 💡 핵심 수정: body에 overscroll-behavior: none; 추가 (전체 화면의 바운스/새로고침 방지) */
         body { 
             margin: 0; display: flex; height: 100vh; font-family: 'Malgun Gothic', sans-serif; 
             background-color: #f4f6f8; flex-direction: row; overflow: hidden; 
@@ -37,9 +36,9 @@
         #sidebar { 
             flex: 1; min-width: 340px; max-width: 420px; background: #ffffff; 
             box-shadow: -2px 0 15px rgba(0,0,0,0.1); z-index: 2; display: flex; flex-direction: column;
-            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); /* 부드러운 전환 효과 강화 */
         }
-        #sidebar.hidden { transform: translateX(100%); }
+        #sidebar.hidden { transform: translateX(100%) !important; }
         
         #dragHandle { display: none; }
         
@@ -57,16 +56,18 @@
             body { flex-direction: column; }
             #map { height: 100vh; width: 100%; flex: none; }
             #sidebar { 
-                position: fixed; bottom: 0; left: 0; width: 100%; 
+                position: fixed; bottom: 0; left: 0; width: 100%; height: 80vh;
                 max-width: 100%; border-radius: 20px 20px 0 0; background: #fff;
-                transition: height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+                transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
                 z-index: 999;
-                transform: none; 
             }
             
-            #sidebar.collapsed { height: 55px; } 
-            #sidebar.half { height: 45vh; } 
-            #sidebar.full { height: 80vh; } 
+            /* 초기 상태: 화면 밖으로 완전히 숨김 */
+            #sidebar.hidden { transform: translateY(100vh) !important; }
+            
+            #sidebar.collapsed { transform: translateY(calc(80vh - 55px)); } 
+            #sidebar.half { transform: translateY(35vh); } /* 약 45% 높이로 부드럽게 올라옴 */
+            #sidebar.full { transform: translateY(0); } 
 
             #dragHandle {
                 display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -79,7 +80,7 @@
             #sidebarContent { padding: 0 16px 24px 16px; }
         }
 
-        /* 💡 프리미엄 인트로 화면 */
+        /* 💡 1. 프리미엄 인트로 화면 (스플래시) */
         #splash { 
             position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999; 
             background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&q=80') no-repeat center center/cover;
@@ -96,11 +97,33 @@
         }
         @media (max-width: 768px) { .splash-title { font-size: 3rem; } }
         .splash-subtitle { font-size: 1.2rem; margin-top: 15px; font-weight: 400; letter-spacing: 1px; text-shadow: 1px 2px 5px rgba(0,0,0,0.5); }
-        
         .touch-hint { font-size: 0.9rem; margin-top: 40px; color: rgba(255,255,255,0.8); animation: blinkHint 1.5s infinite; }
         
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.9) translateY(30px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
         @keyframes blinkHint { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        /* 💡 2. 누적 고도 애니메이션 오버레이 (지도 위로 나타나는 효과) */
+        #altitudeIntro {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(244, 246, 248, 0.85); backdrop-filter: blur(5px);
+            z-index: 9998; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            pointer-events: none; opacity: 0; transition: opacity 0.5s ease;
+        }
+        #altitudeIntro.show { opacity: 1; }
+        
+        .alt-intro-title { 
+            font-size: 1.8rem; color: #2E7D32; font-weight: 900; margin-bottom: 5px;
+            opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); 
+        }
+        .alt-intro-number { 
+            font-size: 4.5rem; font-weight: 900; color: #1b5e20; letter-spacing: -2px; text-shadow: 2px 4px 10px rgba(0,0,0,0.15);
+            opacity: 0; transform: translateY(40px); transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s; 
+        }
+        .alt-intro-unit { font-size: 1.5rem; margin-left: 5px; color: #2E7D32; }
+
+        /* 애니메이션 트리거 클래스 */
+        #altitudeIntro.animate-in .alt-intro-title { opacity: 1; transform: translateY(0); }
+        #altitudeIntro.animate-in .alt-intro-number { opacity: 1; transform: translateY(0); }
 
         /* 핀 애니메이션 및 기타 UI 스타일 */
         .custom-leaflet-icon { background: transparent; border: none; }
@@ -153,13 +176,19 @@
 </head>
 <body>
 
-    <!-- 인트로 애니메이션 -->
+    <!-- 1. 메인 스플래시 인트로 -->
     <div id="splash" onclick="startApp()">
         <div class="splash-content">
             <h1 class="splash-title">나의 등산기</h1>
             <p class="splash-subtitle">나만의 대한민국 등산 지도</p>
             <p class="touch-hint">화면을 터치해서 시작하기</p>
         </div>
+    </div>
+
+    <!-- 2. 누적 고도 카운팅 오버레이 (스플래시 직후 등장) -->
+    <div id="altitudeIntro">
+        <div class="alt-intro-title">🔥 나의 누적 등반 고도</div>
+        <div class="alt-intro-number"><span id="introCounter">0</span><span class="alt-intro-unit">m</span></div>
     </div>
 
     <!-- 사진 확대 오버레이 -->
@@ -175,7 +204,7 @@
     <div id="map"></div>
 
     <!-- 사이드바 (기록 창) -->
-    <div id="sidebar" class="hidden">
+    <div id="sidebar" class="hidden half">
         <div id="dragHandle">
             <div class="bar"></div>
             <div class="drag-text">쓸어내려서 지도 보기 🔽</div>
@@ -216,7 +245,7 @@
                 <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
             </div>
 
-            <!-- 🏔️ 누적 고도 대시보드 (동기부여용) -->
+            <!-- 🏔️ 누적 고도 대시보드 (기존 사이드바 내부) -->
             <div style="background: linear-gradient(135deg, #4CAF50, #2E7D32); padding: 20px; border-radius: 12px; margin-bottom: 25px; text-align: center; color: white; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3);">
                 <div style="font-size: 0.95em; font-weight: bold; opacity: 0.9; margin-bottom: 5px;">🔥 나의 누적 등반 고도</div>
                 <div style="font-size: 2.8em; font-weight: 900; letter-spacing: -1px; text-shadow: 1px 2px 4px rgba(0,0,0,0.2);">
@@ -245,7 +274,6 @@
         let mountainIcon;
         let map, markerLayerGroup;
 
-        // 💡 앱 안전 시작 함수 
         let isAppStarted = false;
         function startApp() {
             if (isAppStarted) return;
@@ -257,7 +285,7 @@
                 setTimeout(() => {
                     splash.style.display = 'none';
                     if (map) map.invalidateSize(); 
-                    initDB();
+                    initDB(); // DB 로드 후 사이드바 및 인트로 애니메이션 시작
                 }, 800);
             }
         }
@@ -296,11 +324,9 @@
         let currentSidebarState = 1; // 0: collapsed, 1: half, 2: full
         const states = ['collapsed', 'half', 'full'];
 
-        sidebar.classList.add('half'); // 초기 상태
-
         handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
         
-        // 💡 핵심 수정: touchmove 이벤트를 passive:false로 설정하고 preventDefault()를 호출하여 브라우저 스크롤/바운스 차단
+        // 브라우저 기본 새로고침 방지
         handle.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); 
 
         handle.addEventListener('touchend', e => {
@@ -326,7 +352,25 @@
             else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
         }
 
-        // 🔍 검색 기능 및 디바운싱
+        // 💡 숫자 부드럽게 올라가는 애니메이션 함수
+        function animateCounter(id, start, end, duration) {
+            const obj = document.getElementById(id);
+            if (!obj) return;
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                // Ease out 효과 적용 (점점 느려짐)
+                const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+                obj.innerText = Math.floor(easeProgress * (end - start) + start).toLocaleString();
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // 🔍 검색 기능
         let debounceTimer;
         function handleEnter(e) {
             clearTimeout(debounceTimer);
@@ -379,7 +423,6 @@
             document.head.appendChild(script);
         }
 
-        // 🗄️ 데이터베이스 및 렌더링 로직
         let db;
         function initDB() {
             const request = indexedDB.open("PeakLogDB", 1);
@@ -434,9 +477,7 @@
             groupedMarkers = {};
             document.getElementById('recordList').innerHTML = '';
 
-            // 💡 고도 합계 계산 및 동기부여 메시지 업데이트 로직
             let totalAltitude = 0;
-
             const groups = {};
             allRecords.forEach(record => {
                 const altValue = parseInt(record.alt) || 0;
@@ -447,8 +488,6 @@
                 groups[key].climbs.push(record);
                 if(new Date(record.date) < new Date(groups[key].earliestDate)) groups[key].earliestDate = record.date;
             });
-
-            document.getElementById('totalAlt').innerText = totalAltitude.toLocaleString();
 
             const motivationText = document.getElementById('motivationText');
             if (totalAltitude === 0) {
@@ -465,7 +504,8 @@
 
             const groupsArray = Object.values(groups);
             
-            if (isFirstLoad && groupsArray.length > 0) {
+            // 💡 앱 첫 실행 시: 사이드바 올라오는 모션 & 카운팅 애니메이션 실행
+            if (isFirstLoad) {
                 groupsArray.sort((a,b) => new Date(a.earliestDate) - new Date(b.earliestDate));
                 let delay = 0;
                 
@@ -474,12 +514,33 @@
                     delay += 200; 
                 });
 
+                // 스플래시 종료 직후 오버레이와 사이드바 처리
                 setTimeout(() => {
+                    // 1. 사이드바 숨김 해제 -> 45% 높이로 부드럽게 올라옴
                     sidebar.classList.remove('hidden');
+                    
+                    // 2. 화면 중앙 오버레이 등장 & 아래에서 위로 타이틀/숫자 팝업
+                    const altitudeIntro = document.getElementById('altitudeIntro');
+                    altitudeIntro.classList.add('show');
+                    
+                    setTimeout(() => {
+                        altitudeIntro.classList.add('animate-in');
+                        // 중앙 오버레이 및 하단 사이드바 숫자 동시에 카운팅 애니메이션
+                        animateCounter('introCounter', 0, totalAltitude, 2000);
+                        animateCounter('totalAlt', 0, totalAltitude, 2000); 
+                    }, 100);
+
+                    // 3. 3.5초 뒤 중앙 오버레이 서서히 사라짐
+                    setTimeout(() => {
+                        altitudeIntro.classList.remove('show', 'animate-in');
+                    }, 3500);
+
                     isFirstLoad = false;
-                }, delay + 400);
+                }, delay + 200);
 
             } else {
+                // 첫 로드가 아닐 때 (기록 추가/삭제/수정 시)
+                document.getElementById('totalAlt').innerText = totalAltitude.toLocaleString();
                 groupsArray.forEach(group => createGroupMarker(group));
                 sidebar.classList.remove('hidden');
             }
@@ -513,7 +574,7 @@
             const marker = groupedMarkers[key];
             if(marker) {
                 if(window.innerWidth <= 768) {
-                    currentSidebarState = 0; // 지도 보기를 위해 창 최소화
+                    currentSidebarState = 0; 
                     updateSidebarState();
                 }
                 map.flyTo([data.lat, data.lng], 14, {animate: true, duration: 1});
@@ -609,7 +670,7 @@
             map.flyTo([record.lat, record.lng], 13);
 
             if(window.innerWidth <= 768) {
-                currentSidebarState = 2; // 수정 시 전체 창으로 열림
+                currentSidebarState = 2; 
                 updateSidebarState();
             }
             document.getElementById('sidebarContent').scrollTop = 0; 
