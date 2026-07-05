@@ -24,7 +24,12 @@
 
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; display: flex; height: 100vh; font-family: 'Malgun Gothic', sans-serif; background-color: #f4f6f8; flex-direction: row; overflow: hidden; }
+        /* 💡 핵심 수정: body에 overscroll-behavior: none; 추가 (전체 화면의 바운스/새로고침 방지) */
+        body { 
+            margin: 0; display: flex; height: 100vh; font-family: 'Malgun Gothic', sans-serif; 
+            background-color: #f4f6f8; flex-direction: row; overflow: hidden; 
+            overscroll-behavior: none; 
+        }
         
         #map { flex: 2; height: 100%; z-index: 1; }
         
@@ -47,20 +52,18 @@
             -webkit-overflow-scrolling: touch;
         }
 
-       /* 📱 모바일 최적화 (3단계 사이즈 적용) */
+        /* 📱 모바일 최적화 (3단계 사이즈 적용) */
         @media (max-width: 768px) {
             body { flex-direction: column; }
             #map { height: 100vh; width: 100%; flex: none; }
             #sidebar { 
                 position: fixed; bottom: 0; left: 0; width: 100%; 
-                /* 기존 height: 80vh 삭제. 상태에 따라 높이가 유동적으로 변하도록 수정 */
                 max-width: 100%; border-radius: 20px 20px 0 0; background: #fff;
-                transition: height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); /* 위치(transform) 대신 높이(height) 부드럽게 전환 */
+                transition: height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
                 z-index: 999;
-                transform: none; /* 위치 강제 이동 방지 */
+                transform: none; 
             }
             
-            /* 💡 핵심 수정: 창 위치를 내리는 것이 아니라, 실제 창의 높이 자체를 조절합니다 */
             #sidebar.collapsed { height: 55px; } 
             #sidebar.half { height: 45vh; } 
             #sidebar.full { height: 80vh; } 
@@ -158,38 +161,6 @@
             <p class="touch-hint">화면을 터치해서 시작하기</p>
         </div>
     </div>
-<!-- 고도 합계 표시 영역 -->
-<div style="background: #e8f5e9; padding: 15px; border-radius: 10px; margin: 15px 0; text-align: center; border: 1px solid #c8e6c9;">
-    <div style="color: #2E7D32; font-size: 0.9em; font-weight: bold;">누적 등반 고도</div>
-    <div id="totalAlt" style="font-size: 1.8em; font-weight: 900; color: #1b5e20;">0m</div>
-</div>
-function renderAll() {
-    markerLayerGroup.clearLayers();
-    groupedMarkers = {};
-    document.getElementById('recordList').innerHTML = '';
-
-    // [추가] 고도 합계 계산
-    let totalAltitude = 0;
-    
-    const groups = {};
-    allRecords.forEach(record => {
-        // [추가] 숫자형으로 변환하여 합산 (정보 없음은 0으로 처리)
-        const altValue = parseInt(record.alt) || 0;
-        totalAltitude += altValue;
-
-        const key = `${record.lat.toFixed(4)},${record.lng.toFixed(4)}`;
-        if(!groups[key]) groups[key] = { key: key, name: record.name, alt: record.alt, lat: record.lat, lng: record.lng, climbs: [], earliestDate: record.date };
-        groups[key].climbs.push(record);
-        if(new Date(record.date) < new Date(groups[key].earliestDate)) groups[key].earliestDate = record.date;
-    });
-
-    // [추가] 화면에 숫자 반영 (천 단위 콤마 추가)
-    document.getElementById('totalAlt').innerText = totalAltitude.toLocaleString() + "m";
-
-    // ... (이후 기존 renderAll 로직 동일)
-    const groupsArray = Object.values(groups);
-    // ...
-}
 
     <!-- 사진 확대 오버레이 -->
     <div id="photoOverlay" onclick="closePhoto(event)">
@@ -236,13 +207,24 @@ function renderAll() {
 
             <button class="save-btn" id="mainSaveBtn" onclick="saveRecord()">지도에 내 기록 남기기</button>
             
-            <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
+            <hr style="margin: 25px 0 15px 0; border: 0; border-top: 1px solid #eee;">
             
             <!-- 백업 및 복원 버튼 -->
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                 <button class="save-btn" style="background:#FFA000; margin-top:0; font-size:0.95em;" onclick="exportData()">💾 백업하기</button>
                 <button class="save-btn" style="background:#757575; margin-top:0; font-size:0.95em;" onclick="document.getElementById('importFile').click()">📂 불러오기</button>
                 <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+            </div>
+
+            <!-- 🏔️ 누적 고도 대시보드 (동기부여용) -->
+            <div style="background: linear-gradient(135deg, #4CAF50, #2E7D32); padding: 20px; border-radius: 12px; margin-bottom: 25px; text-align: center; color: white; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3);">
+                <div style="font-size: 0.95em; font-weight: bold; opacity: 0.9; margin-bottom: 5px;">🔥 나의 누적 등반 고도</div>
+                <div style="font-size: 2.8em; font-weight: 900; letter-spacing: -1px; text-shadow: 1px 2px 4px rgba(0,0,0,0.2);">
+                    <span id="totalAlt">0</span><span style="font-size: 0.4em; font-weight: 600; margin-left: 3px;">m</span>
+                </div>
+                <div id="motivationText" style="font-size: 0.85em; margin-top: 8px; opacity: 0.9; background: rgba(0,0,0,0.15); padding: 5px; border-radius: 20px;">
+                    첫 등산을 기록해보세요!
+                </div>
             </div>
 
             <h3 style="color: #333; margin: 0 0 10px 0;">나의 완등 리스트</h3>
@@ -317,7 +299,9 @@ function renderAll() {
         sidebar.classList.add('half'); // 초기 상태
 
         handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
-        handle.addEventListener('touchmove', e => { }, {passive: true}); 
+        
+        // 💡 핵심 수정: touchmove 이벤트를 passive:false로 설정하고 preventDefault()를 호출하여 브라우저 스크롤/바운스 차단
+        handle.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); 
 
         handle.addEventListener('touchend', e => {
             const endY = e.changedTouches[0].clientY;
@@ -450,13 +434,34 @@ function renderAll() {
             groupedMarkers = {};
             document.getElementById('recordList').innerHTML = '';
 
+            // 💡 고도 합계 계산 및 동기부여 메시지 업데이트 로직
+            let totalAltitude = 0;
+
             const groups = {};
             allRecords.forEach(record => {
+                const altValue = parseInt(record.alt) || 0;
+                totalAltitude += altValue;
+
                 const key = `${record.lat.toFixed(4)},${record.lng.toFixed(4)}`;
                 if(!groups[key]) groups[key] = { key: key, name: record.name, alt: record.alt, lat: record.lat, lng: record.lng, climbs: [], earliestDate: record.date };
                 groups[key].climbs.push(record);
                 if(new Date(record.date) < new Date(groups[key].earliestDate)) groups[key].earliestDate = record.date;
             });
+
+            document.getElementById('totalAlt').innerText = totalAltitude.toLocaleString();
+
+            const motivationText = document.getElementById('motivationText');
+            if (totalAltitude === 0) {
+                motivationText.innerText = "첫 등산을 기록해보세요! 🥾";
+            } else if (totalAltitude < 1000) {
+                motivationText.innerText = "멋진 시작입니다! 계속 올라가 볼까요? 🌿";
+            } else if (totalAltitude < 3000) {
+                motivationText.innerText = "대단해요! 구름이 가까워지고 있어요 ☁️";
+            } else if (totalAltitude < 8848) {
+                motivationText.innerText = "진정한 등산 마니아! 에베레스트를 향해! 🏔️";
+            } else {
+                motivationText.innerText = "에베레스트 정복 고도 달성! 당신은 전설입니다 🏆";
+            }
 
             const groupsArray = Object.values(groups);
             
