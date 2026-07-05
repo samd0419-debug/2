@@ -5,9 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#2E7D32">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="manifest" href="manifest.json">
     <title>성일이의 등산기</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- PWA 서비스 워커 등록 -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
+
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; display: flex; height: 100vh; font-family: 'Malgun Gothic', sans-serif; background-color: #f4f6f8; flex-direction: row; overflow: hidden; }
@@ -18,62 +32,43 @@
         #sidebar { 
             flex: 1; min-width: 340px; max-width: 420px; background: #ffffff; 
             box-shadow: -2px 0 15px rgba(0,0,0,0.1); z-index: 2; display: flex; flex-direction: column;
-            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         #sidebar.hidden { transform: translateX(100%); }
         
         #dragHandle { display: none; }
-        #sidebarContent { flex: 1; overflow-y: auto; padding: 24px; }
-// [상단 변수 선언부에 추가]
-let debounceTimer;
-
-// [기존 handleEnter 수정]
-function handleEnter(e) {
-    clearTimeout(debounceTimer); // 타이머 초기화
-    debounceTimer = setTimeout(() => {
-        if (e.key === 'Enter' || e.keyCode === 13) {
-            e.preventDefault();
-            searchMountain();
+        
+        /* 사이드바 내부 스크롤 최적화 */
+        #sidebarContent { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 24px;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
         }
-    }, 500); // 0.5초 대기
-}
 
-// [HTML input 태그 수정]
-// <input ... onkeyup="handleEnter(event)"> -> 기존 코드 그대로 유지하되, 
-// searchMountain 호출 시에도 debouncing을 걸면 좋습니다.
-<div style="margin: 20px 0; display: flex; gap: 10px;">
-    <button onclick="exportData()" style="flex:1; padding: 10px;">💾 백업(JSON)</button>
-    <button onclick="document.getElementById('importFile').click()" style="flex:1; padding: 10px;">📂 복원</button>
-    <input type="file" id="importFile" style="display:none" onchange="importData(event)">
-</div>
-<link rel="manifest" href="manifest.json">
-<script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
-    }
-</script>
-
-        /* 📱 모바일 최적화 */
+        /* 📱 모바일 최적화 (3단계 사이즈 적용) */
         @media (max-width: 768px) {
-    body { flex-direction: column; }
-    #map { height: 100vh; width: 100%; flex: none; }
-    #sidebar { 
-        position: fixed; bottom: 0; left: 0; width: 100%; height: 80vh; /* 높이 80vh로 확장 */
-        max-width: 100%; border-radius: 20px 20px 0 0; background: #fff;
-        transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-    }
-    
-    /* 상태별 위치값 (80vh 기준) */
-    #sidebar.collapsed { transform: translateY(calc(80vh - 55px)); } /* 55px만 보임 */
-    #sidebar.half { transform: translateY(35vh); }                  /* 45vh 만큼 보임 (80-45=35) */
-    #sidebar.full { transform: translateY(0); }                    /* 전체 80vh 다 보임 */
+            body { flex-direction: column; }
+            #map { height: 100vh; width: 100%; flex: none; }
+            #sidebar { 
+                position: fixed; bottom: 0; left: 0; width: 100%; height: 80vh; 
+                max-width: 100%; border-radius: 20px 20px 0 0; background: #fff;
+                transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+                z-index: 999;
+            }
+            
+            /* 3단계 창 위치 */
+            #sidebar.collapsed { transform: translateY(calc(80vh - 55px)); } 
+            #sidebar.half { transform: translateY(35vh); } 
+            #sidebar.full { transform: translateY(0); } 
 
-    #dragHandle {
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        height: 55px; width: 100%; border-radius: 20px 20px 0 0; background: #fff;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.05); cursor: grab; z-index: 10;
-    }
-    
+            #dragHandle {
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                height: 55px; width: 100%; border-radius: 20px 20px 0 0; background: #fff;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.05); cursor: grab; z-index: 10;
+                touch-action: none; 
+            }
             #dragHandle .bar { width: 45px; height: 6px; background: #ddd; border-radius: 5px; margin-bottom: 6px; }
             #dragHandle .drag-text { font-size: 0.75em; color: #888; font-weight: bold; }
             #sidebarContent { padding: 0 16px 24px 16px; }
@@ -84,7 +79,7 @@ function handleEnter(e) {
             position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999; 
             background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&q=80') no-repeat center center/cover;
             display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.8s;
-            cursor: pointer; /* 클릭 유도 */
+            cursor: pointer;
         }
         #splash::before { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.45); }
         .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
@@ -97,7 +92,6 @@ function handleEnter(e) {
         @media (max-width: 768px) { .splash-title { font-size: 3rem; } }
         .splash-subtitle { font-size: 1.2rem; margin-top: 15px; font-weight: 400; letter-spacing: 1px; text-shadow: 1px 2px 5px rgba(0,0,0,0.5); }
         
-        /* 터치 유도 깜빡임 애니메이션 */
         .touch-hint { font-size: 0.9rem; margin-top: 40px; color: rgba(255,255,255,0.8); animation: blinkHint 1.5s infinite; }
         
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.9) translateY(30px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
@@ -154,7 +148,7 @@ function handleEnter(e) {
 </head>
 <body>
 
-    <!-- 💡 인트로 애니메이션 (터치로도 넘어갈 수 있게 onclick 추가) -->
+    <!-- 인트로 애니메이션 -->
     <div id="splash" onclick="startApp()">
         <div class="splash-content">
             <h1 class="splash-title">성일이의 등산기</h1>
@@ -163,6 +157,7 @@ function handleEnter(e) {
         </div>
     </div>
 
+    <!-- 사진 확대 오버레이 -->
     <div id="photoOverlay" onclick="closePhoto(event)">
         <span class="close-btn" onclick="closePhoto(event)">×</span>
         <span class="nav-btn prev" onclick="changePhoto(-1, event)">&#10094;</span>
@@ -171,8 +166,10 @@ function handleEnter(e) {
         <div class="photo-counter" id="photoCounter">1 / 1</div>
     </div>
 
+    <!-- 지도 영역 -->
     <div id="map"></div>
 
+    <!-- 사이드바 (기록 창) -->
     <div id="sidebar" class="hidden">
         <div id="dragHandle">
             <div class="bar"></div>
@@ -206,11 +203,20 @@ function handleEnter(e) {
             <button class="save-btn" id="mainSaveBtn" onclick="saveRecord()">지도에 내 기록 남기기</button>
             
             <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
+            
+            <!-- 백업 및 복원 버튼 -->
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button class="save-btn" style="background:#FFA000; margin-top:0; font-size:0.95em;" onclick="exportData()">💾 백업하기</button>
+                <button class="save-btn" style="background:#757575; margin-top:0; font-size:0.95em;" onclick="document.getElementById('importFile').click()">📂 불러오기</button>
+                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+            </div>
+
             <h3 style="color: #333; margin: 0 0 10px 0;">나의 완등 리스트</h3>
             <div id="recordList"></div>
         </div>
     </div>
 
+    <!-- 스크립트 영역 -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const customPinSvg = `
@@ -223,7 +229,7 @@ function handleEnter(e) {
         let mountainIcon;
         let map, markerLayerGroup;
 
-        // 💡 앱 안전 시작 함수 (수동 클릭 및 자동 전환 모두 커버)
+        // 💡 앱 안전 시작 함수 
         let isAppStarted = false;
         function startApp() {
             if (isAppStarted) return;
@@ -234,15 +240,13 @@ function handleEnter(e) {
                 splash.style.opacity = '0';
                 setTimeout(() => {
                     splash.style.display = 'none';
-                    if (map) map.invalidateSize(); // 화면이 회색으로 깨지는 현상 방지
+                    if (map) map.invalidateSize(); 
                     initDB();
                 }, 800);
             }
         }
 
-        // 페이지 로딩 완료 후 지도 세팅 및 인트로 종료 타이머 가동
         window.addEventListener('load', () => {
-            // 지도 초기화
             map = L.map('map', { zoomControl: false }).setView([36.5, 127.8], 7);
             L.control.zoom({ position: 'topright' }).addTo(map);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
@@ -257,7 +261,6 @@ function handleEnter(e) {
                 tooltipAnchor: [0, -36]
             });
 
-            // 2.5초 뒤 자동 시작
             setTimeout(() => { startApp(); }, 2500);
         });
 
@@ -269,48 +272,53 @@ function handleEnter(e) {
         let allRecords = []; 
         let groupedMarkers = {}; 
 
+        // 📱 모바일 사이드바 3단계 상태 관리
         const sidebar = document.getElementById('sidebar');
         const handle = document.getElementById('dragHandle');
         const dragText = document.querySelector('.drag-text');
         let startY = 0;
+        let currentSidebarState = 1; // 0: collapsed, 1: half, 2: full
+        const states = ['collapsed', 'half', 'full'];
 
-        // 상태 관리 변수
-let currentSidebarState = 1; // 0: collapsed(접힘), 1: half(45vh), 2: full(80vh)
-const states = ['collapsed', 'half', 'full'];
+        sidebar.classList.add('half'); // 초기 상태
 
-// 기존 터치 핸들러를 삭제하고 아래로 대체
-handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
-handle.addEventListener('touchmove', e => { }, {passive: true}); // passive 옵션 추가로 스크롤 성능 향상
+        handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
+        handle.addEventListener('touchmove', e => { }, {passive: true}); 
 
-handle.addEventListener('touchend', e => {
-    const endY = e.changedTouches[0].clientY;
-    const diff = startY - endY; // 양수면 위로 스와이프, 음수면 아래로 스와이프
+        handle.addEventListener('touchend', e => {
+            const endY = e.changedTouches[0].clientY;
+            const diff = startY - endY; 
 
-    if (Math.abs(diff) > 50) { // 50px 이상 움직였을 때만 인식
-        if (diff > 0) { // 위로 올릴 때 (상태 증가)
-            if (currentSidebarState < 2) currentSidebarState++;
-        } else { // 아래로 내릴 때 (상태 감소)
-            if (currentSidebarState > 0) currentSidebarState--;
+            if (Math.abs(diff) > 50) { 
+                if (diff > 0) { 
+                    if (currentSidebarState < 2) currentSidebarState++;
+                } else { 
+                    if (currentSidebarState > 0) currentSidebarState--;
+                }
+                updateSidebarState();
+            }
+        });
+
+        function updateSidebarState() {
+            sidebar.classList.remove('collapsed', 'half', 'full');
+            sidebar.classList.add(states[currentSidebarState]);
+            
+            if (currentSidebarState === 0) dragText.innerText = '올려서 기록 보기 🔼';
+            else if (currentSidebarState === 1) dragText.innerText = '더 크게 / 접기 ↕️';
+            else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
         }
-        updateSidebarState();
-    }
-});
 
-// 상태 업데이트 함수
-function updateSidebarState() {
-    sidebar.classList.remove('collapsed', 'half', 'full');
-    sidebar.classList.add(states[currentSidebarState]);
-    
-    // 안내 텍스트 변경
-    if (currentSidebarState === 0) dragText.innerText = '올려서 기록 보기 🔼';
-    else if (currentSidebarState === 1) dragText.innerText = '더 크게 / 접기 ↕️';
-    else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
-}
-
-// 초기화: 앱 시작 시 'half' 상태로 시작하도록 설정
-sidebar.classList.add('half');
-
-        function handleEnter(e) { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); searchMountain(); } }
+        // 🔍 검색 기능 및 디바운싱
+        let debounceTimer;
+        function handleEnter(e) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                if (e.key === 'Enter' || e.keyCode === 13) {
+                    e.preventDefault();
+                    searchMountain();
+                }
+            }, 500);
+        }
 
         window.handleSearchResults = function(data) {
             const resultsUl = document.getElementById('searchResults');
@@ -353,6 +361,7 @@ sidebar.classList.add('half');
             document.head.appendChild(script);
         }
 
+        // 🗄️ 데이터베이스 및 렌더링 로직
         let db;
         function initDB() {
             const request = indexedDB.open("PeakLogDB", 1);
@@ -465,7 +474,8 @@ sidebar.classList.add('half');
             const marker = groupedMarkers[key];
             if(marker) {
                 if(window.innerWidth <= 768) {
-                    sidebar.classList.add('collapsed'); dragText.innerText = '올려서 기록 보기 🔼';
+                    currentSidebarState = 0; // 지도 보기를 위해 창 최소화
+                    updateSidebarState();
                 }
                 map.flyTo([data.lat, data.lng], 14, {animate: true, duration: 1});
                 marker.openPopup();
@@ -477,6 +487,7 @@ sidebar.classList.add('half');
             }
         }
 
+        // 📷 사진 뷰어 로직
         let carouselPhotos = [];
         let carouselIndex = 0;
 
@@ -559,8 +570,8 @@ sidebar.classList.add('half');
             map.flyTo([record.lat, record.lng], 13);
 
             if(window.innerWidth <= 768) {
-                sidebar.classList.remove('collapsed');
-                dragText.innerText = '쓸어내려서 지도 보기 🔽';
+                currentSidebarState = 2; // 수정 시 전체 창으로 열림
+                updateSidebarState();
             }
             document.getElementById('sidebarContent').scrollTop = 0; 
             
@@ -630,6 +641,55 @@ sidebar.classList.add('half');
             const transaction = db.transaction(['hike_records'], 'readwrite');
             const request = transaction.objectStore('hike_records').delete(id);
             request.onsuccess = function() { loadSavedRecords(); }; 
+        }
+
+        // 💾 백업 (내보내기)
+        function exportData() {
+            if (allRecords.length === 0) return alert("백업할 기록이 없습니다.");
+            const dataStr = JSON.stringify(allRecords);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = "성일이의_등산기록_백업.json"; 
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 📂 복원 (불러오기)
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!confirm("기존 기록에 불러온 데이터를 추가하시겠습니까?")) {
+                event.target.value = ''; 
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    const transaction = db.transaction(['hike_records'], 'readwrite');
+                    const store = transaction.objectStore('hike_records');
+                    
+                    importedData.forEach(record => {
+                        delete record.id; 
+                        store.add(record);
+                    });
+                    
+                    transaction.oncomplete = () => {
+                        alert("기록 복원이 완료되었습니다!");
+                        loadSavedRecords(); 
+                    };
+                } catch (err) {
+                    alert("잘못된 파일입니다. 백업했던 JSON 파일을 선택해주세요.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; 
         }
     </script>
 </body>
