@@ -9,7 +9,7 @@
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="manifest" href="manifest.json">
-    <title>성일이의 등산기</title>
+    <title>나의 등산기</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
@@ -151,7 +151,7 @@
     <!-- 인트로 애니메이션 -->
     <div id="splash" onclick="startApp()">
         <div class="splash-content">
-            <h1 class="splash-title">성일이의 등산기</h1>
+            <h1 class="splash-title">나의 등산기</h1>
             <p class="splash-subtitle">나만의 대한민국 등산 지도</p>
             <p class="touch-hint">화면을 터치해서 시작하기</p>
         </div>
@@ -177,7 +177,7 @@
         </div>
         
         <div id="sidebarContent">
-            <h2>🏔️ 성일이의 등산기</h2>
+            <h2>🏔️ 나의 등산기</h2>
             <div class="instruction">
                 <b>꿀팁:</b> 리스트에 기록된 산을 누르면 지도에서 핀이 튀어오르며 위치를 알려줍니다!
             </div>
@@ -652,7 +652,7 @@
             
             const link = document.createElement('a');
             link.href = url;
-            link.download = "성일이의_등산기록_백업.json"; 
+            link.download = "나의_등산기록_백업.json"; 
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
