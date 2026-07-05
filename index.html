@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>성일이의 등산기</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; display: flex; height: 100vh; font-family: 'Malgun Gothic', sans-serif; background-color: #f4f6f8; flex-direction: row; overflow: hidden; }
+        
+        #map { flex: 2; height: 100%; z-index: 1; }
+        
+        /* 💡 사이드바 기본 (PC) */
+        #sidebar { 
+            flex: 1; min-width: 340px; max-width: 420px; background: #ffffff; 
+            box-shadow: -2px 0 15px rgba(0,0,0,0.1); z-index: 2; display: flex; flex-direction: column;
+            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        #sidebar.hidden { transform: translateX(100%); }
+        
+        #dragHandle { display: none; }
+        #sidebarContent { flex: 1; overflow-y: auto; padding: 24px; }
+// [상단 변수 선언부에 추가]
+let debounceTimer;
+
+// [기존 handleEnter 수정]
+function handleEnter(e) {
+    clearTimeout(debounceTimer); // 타이머 초기화
+    debounceTimer = setTimeout(() => {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault();
+            searchMountain();
+        }
+    }, 500); // 0.5초 대기
+}
+
+// [HTML input 태그 수정]
+// <input ... onkeyup="handleEnter(event)"> -> 기존 코드 그대로 유지하되, 
+// searchMountain 호출 시에도 debouncing을 걸면 좋습니다.
+<div style="margin: 20px 0; display: flex; gap: 10px;">
+    <button onclick="exportData()" style="flex:1; padding: 10px;">💾 백업(JSON)</button>
+    <button onclick="document.getElementById('importFile').click()" style="flex:1; padding: 10px;">📂 복원</button>
+    <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+</div>
+<link rel="manifest" href="manifest.json">
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+    }
+</script>
+
+        /* 📱 모바일 최적화 */
+        @media (max-width: 768px) {
+    body { flex-direction: column; }
+    #map { height: 100vh; width: 100%; flex: none; }
+    #sidebar { 
+        position: fixed; bottom: 0; left: 0; width: 100%; height: 80vh; /* 높이 80vh로 확장 */
+        max-width: 100%; border-radius: 20px 20px 0 0; background: #fff;
+        transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    
+    /* 상태별 위치값 (80vh 기준) */
+    #sidebar.collapsed { transform: translateY(calc(80vh - 55px)); } /* 55px만 보임 */
+    #sidebar.half { transform: translateY(35vh); }                  /* 45vh 만큼 보임 (80-45=35) */
+    #sidebar.full { transform: translateY(0); }                    /* 전체 80vh 다 보임 */
+
+    #dragHandle {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        height: 55px; width: 100%; border-radius: 20px 20px 0 0; background: #fff;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05); cursor: grab; z-index: 10;
+    }
+    
+            #dragHandle .bar { width: 45px; height: 6px; background: #ddd; border-radius: 5px; margin-bottom: 6px; }
+            #dragHandle .drag-text { font-size: 0.75em; color: #888; font-weight: bold; }
+            #sidebarContent { padding: 0 16px 24px 16px; }
+        }
+
+        /* 💡 프리미엄 인트로 화면 */
+        #splash { 
+            position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999; 
+            background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&q=80') no-repeat center center/cover;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.8s;
+            cursor: pointer; /* 클릭 유도 */
+        }
+        #splash::before { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.45); }
+        .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        
+        .splash-title { 
+            font-size: 3.5rem; margin: 0; font-weight: 900; letter-spacing: -2px;
+            white-space: nowrap; text-shadow: 2px 4px 15px rgba(0,0,0,0.6); 
+            border-bottom: 4px solid #4CAF50; padding-bottom: 10px; 
+        }
+        @media (max-width: 768px) { .splash-title { font-size: 3rem; } }
+        .splash-subtitle { font-size: 1.2rem; margin-top: 15px; font-weight: 400; letter-spacing: 1px; text-shadow: 1px 2px 5px rgba(0,0,0,0.5); }
+        
+        /* 터치 유도 깜빡임 애니메이션 */
+        .touch-hint { font-size: 0.9rem; margin-top: 40px; color: rgba(255,255,255,0.8); animation: blinkHint 1.5s infinite; }
+        
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.9) translateY(30px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes blinkHint { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        /* 핀 애니메이션 및 기타 UI 스타일 */
+        .custom-leaflet-icon { background: transparent; border: none; }
+        .pin-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-end; transform-origin: bottom center; }
+        @keyframes dropBounce { 0% { transform: translateY(-100px); opacity: 0; } 50% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(-15px); } 100% { transform: translateY(0); } }
+        .drop-marker .pin-wrapper { animation: dropBounce 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        @keyframes pulseMarker { 0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(46,125,50,0.8)); } 50% { transform: scale(1.4); filter: drop-shadow(0 0 15px rgba(46,125,50,1)); } 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(46,125,50,0)); } }
+        .pulse-animation .pin-wrapper { animation: pulseMarker 0.8s ease-in-out 2; }
+
+        .leaflet-tooltip.mountain-label { background: rgba(255, 255, 255, 0.95); border: 2px solid #2E7D32; border-radius: 5px; color: #1b5e20; font-weight: bold; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); padding: 4px 8px; }
+        .leaflet-tooltip-top:before { border-top-color: #2E7D32; }
+
+        h2 { color: #2E7D32; margin-top: 0; font-size: 1.8em; font-weight: 900; letter-spacing: -1px; } 
+        .instruction { font-size: 0.85em; color: #555; margin-bottom: 15px; background: #e8f5e9; padding: 12px; border-radius: 6px; border-left: 4px solid #4CAF50;}
+        label { font-size: 0.9em; font-weight: bold; color: #333; display: block; margin-top: 14px; margin-bottom: 5px;}
+        input[type="text"], input[type="date"], input[type="file"], input[type="number"] { width: 100%; padding: 11px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        
+        .search-wrapper { position: relative; width: 100%; }
+        .search-container { display: flex; gap: 6px; }
+        .search-btn { padding: 0 18px; background: #2E7D32; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 0.95em; white-space: nowrap; cursor: pointer; }
+        
+        #searchResults { position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; list-style: none; padding: 0; margin: 5px 0 0 0; max-height: 180px; overflow-y: auto; border: 2px solid #2E7D32; border-radius: 6px; display: none; background: #fff; box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
+        #searchResults li { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .save-btn { width: 100%; padding: 14px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); cursor: pointer; transition: 0.2s; }
+        .save-btn.edit-mode { background: #1976D2; }
+        
+        .photo-gallery { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; padding-bottom: 5px; }
+        .photo-gallery img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; cursor: pointer; transition: transform 0.2s; }
+        .leaflet-popup-content .photo-gallery img { width: 75px; height: 75px; }
+        
+        .record-card { position: relative; background: #fafafa; padding: 14px; margin-top: 15px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.02); cursor: pointer; transition: background 0.2s; }
+        .record-card:hover { background: #f0f5f1; }
+        .record-card h4 { margin: 0 0 5px 0; color: #333; font-size: 1.1em; padding-right: 90px; }
+        .record-card p { margin: 0; font-size: 0.85em; color: #666; }
+        
+        .action-btns { position: absolute; top: 14px; right: 14px; display: flex; gap: 5px; }
+        .edit-btn { background: #1976D2; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 0.8em; font-weight: bold; cursor: pointer; }
+        .delete-btn { background: #d32f2f; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 0.8em; font-weight: bold; cursor: pointer; }
+
+        #photoOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
+        #photoOverlay.show { opacity: 1; visibility: visible; }
+        #expandedPhoto { max-width: 90%; max-height: 80%; object-fit: contain; border-radius: 4px; user-select: none; }
+        .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); color: white; font-size: 3rem; cursor: pointer; padding: 20px; user-select: none; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .nav-btn.prev { left: 10px; }
+        .nav-btn.next { right: 10px; }
+        .close-btn { position: absolute; top: 20px; right: 20px; color: white; font-size: 2.5rem; cursor: pointer; user-select: none; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .photo-counter { position: absolute; bottom: 30px; color: white; font-size: 1.2rem; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; }
+    </style>
+</head>
+<body>
+
+    <!-- 💡 인트로 애니메이션 (터치로도 넘어갈 수 있게 onclick 추가) -->
+    <div id="splash" onclick="startApp()">
+        <div class="splash-content">
+            <h1 class="splash-title">성일이의 등산기</h1>
+            <p class="splash-subtitle">나만의 대한민국 등산 지도</p>
+            <p class="touch-hint">화면을 터치해서 시작하기</p>
+        </div>
+    </div>
+
+    <div id="photoOverlay" onclick="closePhoto(event)">
+        <span class="close-btn" onclick="closePhoto(event)">×</span>
+        <span class="nav-btn prev" onclick="changePhoto(-1, event)">&#10094;</span>
+        <img id="expandedPhoto" src="">
+        <span class="nav-btn next" onclick="changePhoto(1, event)">&#10095;</span>
+        <div class="photo-counter" id="photoCounter">1 / 1</div>
+    </div>
+
+    <div id="map"></div>
+
+    <div id="sidebar" class="hidden">
+        <div id="dragHandle">
+            <div class="bar"></div>
+            <div class="drag-text">쓸어내려서 지도 보기 🔽</div>
+        </div>
+        
+        <div id="sidebarContent">
+            <h2>🏔️ 성일이의 등산기</h2>
+            <div class="instruction">
+                <b>꿀팁:</b> 리스트에 기록된 산을 누르면 지도에서 핀이 튀어오르며 위치를 알려줍니다!
+            </div>
+
+            <label for="mountainInput">1. 산 이름 검색</label>
+            <div class="search-wrapper">
+                <div class="search-container">
+                    <input type="text" id="mountainInput" placeholder="예: 북한산, 광교산" onkeyup="handleEnter(event)">
+                    <button type="button" class="search-btn" onclick="searchMountain()">검색</button>
+                </div>
+                <ul id="searchResults"></ul>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;"><label>2. 등산 날짜</label><input type="date" id="hikeDate"></div>
+                <div style="flex: 1;"><label>3. 고도 (m)</label><input type="number" id="hikeAlt" placeholder="예: 836"></div>
+            </div>
+
+            <label>4. 등산 사진 (여러 장 가능)</label>
+            <input type="file" id="hikePhoto" accept="image/*" multiple>
+            <input type="hidden" id="lat"><input type="hidden" id="lng">
+
+            <button class="save-btn" id="mainSaveBtn" onclick="saveRecord()">지도에 내 기록 남기기</button>
+            
+            <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
+            <h3 style="color: #333; margin: 0 0 10px 0;">나의 완등 리스트</h3>
+            <div id="recordList"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const customPinSvg = `
+            <div class="pin-wrapper">
+                <svg viewBox="0 0 24 24" width="36" height="36" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 16 8 16s8-10.75 8-16c0-4.42-3.58-8-8-8zm0 11.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 4.5 12 4.5 15.5 6.07 15.5 8 13.93 11.5 12 11.5z" fill="#E53935" stroke="#ffffff" stroke-width="1.5"/>
+                </svg>
+            </div>
+        `;
+        let mountainIcon;
+        let map, markerLayerGroup;
+
+        // 💡 앱 안전 시작 함수 (수동 클릭 및 자동 전환 모두 커버)
+        let isAppStarted = false;
+        function startApp() {
+            if (isAppStarted) return;
+            isAppStarted = true;
+            
+            const splash = document.getElementById('splash');
+            if (splash) {
+                splash.style.opacity = '0';
+                setTimeout(() => {
+                    splash.style.display = 'none';
+                    if (map) map.invalidateSize(); // 화면이 회색으로 깨지는 현상 방지
+                    initDB();
+                }, 800);
+            }
+        }
+
+        // 페이지 로딩 완료 후 지도 세팅 및 인트로 종료 타이머 가동
+        window.addEventListener('load', () => {
+            // 지도 초기화
+            map = L.map('map', { zoomControl: false }).setView([36.5, 127.8], 7);
+            L.control.zoom({ position: 'topright' }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
+            markerLayerGroup = L.layerGroup().addTo(map);
+            
+            mountainIcon = L.divIcon({
+                className: 'custom-leaflet-icon',
+                html: customPinSvg,
+                iconSize: [36, 36],
+                iconAnchor: [18, 36], 
+                popupAnchor: [0, -36],
+                tooltipAnchor: [0, -36]
+            });
+
+            // 2.5초 뒤 자동 시작
+            setTimeout(() => { startApp(); }, 2500);
+        });
+
+        window.addEventListener('resize', () => { setTimeout(() => { if(map) map.invalidateSize(); }, 200); });
+
+        let editingId = null; 
+        let isFirstLoad = true; 
+        let tempMarker = null;
+        let allRecords = []; 
+        let groupedMarkers = {}; 
+
+        const sidebar = document.getElementById('sidebar');
+        const handle = document.getElementById('dragHandle');
+        const dragText = document.querySelector('.drag-text');
+        let startY = 0;
+
+        // 상태 관리 변수
+let currentSidebarState = 1; // 0: collapsed(접힘), 1: half(45vh), 2: full(80vh)
+const states = ['collapsed', 'half', 'full'];
+
+// 기존 터치 핸들러를 삭제하고 아래로 대체
+handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
+handle.addEventListener('touchmove', e => { }, {passive: true}); // passive 옵션 추가로 스크롤 성능 향상
+
+handle.addEventListener('touchend', e => {
+    const endY = e.changedTouches[0].clientY;
+    const diff = startY - endY; // 양수면 위로 스와이프, 음수면 아래로 스와이프
+
+    if (Math.abs(diff) > 50) { // 50px 이상 움직였을 때만 인식
+        if (diff > 0) { // 위로 올릴 때 (상태 증가)
+            if (currentSidebarState < 2) currentSidebarState++;
+        } else { // 아래로 내릴 때 (상태 감소)
+            if (currentSidebarState > 0) currentSidebarState--;
+        }
+        updateSidebarState();
+    }
+});
+
+// 상태 업데이트 함수
+function updateSidebarState() {
+    sidebar.classList.remove('collapsed', 'half', 'full');
+    sidebar.classList.add(states[currentSidebarState]);
+    
+    // 안내 텍스트 변경
+    if (currentSidebarState === 0) dragText.innerText = '올려서 기록 보기 🔼';
+    else if (currentSidebarState === 1) dragText.innerText = '더 크게 / 접기 ↕️';
+    else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
+}
+
+// 초기화: 앱 시작 시 'half' 상태로 시작하도록 설정
+sidebar.classList.add('half');
+
+        function handleEnter(e) { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); searchMountain(); } }
+
+        window.handleSearchResults = function(data) {
+            const resultsUl = document.getElementById('searchResults');
+            resultsUl.innerHTML = '';
+            if (!data || data.length === 0) { resultsUl.innerHTML = '<li style="color:#d32f2f;">결과가 없습니다.</li>'; return; }
+
+            data.forEach(place => {
+                const li = document.createElement('li');
+                const shortAddress = place.display_name.split(',').slice(1).join(',').trim() || place.display_name;
+                li.innerHTML = `<strong>${place.name}</strong> <span style="color:#777; font-size:0.85em; margin-left:8px;">${shortAddress}</span>`;
+                li.onclick = () => {
+                    document.getElementById('mountainInput').value = place.name;
+                    document.getElementById('lat').value = place.lat;
+                    document.getElementById('lng').value = place.lon;
+                    if (tempMarker) map.removeLayer(tempMarker);
+                    tempMarker = L.marker([place.lat, place.lon], {icon: mountainIcon}).addTo(map).bindPopup("<b>이곳이 맞다면 나머지 정보를 입력 후 저장하세요.</b>").openPopup();
+                    resultsUl.style.display = 'none';
+                    map.flyTo([place.lat, place.lon], 13);
+                };
+                resultsUl.appendChild(li);
+            });
+        };
+
+        function searchMountain() {
+            const inputField = document.getElementById('mountainInput');
+            inputField.blur();
+            const query = inputField.value.trim();
+            if (!query) return alert("산 이름을 적어주세요.");
+            
+            const resultsUl = document.getElementById('searchResults');
+            resultsUl.style.display = 'block'; resultsUl.innerHTML = '<li>조회 중... ⏳</li>';
+
+            const oldScript = document.getElementById('jsonpSearch');
+            if (oldScript) oldScript.remove();
+
+            const script = document.createElement('script');
+            script.id = 'jsonpSearch';
+            script.src = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=kr&accept-language=ko&limit=10&json_callback=handleSearchResults`;
+            script.onerror = () => { resultsUl.innerHTML = '<li style="color:#d32f2f;">통신 오류 발생. 다시 시도해주세요.</li>'; };
+            document.head.appendChild(script);
+        }
+
+        let db;
+        function initDB() {
+            const request = indexedDB.open("PeakLogDB", 1);
+            request.onupgradeneeded = function(e) {
+                db = e.target.result;
+                if (!db.objectStoreNames.contains('hike_records')) db.createObjectStore('hike_records', { keyPath: 'id', autoIncrement: true });
+            };
+            request.onsuccess = function(e) { db = e.target.result; loadSavedRecords(); };
+        }
+
+        function loadSavedRecords() {
+            const transaction = db.transaction(['hike_records'], 'readonly');
+            const request = transaction.objectStore('hike_records').getAll();
+            request.onsuccess = function() {
+                allRecords = request.result;
+                renderAll(); 
+            };
+        }
+
+        function createGroupMarker(group) {
+            const marker = L.marker([group.lat, group.lng], {icon: mountainIcon}).addTo(markerLayerGroup);
+            groupedMarkers[group.key] = marker; 
+
+            const iconElement = marker.getElement();
+            if(iconElement) iconElement.classList.add('drop-marker');
+
+            const altText = group.alt && group.alt !== "정보 없음" ? `${group.alt}m` : "";
+            const tooltipText = altText ? `${group.name} (${altText})` : `${group.name}`;
+            const countText = group.climbs.length > 1 ? ` [${group.climbs.length}회 완등]` : "";
+            
+            setTimeout(() => {
+                marker.bindTooltip(tooltipText + countText, { permanent: true, direction: 'top', className: 'mountain-label', offset: [0, -25] });
+            }, 400);
+
+            let popupContent = `<div style="text-align:center; min-width:180px;"><b>⛰️ ${group.name}</b><br><span style="color:#2E7D32; font-weight:bold;">총 ${group.climbs.length}회 등반</span><hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">`;
+            group.climbs.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(climb => {
+                popupContent += `<div style="margin-bottom: 12px;"><span style="color:#555; font-size:0.9em;">📅 ${climb.date}</span>`;
+                if (climb.photos && climb.photos.length > 0) {
+                    popupContent += `<div class="photo-gallery" style="justify-content:center;">`;
+                    const encoded = encodeURIComponent(JSON.stringify(climb.photos));
+                    climb.photos.forEach((url, idx) => { popupContent += `<img src="${url}" onclick="openCarousel('${encoded}', ${idx}, event)">`; });
+                    popupContent += `</div>`;
+                }
+                popupContent += `</div>`;
+            });
+            popupContent += `</div>`;
+            marker.bindPopup(popupContent);
+        }
+
+        function renderAll() {
+            markerLayerGroup.clearLayers();
+            groupedMarkers = {};
+            document.getElementById('recordList').innerHTML = '';
+
+            const groups = {};
+            allRecords.forEach(record => {
+                const key = `${record.lat.toFixed(4)},${record.lng.toFixed(4)}`;
+                if(!groups[key]) groups[key] = { key: key, name: record.name, alt: record.alt, lat: record.lat, lng: record.lng, climbs: [], earliestDate: record.date };
+                groups[key].climbs.push(record);
+                if(new Date(record.date) < new Date(groups[key].earliestDate)) groups[key].earliestDate = record.date;
+            });
+
+            const groupsArray = Object.values(groups);
+            
+            if (isFirstLoad && groupsArray.length > 0) {
+                groupsArray.sort((a,b) => new Date(a.earliestDate) - new Date(b.earliestDate));
+                let delay = 0;
+                
+                groupsArray.forEach(group => {
+                    setTimeout(() => { createGroupMarker(group); }, delay);
+                    delay += 200; 
+                });
+
+                setTimeout(() => {
+                    sidebar.classList.remove('hidden');
+                    isFirstLoad = false;
+                }, delay + 400);
+
+            } else {
+                groupsArray.forEach(group => createGroupMarker(group));
+                sidebar.classList.remove('hidden');
+            }
+
+            allRecords.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(data => {
+                const list = document.getElementById('recordList');
+                const recordCard = document.createElement('div');
+                recordCard.className = 'record-card';
+                recordCard.onclick = (e) => {
+                    if(e.target.tagName === 'BUTTON' || e.target.tagName === 'IMG') return;
+                    highlightMarker(data);
+                };
+
+                const altText = data.alt !== "정보 없음" ? `${data.alt}m` : "";
+                
+                let cardHtml = `
+                    <div class="action-btns">
+                        <button class="edit-btn" onclick="editRecord(${data.id}, event)">수정</button>
+                        <button class="delete-btn" onclick="deleteRecord(${data.id}, event)">삭제</button>
+                    </div>
+                    <h4>⛰️ ${data.name} <span style="font-size:0.8em; color:#2E7D32;">${altText ? '('+altText+')' : ''}</span></h4>
+                    <p>📅 ${data.date}</p>
+                `;
+                recordCard.innerHTML = cardHtml;
+                list.appendChild(recordCard); 
+            });
+        }
+
+        function highlightMarker(data) {
+            const key = `${data.lat.toFixed(4)},${data.lng.toFixed(4)}`;
+            const marker = groupedMarkers[key];
+            if(marker) {
+                if(window.innerWidth <= 768) {
+                    sidebar.classList.add('collapsed'); dragText.innerText = '올려서 기록 보기 🔼';
+                }
+                map.flyTo([data.lat, data.lng], 14, {animate: true, duration: 1});
+                marker.openPopup();
+                const iconElement = marker.getElement();
+                if(iconElement) {
+                    iconElement.classList.add('pulse-animation');
+                    setTimeout(() => iconElement.classList.remove('pulse-animation'), 1600);
+                }
+            }
+        }
+
+        let carouselPhotos = [];
+        let carouselIndex = 0;
+
+        function openCarousel(encodedPhotos, startIndex, event) {
+            if(event) event.stopPropagation();
+            carouselPhotos = JSON.parse(decodeURIComponent(encodedPhotos));
+            carouselIndex = startIndex;
+            updateCarouselUI();
+            document.getElementById('photoOverlay').classList.add('show');
+        }
+
+        function updateCarouselUI() {
+            document.getElementById('expandedPhoto').src = carouselPhotos[carouselIndex];
+            document.getElementById('photoCounter').innerText = `${carouselIndex + 1} / ${carouselPhotos.length}`;
+            const showArrows = carouselPhotos.length > 1 ? 'block' : 'none';
+            document.querySelector('.nav-btn.prev').style.display = showArrows;
+            document.querySelector('.nav-btn.next').style.display = showArrows;
+        }
+
+        function changePhoto(step, event) {
+            if(event) event.stopPropagation(); 
+            carouselIndex += step;
+            if (carouselIndex < 0) carouselIndex = carouselPhotos.length - 1;
+            if (carouselIndex >= carouselPhotos.length) carouselIndex = 0;
+            updateCarouselUI();
+        }
+
+        function closePhoto(e) {
+            if(e && (e.target.classList.contains('nav-btn') || e.target.id === 'expandedPhoto' || e.target.id === 'photoCounter')) return;
+            document.getElementById('photoOverlay').classList.remove('show');
+        }
+
+        let touchStartX = 0; let touchEndX = 0;
+        const photoOverlay = document.getElementById('photoOverlay');
+        photoOverlay.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
+        photoOverlay.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            if (touchStartX - touchEndX > 50) changePhoto(1); 
+            if (touchEndX - touchStartX > 50) changePhoto(-1); 
+        }, {passive: true});
+
+        function resizeImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const maxSize = 800; let width = img.width, height = img.height;
+                        if (width > height && width > maxSize) { height *= maxSize / width; width = maxSize; }
+                        else if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+                        canvas.width = width; canvas.height = height;
+                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.8)); 
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function editRecord(id, event) {
+            if(event) event.stopPropagation();
+            const record = allRecords.find(r => r.id === id);
+            if(!record) return;
+
+            editingId = id; 
+            document.getElementById('mountainInput').value = record.name;
+            document.getElementById('hikeDate').value = record.date;
+            document.getElementById('hikeAlt').value = record.alt !== "정보 없음" ? record.alt : "";
+            document.getElementById('lat').value = record.lat;
+            document.getElementById('lng').value = record.lng;
+            
+            const saveBtn = document.getElementById('mainSaveBtn');
+            saveBtn.innerText = "🔄 기록 수정 완료";
+            saveBtn.classList.add('edit-mode');
+            
+            if (tempMarker) map.removeLayer(tempMarker);
+            tempMarker = L.marker([record.lat, record.lng], {icon: mountainIcon}).addTo(map);
+            map.flyTo([record.lat, record.lng], 13);
+
+            if(window.innerWidth <= 768) {
+                sidebar.classList.remove('collapsed');
+                dragText.innerText = '쓸어내려서 지도 보기 🔽';
+            }
+            document.getElementById('sidebarContent').scrollTop = 0; 
+            
+            alert("수정 모드로 전환되었습니다.\n사진은 새로 첨부하지 않으면 기존 사진이 보존됩니다.");
+        }
+
+        async function saveRecord() {
+            const name = document.getElementById('mountainInput').value || "이름 없는 산";
+            const date = document.getElementById('hikeDate').value;
+            const alt = document.getElementById('hikeAlt').value || "정보 없음";
+            const lat = document.getElementById('lat').value;
+            const lng = document.getElementById('lng').value;
+            const photoInput = document.getElementById('hikePhoto');
+
+            if (!lat || !lng) return alert("검색을 통해 산 위치를 선택해주세요!");
+            if (!date) return alert("등산하신 날짜를 골라주세요.");
+
+            const saveBtn = document.getElementById('mainSaveBtn');
+            saveBtn.innerText = "처리 중... ⏳";
+            saveBtn.disabled = true;
+
+            let photoUrls = [];
+            if (photoInput.files && photoInput.files.length > 0) {
+                for(let i = 0; i < photoInput.files.length; i++) {
+                    photoUrls.push(await resizeImage(photoInput.files[i]));
+                }
+            }
+
+            const transaction = db.transaction(['hike_records'], 'readwrite');
+            const store = transaction.objectStore('hike_records');
+
+            if (editingId) {
+                const request = store.get(editingId);
+                request.onsuccess = function() {
+                    const record = request.result;
+                    record.name = name; record.date = date; record.alt = alt;
+                    record.lat = parseFloat(lat); record.lng = parseFloat(lng);
+                    if (photoUrls.length > 0) record.photos = photoUrls; 
+
+                    const updateRequest = store.put(record);
+                    updateRequest.onsuccess = function() { resetAndReload(); };
+                };
+            } else {
+                const recordData = { name, date, alt, lat: parseFloat(lat), lng: parseFloat(lng), photos: photoUrls };
+                const addRequest = store.add(recordData);
+                addRequest.onsuccess = function(e) { resetAndReload(); };
+            }
+
+            function resetAndReload() {
+                editingId = null;
+                saveBtn.classList.remove('edit-mode');
+                document.getElementById('mountainInput').value = ''; document.getElementById('hikeDate').value = '';
+                document.getElementById('hikeAlt').value = ''; document.getElementById('hikePhoto').value = '';
+                document.getElementById('lat').value = ''; document.getElementById('lng').value = '';
+                if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
+                
+                saveBtn.innerText = "지도에 내 기록 남기기";
+                saveBtn.disabled = false;
+                loadSavedRecords(); 
+            }
+        }
+
+        function deleteRecord(id, event) {
+            if(event) event.stopPropagation(); 
+            if (!confirm("정말로 이 등산 기록을 삭제하시겠습니까?")) return;
+
+            const transaction = db.transaction(['hike_records'], 'readwrite');
+            const request = transaction.objectStore('hike_records').delete(id);
+            request.onsuccess = function() { loadSavedRecords(); }; 
+        }
+    </script>
+</body>
+</html>
