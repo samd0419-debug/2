@@ -42,37 +42,30 @@
         
         #dragHandle { display: none; }
         
-        /* 사이드바 내부 스크롤 최적화 */
         #sidebarContent { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 24px;
-            overscroll-behavior: contain;
-            -webkit-overflow-scrolling: touch;
+            flex: 1; overflow-y: auto; padding: 24px;
+            overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
         }
 
-        /* 📱 모바일 최적화 (3단계 사이즈 적용 및 홈 제스처 충돌 방지) */
+        /* 📱 모바일 최적화 (3단계 사이즈) */
         @media (max-width: 768px) {
             body { flex-direction: column; }
             #map { height: 100vh; width: 100%; flex: none; }
             #sidebar { 
-                position: fixed; bottom: 0; left: 0; width: 100%; height: 85vh; /* 85vh로 증가 */
+                position: fixed; bottom: 0; left: 0; width: 100%; height: 85vh; 
                 max-width: 100%; border-radius: 20px 20px 0 0; background: #fff;
                 transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
                 z-index: 999;
             }
             
             #sidebar.hidden { transform: translateY(100vh) !important; }
-            
-            /* 💡 핵심: 하단 아이폰 홈바와 겹치지 않도록 높이와 여백 계산 */
             #sidebar.collapsed { transform: translateY(calc(100% - 90px - env(safe-area-inset-bottom))); } 
             #sidebar.half { transform: translateY(45%); } 
             #sidebar.full { transform: translateY(0); } 
 
             #dragHandle {
                 display: flex; flex-direction: column; align-items: center; justify-content: center;
-                height: 65px; /* 손잡이 영역 확장 */
-                width: 100%; border-radius: 20px 20px 0 0; background: #fff;
+                height: 65px; width: 100%; border-radius: 20px 20px 0 0; background: #fff;
                 box-shadow: 0 -2px 10px rgba(0,0,0,0.05); cursor: grab; z-index: 10;
                 touch-action: none; 
             }
@@ -81,7 +74,7 @@
             
             #sidebarContent { 
                 padding: 0 16px 24px 16px; 
-                padding-bottom: calc(24px + env(safe-area-inset-bottom)); /* 하단 여백 추가 */
+                padding-bottom: calc(24px + env(safe-area-inset-bottom));
             }
         }
 
@@ -89,61 +82,77 @@
         #splash { 
             position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999; 
             background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&q=80') no-repeat center center/cover;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out;
-            cursor: pointer;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; cursor: pointer;
         }
         #splash::before { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); }
         .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1s cubic-bezier(0.2, 0.8, 0.2, 1); width: 100%; }
-        
-        .splash-title { 
-            font-size: 3.5rem; margin: 0; font-weight: 900; letter-spacing: -2px;
-            white-space: nowrap; text-shadow: 2px 4px 15px rgba(0,0,0,0.6); 
-            border-bottom: 4px solid #4CAF50; padding-bottom: 10px; 
-        }
+        .splash-title { font-size: 3.5rem; margin: 0; font-weight: 900; letter-spacing: -2px; white-space: nowrap; text-shadow: 2px 4px 15px rgba(0,0,0,0.6); border-bottom: 4px solid #4CAF50; padding-bottom: 10px; }
         @media (max-width: 768px) { .splash-title { font-size: 3.2rem; } }
         .splash-subtitle { font-size: 1.2rem; margin-top: 15px; font-weight: 400; letter-spacing: 1px; text-shadow: 1px 2px 5px rgba(0,0,0,0.5); }
         
-        /* 💡 타이틀 바로 아래 누적고도 카운터 */
-        #splashCounterContainer {
-            opacity: 0; transform: translateY(20px); margin-top: 40px; text-align: center;
-            transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
+        #splashCounterContainer { opacity: 0; transform: translateY(20px); margin-top: 40px; text-align: center; transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
         #splashCounterContainer.show { opacity: 1; transform: translateY(0); }
-        
         .splash-alt-label { font-size: 1.1rem; color: #A5D6A7; font-weight: bold; margin-bottom: 5px; text-shadow: 1px 2px 4px rgba(0,0,0,0.5); letter-spacing: 1px; }
-        .splash-alt-number { 
-            font-size: 4.8rem; font-weight: 900; color: #ffffff; letter-spacing: -3px; 
-            text-shadow: 2px 4px 15px rgba(0,0,0,0.6); display: inline-block;
-        }
+        .splash-alt-number { font-size: 4.8rem; font-weight: 900; color: #ffffff; letter-spacing: -3px; text-shadow: 2px 4px 15px rgba(0,0,0,0.6); display: inline-block; }
         .splash-alt-unit { font-size: 1.5rem; margin-left: 5px; color: #A5D6A7; font-weight: bold; }
-        
-        .touch-hint { 
-            font-size: 1rem; margin-top: 50px; color: #A5D6A7; font-weight: bold; 
-            padding: 10px 20px; border-radius: 30px; background: rgba(0,0,0,0.3); border: 1px solid #4CAF50;
-            animation: blinkHint 1.5s infinite; opacity: 0; transition: opacity 0.5s; 
-        }
+        .touch-hint { font-size: 1rem; margin-top: 50px; color: #A5D6A7; font-weight: bold; padding: 10px 20px; border-radius: 30px; background: rgba(0,0,0,0.3); border: 1px solid #4CAF50; animation: blinkHint 1.5s infinite; opacity: 0; transition: opacity 0.5s; }
 
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.9) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
         @keyframes blinkHint { 0%, 100% { transform: scale(0.95); opacity: 0.6; } 50% { transform: scale(1.05); opacity: 1; } }
-        
-        /* 카운팅 끝났을 때 빛나는 효과 */
-        @keyframes popFinish { 
-            0% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(76,175,80,0)); }
-            50% { transform: scale(1.15); color: #FFEB3B; filter: drop-shadow(0 0 25px rgba(255,235,59,0.8)); }
-            100% { transform: scale(1); color: #ffffff; filter: drop-shadow(0 0 10px rgba(76,175,80,0.8)); }
-        }
+        @keyframes popFinish { 0% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(76,175,80,0)); } 50% { transform: scale(1.15); color: #FFEB3B; filter: drop-shadow(0 0 25px rgba(255,235,59,0.8)); } 100% { transform: scale(1); color: #ffffff; filter: drop-shadow(0 0 10px rgba(76,175,80,0.8)); } }
         .pop-effect { animation: popFinish 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 
-        /* 핀 애니메이션 및 기타 UI 스타일 */
-        .custom-leaflet-icon { background: transparent; border: none; }
+        /* 💡 자물쇠 휠(달력) UI 패널 */
+        #calendarDrawer {
+            position: fixed; right: -280px; top: 15vh; width: 280px; background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px); border-radius: 20px 0 0 20px; box-shadow: -5px 0 25px rgba(0,0,0,0.2);
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 1000;
+            display: flex; flex-direction: column; padding: 20px;
+        }
+        #calendarDrawer.open { transform: translateX(-280px); }
+        
+        #calendarHandle {
+            position: absolute; left: -35px; top: 50%; transform: translateY(-50%);
+            width: 35px; height: 80px; background: #2E7D32; color: white;
+            border-radius: 12px 0 0 12px; display: flex; align-items: center; justify-content: center;
+            box-shadow: -3px 0 10px rgba(0,0,0,0.15); cursor: pointer; writing-mode: vertical-rl; 
+            text-orientation: mixed; font-weight: bold; font-size: 1em; letter-spacing: 2px;
+        }
+
+        .picker-container { display: flex; gap: 10px; height: 180px; position: relative; margin-top: 15px; background: #f0f0f0; border-radius: 12px; overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1); }
+        .picker-overlay { position: absolute; top: 60px; left: 0; width: 100%; height: 60px; border-top: 2px solid #4CAF50; border-bottom: 2px solid #4CAF50; background: rgba(76,175,80,0.1); pointer-events: none; z-index: 2; box-sizing: border-box; }
+        
+        .wheel {
+            flex: 1; height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory;
+            scrollbar-width: none; -ms-overflow-style: none; /* Hide scrollbar */
+        }
+        .wheel::-webkit-scrollbar { display: none; }
+        
+        .wheel-item {
+            height: 60px; display: flex; align-items: center; justify-content: center;
+            scroll-snap-align: center; font-size: 1.4em; color: #aaa; font-weight: bold;
+            transition: all 0.2s; user-select: none;
+        }
+        .wheel-item.active { color: #1b5e20; font-size: 1.8em; }
+
+        /* 💡 지도 핀 애니메이션 및 스타일 (필터 적용 포함) */
+        .custom-leaflet-icon { background: transparent; border: none; transition: opacity 0.3s, transform 0.3s; }
         .pin-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-end; transform-origin: bottom center; }
+        
         @keyframes dropBounce { 0% { transform: translateY(-100px); opacity: 0; } 50% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(-15px); } 100% { transform: translateY(0); } }
         .drop-marker .pin-wrapper { animation: dropBounce 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-        @keyframes pulseMarker { 0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(46,125,50,0.8)); } 50% { transform: scale(1.4); filter: drop-shadow(0 0 15px rgba(46,125,50,1)); } 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(46,125,50,0)); } }
-        .pulse-animation .pin-wrapper { animation: pulseMarker 0.8s ease-in-out 2; }
+        
+        /* 선택된 시기의 핀 돋보이게 하는 스타일 */
+        .highlight-marker .pin-wrapper svg { transform: scale(1.4); filter: drop-shadow(0 0 12px #FFEB3B); transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .highlight-marker .pin-wrapper path { fill: #D32F2F; stroke: #FFEB3B; stroke-width: 2px; }
+        .dim-marker { opacity: 0.3 !important; filter: grayscale(100%); transition: all 0.3s; }
 
         .leaflet-tooltip.mountain-label { background: rgba(255, 255, 255, 0.95); border: 2px solid #2E7D32; border-radius: 5px; color: #1b5e20; font-weight: bold; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); padding: 4px 8px; }
         .leaflet-tooltip-top:before { border-top-color: #2E7D32; }
+        
+        /* 선택된 시기 툴팁 돋보이게 */
+        .highlight-marker-tooltip { background: #FFEB3B !important; border-color: #F57F17 !important; color: #b71c1c !important; transform: scale(1.1); font-size: 14px !important; z-index: 1000 !important; }
+        .highlight-marker-tooltip:before { border-top-color: #F57F17 !important; }
 
         h2 { color: #2E7D32; margin-top: 0; font-size: 1.8em; font-weight: 900; letter-spacing: -1px; } 
         .instruction { font-size: 0.85em; color: #555; margin-bottom: 15px; background: #e8f5e9; padding: 12px; border-radius: 6px; border-left: 4px solid #4CAF50;}
@@ -185,7 +194,7 @@
 </head>
 <body>
 
-    <!-- 💡 1. 메인 스플래시 화면 (무한 대기 모드 추가) -->
+    <!-- 1. 메인 스플래시 화면 -->
     <div id="splash">
         <div class="splash-content">
             <h1 class="splash-title">나의 등산기</h1>
@@ -195,7 +204,6 @@
                 <div class="splash-alt-label">🔥 나의 누적 등반 고도</div>
                 <div class="splash-alt-number" id="splashCounter">0</div><span class="splash-alt-unit">m</span>
             </div>
-
             <div class="touch-hint" id="touchHint">로딩 중...</div>
         </div>
     </div>
@@ -209,20 +217,47 @@
         <div class="photo-counter" id="photoCounter">1 / 1</div>
     </div>
 
+    <!-- 💡 2. 자물쇠 휠 캘린더 드로어 (오른쪽 숨김) -->
+    <div id="calendarDrawer">
+        <div id="calendarHandle" onclick="toggleCalendar()">기록필터</div>
+        <div style="text-align:center; font-weight:900; color:#2E7D32; font-size:1.1em; letter-spacing:-0.5px;">📅 시기별 등산 보기</div>
+        <p style="margin:5px 0 0 0; font-size:0.75em; text-align:center; color:#666;">연도와 월을 스크롤하여 맞춰보세요!</p>
+        
+        <div class="picker-container">
+            <div class="picker-overlay"></div>
+            <!-- 연도 휠 -->
+            <div class="wheel" id="wheelYear">
+                <div class="wheel-item"></div>
+                <div class="wheel-item active" data-val="all">전체</div>
+                <!-- JS에서 2010~2030 추가 -->
+                <div class="wheel-item"></div>
+            </div>
+            <!-- 월 휠 -->
+            <div class="wheel" id="wheelMonth">
+                <div class="wheel-item"></div>
+                <div class="wheel-item active" data-val="all">전체</div>
+                <!-- JS에서 1~12 추가 -->
+                <div class="wheel-item"></div>
+            </div>
+        </div>
+        <button onclick="toggleCalendar()" style="margin-top:15px; padding:10px; border-radius:8px; border:none; background:#4CAF50; color:white; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.1); cursor:pointer;">적용하고 닫기</button>
+    </div>
+
     <!-- 지도 영역 -->
     <div id="map"></div>
 
-    <!-- 사이드바 (기록 창) -->
-    <div id="sidebar" class="hidden half">
+    <!-- 사이드바 (기록 창) - 💡 초기 상태를 collapsed(0)로 변경 -->
+    <div id="sidebar" class="hidden collapsed">
         <div id="dragHandle">
             <div class="bar"></div>
-            <div class="drag-text">쓸어내려서 지도 보기 🔽</div>
+            <div class="drag-text">쓸어올려서 기록 보기 🔼</div>
         </div>
         
         <div id="sidebarContent">
             <h2>🏔️ 나의 등산기</h2>
             <div class="instruction">
-                <b>꿀팁:</b> 리스트에 기록된 산을 누르면 지도에서 핀이 튀어오르며 위치를 알려줍니다!
+                <b>꿀팁:</b> 지도를 **두 번 터치(더블 클릭)**하면 우리나라 전체가 보입니다!<br>
+                화면 우측의 **[기록필터]** 탭을 쓸어당겨 원하는 달의 기록만 확인해보세요.
             </div>
 
             <label for="mountainInput">1. 산 이름 검색</label>
@@ -247,14 +282,12 @@
             
             <hr style="margin: 25px 0 15px 0; border: 0; border-top: 1px solid #eee;">
             
-            <!-- 백업 및 복원 버튼 -->
             <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                 <button class="save-btn" style="background:#FFA000; margin-top:0; font-size:0.95em;" onclick="exportData()">💾 백업하기</button>
                 <button class="save-btn" style="background:#757575; margin-top:0; font-size:0.95em;" onclick="document.getElementById('importFile').click()">📂 불러오기</button>
                 <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
             </div>
 
-            <!-- 🏔️ 누적 고도 대시보드 -->
             <div style="background: linear-gradient(135deg, #4CAF50, #2E7D32); padding: 20px; border-radius: 12px; margin-bottom: 25px; text-align: center; color: white; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3);">
                 <div style="font-size: 0.95em; font-weight: bold; opacity: 0.9; margin-bottom: 5px;">🔥 나의 누적 등반 고도</div>
                 <div style="font-size: 2.8em; font-weight: 900; letter-spacing: -1px; text-shadow: 1px 2px 4px rgba(0,0,0,0.2);">
@@ -282,10 +315,14 @@
         `;
         let mountainIcon;
         let map, markerLayerGroup;
-        let totalAltitudeData = 0; // 스플래시용 N회차 소급 합산 변수
+        let totalAltitudeData = 0; 
+        
+        let selectedFilterYear = 'all';
+        let selectedFilterMonth = 'all';
 
         window.addEventListener('load', () => {
-            map = L.map('map', { zoomControl: false }).setView([36.5, 127.8], 7);
+            // 💡 맵 초기화 시 doubleClickZoom 끄기 (직접 커스텀 줌아웃을 구현하기 위해)
+            map = L.map('map', { zoomControl: false, doubleClickZoom: false }).setView([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7);
             L.control.zoom({ position: 'topright' }).addTo(map);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
             markerLayerGroup = L.layerGroup().addTo(map);
@@ -293,13 +330,20 @@
             mountainIcon = L.divIcon({
                 className: 'custom-leaflet-icon',
                 html: customPinSvg,
-                iconSize: [36, 36],
-                iconAnchor: [18, 36], 
-                popupAnchor: [0, -36],
-                tooltipAnchor: [0, -36]
+                iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36], tooltipAnchor: [0, -36]
             });
 
-            // 페이지 켜지면 무조건 DB 로드부터 시작
+            // 💡 지도 더블 터치(클릭) 이벤트: 전체 지도 보기 + 창 최소화
+            map.on('dblclick', () => {
+                map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7, { animate: true, duration: 1 });
+                if(window.innerWidth <= 768) {
+                    currentSidebarState = 0; // collapsed (최소화 상태)
+                    updateSidebarState();
+                }
+            });
+
+            // 캘린더 휠 아이템 생성
+            generateWheelItems();
             initDB();
         });
 
@@ -311,16 +355,16 @@
         let allRecords = []; 
         let groupedMarkers = {}; 
 
-        // 📱 모바일 사이드바 상태 제어 (아이폰 홈 제스처 충돌 방지 로직 적용)
+        // 📱 모바일 사이드바 상태 제어 
         const sidebar = document.getElementById('sidebar');
         const handle = document.getElementById('dragHandle');
         const dragText = document.querySelector('.drag-text');
         let startY = 0;
-        let currentSidebarState = 1; // 0: collapsed, 1: half, 2: full
+        let currentSidebarState = 0; // 💡 기본 상태를 0(collapsed)으로 변경
         const states = ['collapsed', 'half', 'full'];
 
         handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
-        handle.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); // 튕김 100% 방지
+        handle.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); 
 
         handle.addEventListener('touchend', e => {
             const endY = e.changedTouches[0].clientY;
@@ -345,6 +389,60 @@
             else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
         }
 
+        // 💡 우측에서 나오는 캘린더 필터 제어 로직
+        function toggleCalendar() { document.getElementById('calendarDrawer').classList.toggle('open'); }
+        
+        // 오른쪽 모서리 스와이프로 캘린더 꺼내기
+        let bodyStartX = 0;
+        document.body.addEventListener('touchstart', e => { bodyStartX = e.touches[0].clientX; }, {passive: true});
+        document.body.addEventListener('touchend', e => {
+            const diffX = bodyStartX - e.changedTouches[0].clientX;
+            const drawer = document.getElementById('calendarDrawer');
+            if (bodyStartX > window.innerWidth - 60 && diffX > 40) drawer.classList.add('open');
+            if (diffX < -40 && drawer.classList.contains('open')) drawer.classList.remove('open');
+        });
+
+        function generateWheelItems() {
+            const wheelYear = document.getElementById('wheelYear');
+            const wheelMonth = document.getElementById('wheelMonth');
+            
+            // 연도 추가 (2010 ~ 2030)
+            for(let y=2015; y<=2030; y++) {
+                const div = document.createElement('div'); div.className = 'wheel-item'; div.innerText = y + '년'; div.setAttribute('data-val', y);
+                wheelYear.insertBefore(div, wheelYear.lastElementChild);
+            }
+            // 월 추가 (1 ~ 12)
+            for(let m=1; m<=12; m++) {
+                const div = document.createElement('div'); div.className = 'wheel-item'; div.innerText = m + '월'; 
+                div.setAttribute('data-val', m < 10 ? '0'+m : m.toString()); // 01, 02 형태
+                wheelMonth.insertBefore(div, wheelMonth.lastElementChild);
+            }
+
+            // 스크롤 이벤트 연동 (Debounce 적용)
+            let scrollTimeout;
+            wheelYear.addEventListener('scroll', () => { clearTimeout(scrollTimeout); scrollTimeout = setTimeout(() => handleWheelStop(wheelYear, 'year'), 150); });
+            wheelMonth.addEventListener('scroll', () => { clearTimeout(scrollTimeout); scrollTimeout = setTimeout(() => handleWheelStop(wheelMonth, 'month'), 150); });
+        }
+
+        function handleWheelStop(wheelElem, type) {
+            const itemHeight = 60; // .wheel-item height
+            const index = Math.round(wheelElem.scrollTop / itemHeight);
+            
+            // UI 업데이트 (active 클래스 변경)
+            Array.from(wheelElem.children).forEach((child, i) => {
+                if (i === index + 1) child.classList.add('active'); // +1 because of padding item
+                else child.classList.remove('active');
+            });
+            
+            // 값 추출
+            const activeElem = wheelElem.children[index + 1];
+            if(activeElem) {
+                if(type === 'year') selectedFilterYear = activeElem.getAttribute('data-val');
+                if(type === 'month') selectedFilterMonth = activeElem.getAttribute('data-val');
+                applyDateFilter(); // 필터 적용
+            }
+        }
+
         // DB 초기화
         let db;
         function initDB() {
@@ -353,10 +451,7 @@
                 db = e.target.result;
                 if (!db.objectStoreNames.contains('hike_records')) db.createObjectStore('hike_records', { keyPath: 'id', autoIncrement: true });
             };
-            request.onsuccess = function(e) { 
-                db = e.target.result; 
-                loadSavedRecords(); 
-            };
+            request.onsuccess = function(e) { db = e.target.result; loadSavedRecords(); };
         }
 
         function loadSavedRecords() {
@@ -364,17 +459,11 @@
             const request = transaction.objectStore('hike_records').getAll();
             request.onsuccess = function() {
                 allRecords = request.result;
-                
-                if (isFirstLoad) {
-                    calculateTotalAltOnly();
-                    playSplashIntro();
-                } else {
-                    renderAll(); 
-                }
+                if (isFirstLoad) { calculateTotalAltOnly(); playSplashIntro(); } 
+                else { renderAll(); }
             };
         }
 
-        // 💡 N회차 등반 소급 합산 로직 (동일 위치 기준)
         function calculateTotalAltOnly() {
             totalAltitudeData = 0;
             const mountainMap = {};
@@ -382,23 +471,17 @@
             allRecords.forEach(record => {
                 const key = `${record.lat.toFixed(4)},${record.lng.toFixed(4)}`;
                 if (!mountainMap[key]) mountainMap[key] = { count: 0, alt: 0 };
-                
                 mountainMap[key].count += 1;
                 
-                // 해당 위치에 고도가 입력된 기록이 하나라도 있다면 그 고도를 저장
                 const altValue = parseInt(record.alt);
-                if (!isNaN(altValue) && altValue > 0) {
-                    mountainMap[key].alt = altValue; 
-                }
+                if (!isNaN(altValue) && altValue > 0) mountainMap[key].alt = altValue; 
             });
             
-            // (동일한 산의 고도 * 총 방문 횟수) 합산
             for (let key in mountainMap) {
                 totalAltitudeData += mountainMap[key].alt * mountainMap[key].count;
             }
         }
 
-        // 💡 스플래시 무한 대기 & 터치 즉시 건너뛰기
         let splashSkipTriggered = false;
 
         function playSplashIntro() {
@@ -407,23 +490,17 @@
             const counterObj = document.getElementById('splashCounter');
             const hintObj = document.getElementById('touchHint');
 
-            // 사용자가 화면을 터치할 경우 (카운팅 중이거나 대기 중일 때 모두 반응)
             splash.addEventListener('click', skipSplash);
             splash.addEventListener('touchstart', skipSplash, {passive: true});
 
             function skipSplash() {
                 if (splashSkipTriggered) return;
-                splashSkipTriggered = true; // 스킵 중복 방지
-                
-                // 수치 즉시 100% 반영 및 이펙트 팡!
+                splashSkipTriggered = true; 
                 counterObj.innerText = totalAltitudeData.toLocaleString();
                 counterObj.classList.add('pop-effect');
-                
-                // 지체 없이 바로 메인화면으로 진입
                 finishSplashAndStart();
             }
 
-            // 카운팅 시작 로직 (자동 전환은 제거됨)
             setTimeout(() => {
                 if (splashSkipTriggered) return;
                 counterContainer.classList.add('show');
@@ -432,9 +509,8 @@
                 
                 setTimeout(() => {
                     if (splashSkipTriggered) return;
-                    
                     let startTimestamp = null;
-                    const duration = 1500; // 1.5초
+                    const duration = 1500; 
                     
                     const step = (timestamp) => {
                         if (splashSkipTriggered) return; 
@@ -447,11 +523,9 @@
                         if (progress < 1) {
                             window.requestAnimationFrame(step);
                         } else {
-                            // 카운트 완료 시 (스킵 안했을 때)
                             counterObj.classList.add('pop-effect');
-                            hintObj.innerText = "화면을 터치하여 지도 보기 🗺️"; // 안내문구 변경
+                            hintObj.innerText = "화면을 터치하여 지도 보기 🗺️"; 
                             hintObj.style.animation = 'blinkHint 1s infinite';
-                            // 💡 여기서 자동 전환 코드를 삭제했습니다! (사용자가 터치할 때까지 무한 대기)
                         }
                     };
                     window.requestAnimationFrame(step);
@@ -459,11 +533,9 @@
             }, 600); 
         }
 
-        // 💡 메인 화면 렌더링 호출
         function finishSplashAndStart() {
             const splash = document.getElementById('splash');
             splash.style.opacity = '0'; 
-            
             setTimeout(() => {
                 splash.style.display = 'none'; 
                 if (map) map.invalidateSize(); 
@@ -473,7 +545,7 @@
 
         function createGroupMarker(group) {
             const marker = L.marker([group.lat, group.lng], {icon: mountainIcon}).addTo(markerLayerGroup);
-            groupedMarkers[group.key] = marker; 
+            groupedMarkers[group.key] = { marker: marker, data: group }; // 마커 객체와 원본 데이터를 함께 저장
 
             const iconElement = marker.getElement();
             if(iconElement) iconElement.classList.add('drop-marker');
@@ -509,7 +581,6 @@
             let totalAltitude = 0;
             const groups = {};
             
-            // 💡 동일 위치 N회차 그룹화 및 고도 소급 적용
             allRecords.forEach(record => {
                 const key = `${record.lat.toFixed(4)},${record.lng.toFixed(4)}`;
                 if(!groups[key]) groups[key] = { key: key, name: record.name, lat: record.lat, lng: record.lng, climbs: [], earliestDate: record.date, altNum: 0 };
@@ -519,11 +590,10 @@
                 
                 const altValue = parseInt(record.alt);
                 if (!isNaN(altValue) && altValue > 0) {
-                    groups[key].altNum = altValue; // 가장 마지막 또는 정상 입력된 고도로 업데이트
+                    groups[key].altNum = altValue; 
                 }
             });
 
-            // 그룹별 총 고도 합산 (산 고도 * 등반 횟수)
             for (let key in groups) {
                 totalAltitude += groups[key].altNum * groups[key].climbs.length;
             }
@@ -558,11 +628,13 @@
 
             if (isFirstLoad) {
                 setTimeout(() => {
-                    sidebar.classList.remove('hidden');
+                    sidebar.classList.remove('hidden'); // collapsed 상태(최소화)로 등장
+                    applyDateFilter(); // 혹시 필터가 걸려있다면 적용
                     isFirstLoad = false;
                 }, delay + 100);
             } else {
                 sidebar.classList.remove('hidden');
+                applyDateFilter();
             }
 
             allRecords.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(data => {
@@ -575,7 +647,6 @@
                 };
 
                 const altText = data.alt !== "정보 없음" ? `${data.alt}m` : "";
-                
                 let cardHtml = `
                     <div class="action-btns">
                         <button class="edit-btn" onclick="editRecord(${data.id}, event)">수정</button>
@@ -589,14 +660,59 @@
             });
         }
 
+        // 💡 선택한 시기 필터링 및 지도 시각적 강조 효과 적용 함수
+        function applyDateFilter() {
+            let matchCount = 0;
+            const filterActive = (selectedFilterYear !== 'all' || selectedFilterMonth !== 'all');
+
+            for (let key in groupedMarkers) {
+                const item = groupedMarkers[key];
+                const marker = item.marker;
+                const domElement = marker.getElement();
+                const tooltipElement = marker.getTooltip() ? marker.getTooltip().getElement() : null;
+                
+                if (!domElement) continue;
+
+                if (!filterActive) {
+                    // 전체 상태일 때 (필터 해제)
+                    domElement.classList.remove('highlight-marker', 'dim-marker');
+                    if (tooltipElement) tooltipElement.classList.remove('highlight-marker-tooltip');
+                    marker.setZIndexOffset(0);
+                    continue;
+                }
+
+                // 해당 산을 등반한 기록(climbs) 중 선택한 연/월이 포함되어 있는지 확인
+                let isMatch = false;
+                item.data.climbs.forEach(climb => {
+                    const climbYear = climb.date.split('-')[0];
+                    const climbMonth = climb.date.split('-')[1];
+                    
+                    const yearMatch = (selectedFilterYear === 'all' || selectedFilterYear === climbYear);
+                    const monthMatch = (selectedFilterMonth === 'all' || selectedFilterMonth === climbMonth);
+                    
+                    if (yearMatch && monthMatch) isMatch = true;
+                });
+
+                if (isMatch) {
+                    domElement.classList.remove('dim-marker');
+                    domElement.classList.add('highlight-marker');
+                    if (tooltipElement) tooltipElement.classList.add('highlight-marker-tooltip');
+                    marker.setZIndexOffset(1000); // 제일 위로 올리기
+                    matchCount++;
+                } else {
+                    domElement.classList.remove('highlight-marker');
+                    domElement.classList.add('dim-marker');
+                    if (tooltipElement) tooltipElement.classList.remove('highlight-marker-tooltip');
+                    marker.setZIndexOffset(0);
+                }
+            }
+        }
+
         let debounceTimer;
         function handleEnter(e) {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
-                if (e.key === 'Enter' || e.keyCode === 13) {
-                    e.preventDefault();
-                    searchMountain();
-                }
+                if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); searchMountain(); }
             }, 500);
         }
 
@@ -643,15 +759,15 @@
 
         function highlightMarker(data) {
             const key = `${data.lat.toFixed(4)},${data.lng.toFixed(4)}`;
-            const marker = groupedMarkers[key];
-            if(marker) {
+            const item = groupedMarkers[key];
+            if(item && item.marker) {
                 if(window.innerWidth <= 768) {
                     currentSidebarState = 0; 
                     updateSidebarState();
                 }
                 map.flyTo([data.lat, data.lng], 14, {animate: true, duration: 1});
-                marker.openPopup();
-                const iconElement = marker.getElement();
+                item.marker.openPopup();
+                const iconElement = item.marker.getElement();
                 if(iconElement) {
                     iconElement.classList.add('pulse-animation');
                     setTimeout(() => iconElement.classList.remove('pulse-animation'), 1600);
@@ -659,7 +775,6 @@
             }
         }
 
-        // 사진 뷰어 로직
         let carouselPhotos = [];
         let carouselIndex = 0;
 
