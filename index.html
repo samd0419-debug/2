@@ -13,7 +13,6 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
-    <!-- PWA 서비스 워커 등록 -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -27,7 +26,7 @@
         body { 
             margin: 0; display: flex; height: 100vh; font-family: 'Malgun Gothic', sans-serif; 
             background-color: #f4f6f8; flex-direction: row; overflow: hidden; 
-            overscroll-behavior: none; 
+            overscroll-behavior: none; touch-action: pan-x pan-y;
         }
         
         #map { flex: 2; height: 100%; z-index: 1; }
@@ -39,15 +38,10 @@
             transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); 
         }
         #sidebar.hidden { transform: translateX(100%) !important; }
-        
         #dragHandle { display: none; }
-        
-        #sidebarContent { 
-            flex: 1; overflow-y: auto; padding: 24px;
-            overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
-        }
+        #sidebarContent { flex: 1; overflow-y: auto; padding: 24px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 
-        /* 📱 모바일 최적화 (3단계 사이즈) */
+        /* 📱 모바일 최적화 */
         @media (max-width: 768px) {
             body { flex-direction: column; }
             #map { height: 100vh; width: 100%; flex: none; }
@@ -72,18 +66,11 @@
             #dragHandle .bar { width: 50px; height: 6px; background: #ccc; border-radius: 5px; margin-bottom: 8px; }
             #dragHandle .drag-text { font-size: 0.8em; color: #777; font-weight: bold; }
             
-            #sidebarContent { 
-                padding: 0 16px 24px 16px; 
-                padding-bottom: calc(24px + env(safe-area-inset-bottom));
-            }
+            #sidebarContent { padding: 0 16px 24px 16px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
         }
 
-        /* 💡 메인 스플래시 인트로 */
-        #splash { 
-            position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999; 
-            background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&q=80') no-repeat center center/cover;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; cursor: pointer;
-        }
+        /* 💡 스플래시 인트로 */
+        #splash { position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999; background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&q=80') no-repeat center center/cover; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; cursor: pointer; }
         #splash::before { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); }
         .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1s cubic-bezier(0.2, 0.8, 0.2, 1); width: 100%; }
         .splash-title { font-size: 3.5rem; margin: 0; font-weight: 900; letter-spacing: -2px; white-space: nowrap; text-shadow: 2px 4px 15px rgba(0,0,0,0.6); border-bottom: 4px solid #4CAF50; padding-bottom: 10px; }
@@ -104,65 +91,62 @@
 
         /* 💡 자물쇠 휠(달력) UI 패널 */
         #calendarDrawer {
-            position: fixed; right: -280px; top: 15vh; width: 280px; background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px); border-radius: 20px 0 0 20px; box-shadow: -5px 0 25px rgba(0,0,0,0.2);
-            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 1000;
-            display: flex; flex-direction: column; padding: 20px;
+            position: fixed; right: -230px; /* 크기 축소 반영 */
+            top: 0; width: 230px; height: 100vh;
+            pointer-events: none; z-index: 1000;
         }
-        #calendarDrawer.open { transform: translateX(-280px); }
         
+        .drawer-content {
+            position: absolute; right: 0; top: 15vh; width: 230px;
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+            border-radius: 20px 0 0 20px; box-shadow: -5px 0 25px rgba(0,0,0,0.2);
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            display: flex; flex-direction: column; padding: 15px;
+            pointer-events: auto; transform: translateX(230px);
+        }
+        #calendarDrawer.open .drawer-content { transform: translateX(0); }
+        
+        /* 기록필터 탭 (드래그 가능, 여백 확대) */
         #calendarHandle {
-            position: absolute; left: -35px; top: 50%; transform: translateY(-50%);
-            width: 35px; height: 80px; background: #2E7D32; color: white;
+            position: absolute; left: -38px; top: 15vh; /* 독립적인 위치 조정 가능하도록 */
+            width: 38px; height: 110px; background: #2E7D32; color: white;
             border-radius: 12px 0 0 12px; display: flex; align-items: center; justify-content: center;
-            box-shadow: -3px 0 10px rgba(0,0,0,0.15); cursor: pointer; writing-mode: vertical-rl; 
-            text-orientation: mixed; font-weight: bold; font-size: 1em; letter-spacing: 2px;
+            box-shadow: -3px 0 10px rgba(0,0,0,0.15); cursor: pointer; pointer-events: auto;
+            writing-mode: vertical-rl; text-orientation: upright; font-weight: bold; font-size: 0.95em; 
+            letter-spacing: 3px; padding: 10px 0; user-select: none; transition: background 0.2s, transform 0.1s;
         }
 
-        .picker-container { display: flex; gap: 10px; height: 180px; position: relative; margin-top: 15px; background: #f0f0f0; border-radius: 12px; overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1); }
-        .picker-overlay { position: absolute; top: 60px; left: 0; width: 100%; height: 60px; border-top: 2px solid #4CAF50; border-bottom: 2px solid #4CAF50; background: rgba(76,175,80,0.1); pointer-events: none; z-index: 2; box-sizing: border-box; }
+        /* 휠 크기 및 간격 축소 */
+        .picker-container { display: flex; gap: 2px; height: 150px; position: relative; margin-top: 15px; background: #f0f0f0; border-radius: 12px; overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1); }
+        .picker-overlay { position: absolute; top: 45px; left: 0; width: 100%; height: 60px; border-top: 2px solid #4CAF50; border-bottom: 2px solid #4CAF50; background: rgba(76,175,80,0.1); pointer-events: none; z-index: 2; box-sizing: border-box; }
         
-        .wheel {
-            flex: 1; height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory;
-            scrollbar-width: none; -ms-overflow-style: none; /* Hide scrollbar */
-        }
+        .wheel { flex: 1; height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none; -ms-overflow-style: none; }
         .wheel::-webkit-scrollbar { display: none; }
-        
-        .wheel-item {
-            height: 60px; display: flex; align-items: center; justify-content: center;
-            scroll-snap-align: center; font-size: 1.4em; color: #aaa; font-weight: bold;
-            transition: all 0.2s; user-select: none;
-        }
-        .wheel-item.active { color: #1b5e20; font-size: 1.8em; }
+        .wheel-item { height: 60px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; font-size: 1.2em; color: #aaa; font-weight: bold; transition: all 0.2s; user-select: none; }
+        .wheel-item.active { color: #1b5e20; font-size: 1.5em; }
 
-        /* 💡 지도 핀 애니메이션 및 스타일 (필터 적용 포함) */
+        /* 핀 애니메이션 및 필터 스타일 */
         .custom-leaflet-icon { background: transparent; border: none; transition: opacity 0.3s, transform 0.3s; }
         .pin-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-end; transform-origin: bottom center; }
-        
         @keyframes dropBounce { 0% { transform: translateY(-100px); opacity: 0; } 50% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(-15px); } 100% { transform: translateY(0); } }
         .drop-marker .pin-wrapper { animation: dropBounce 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
         
-        /* 선택된 시기의 핀 돋보이게 하는 스타일 */
         .highlight-marker .pin-wrapper svg { transform: scale(1.4); filter: drop-shadow(0 0 12px #FFEB3B); transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
         .highlight-marker .pin-wrapper path { fill: #D32F2F; stroke: #FFEB3B; stroke-width: 2px; }
         .dim-marker { opacity: 0.3 !important; filter: grayscale(100%); transition: all 0.3s; }
-
         .leaflet-tooltip.mountain-label { background: rgba(255, 255, 255, 0.95); border: 2px solid #2E7D32; border-radius: 5px; color: #1b5e20; font-weight: bold; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); padding: 4px 8px; }
         .leaflet-tooltip-top:before { border-top-color: #2E7D32; }
-        
-        /* 선택된 시기 툴팁 돋보이게 */
         .highlight-marker-tooltip { background: #FFEB3B !important; border-color: #F57F17 !important; color: #b71c1c !important; transform: scale(1.1); font-size: 14px !important; z-index: 1000 !important; }
         .highlight-marker-tooltip:before { border-top-color: #F57F17 !important; }
 
+        /* 입력 폼 스타일 */
         h2 { color: #2E7D32; margin-top: 0; font-size: 1.8em; font-weight: 900; letter-spacing: -1px; } 
         .instruction { font-size: 0.85em; color: #555; margin-bottom: 15px; background: #e8f5e9; padding: 12px; border-radius: 6px; border-left: 4px solid #4CAF50;}
         label { font-size: 0.9em; font-weight: bold; color: #333; display: block; margin-top: 14px; margin-bottom: 5px;}
         input[type="text"], input[type="date"], input[type="file"], input[type="number"] { width: 100%; padding: 11px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-        
         .search-wrapper { position: relative; width: 100%; }
         .search-container { display: flex; gap: 6px; }
         .search-btn { padding: 0 18px; background: #2E7D32; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 0.95em; white-space: nowrap; cursor: pointer; }
-        
         #searchResults { position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; list-style: none; padding: 0; margin: 5px 0 0 0; max-height: 180px; overflow-y: auto; border: 2px solid #2E7D32; border-radius: 6px; display: none; background: #fff; box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
         #searchResults li { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
@@ -177,11 +161,11 @@
         .record-card:hover { background: #f0f5f1; }
         .record-card h4 { margin: 0 0 5px 0; color: #333; font-size: 1.1em; padding-right: 90px; }
         .record-card p { margin: 0; font-size: 0.85em; color: #666; }
-        
         .action-btns { position: absolute; top: 14px; right: 14px; display: flex; gap: 5px; }
         .edit-btn { background: #1976D2; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 0.8em; font-weight: bold; cursor: pointer; }
         .delete-btn { background: #d32f2f; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 0.8em; font-weight: bold; cursor: pointer; }
 
+        /* 사진 확대 오버레이 */
         #photoOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
         #photoOverlay.show { opacity: 1; visibility: visible; }
         #expandedPhoto { max-width: 90%; max-height: 80%; object-fit: contain; border-radius: 4px; user-select: none; }
@@ -217,36 +201,36 @@
         <div class="photo-counter" id="photoCounter">1 / 1</div>
     </div>
 
-    <!-- 💡 2. 자물쇠 휠 캘린더 드로어 (오른쪽 숨김) -->
+    <!-- 2. 자물쇠 휠 캘린더 드로어 & 자유 이동 손잡이 -->
     <div id="calendarDrawer">
-        <div id="calendarHandle" onclick="toggleCalendar()">기록필터</div>
-        <div style="text-align:center; font-weight:900; color:#2E7D32; font-size:1.1em; letter-spacing:-0.5px;">📅 시기별 등산 보기</div>
-        <p style="margin:5px 0 0 0; font-size:0.75em; text-align:center; color:#666;">연도와 월을 스크롤하여 맞춰보세요!</p>
+        <!-- 손잡이만 바깥에 독립 배치하여 상하 드래그 용이 -->
+        <div id="calendarHandle">기록필터</div>
         
-        <div class="picker-container">
-            <div class="picker-overlay"></div>
-            <!-- 연도 휠 -->
-            <div class="wheel" id="wheelYear">
-                <div class="wheel-item"></div>
-                <div class="wheel-item active" data-val="all">전체</div>
-                <!-- JS에서 2010~2030 추가 -->
-                <div class="wheel-item"></div>
+        <div class="drawer-content">
+            <div style="text-align:center; font-weight:900; color:#2E7D32; font-size:1.1em; letter-spacing:-0.5px;">📅 시기별 등산 보기</div>
+            <p style="margin:5px 0 0 0; font-size:0.75em; text-align:center; color:#666;">연/월을 돌려 기록을 찾으세요</p>
+            
+            <div class="picker-container">
+                <div class="picker-overlay"></div>
+                <!-- 연도 휠 -->
+                <div class="wheel" id="wheelYear">
+                    <div class="wheel-item"></div>
+                    <div class="wheel-item active" data-val="all">전체</div>
+                </div>
+                <!-- 월 휠 -->
+                <div class="wheel" id="wheelMonth">
+                    <div class="wheel-item"></div>
+                    <div class="wheel-item active" data-val="all">전체</div>
+                </div>
             </div>
-            <!-- 월 휠 -->
-            <div class="wheel" id="wheelMonth">
-                <div class="wheel-item"></div>
-                <div class="wheel-item active" data-val="all">전체</div>
-                <!-- JS에서 1~12 추가 -->
-                <div class="wheel-item"></div>
-            </div>
+            <button onclick="document.getElementById('calendarDrawer').classList.remove('open')" style="margin-top:15px; padding:10px; border-radius:8px; border:none; background:#4CAF50; color:white; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.1); cursor:pointer;">적용하고 닫기</button>
         </div>
-        <button onclick="toggleCalendar()" style="margin-top:15px; padding:10px; border-radius:8px; border:none; background:#4CAF50; color:white; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.1); cursor:pointer;">적용하고 닫기</button>
     </div>
 
-    <!-- 지도 영역 -->
+    <!-- 3. 지도 영역 -->
     <div id="map"></div>
 
-    <!-- 사이드바 (기록 창) - 💡 초기 상태를 collapsed(0)로 변경 -->
+    <!-- 4. 사이드바 (기록 창) -->
     <div id="sidebar" class="hidden collapsed">
         <div id="dragHandle">
             <div class="bar"></div>
@@ -256,8 +240,8 @@
         <div id="sidebarContent">
             <h2>🏔️ 나의 등산기</h2>
             <div class="instruction">
-                <b>꿀팁:</b> 지도를 **두 번 터치(더블 클릭)**하면 우리나라 전체가 보입니다!<br>
-                화면 우측의 **[기록필터]** 탭을 쓸어당겨 원하는 달의 기록만 확인해보세요.
+                <b>💡 꿀팁:</b> 지도의 빈 공간을 **두 번 연속 터치(다닥!)**하면 언제든 <b>한국 전체 지도</b>가 보이며 기록창이 최소화됩니다.<br>
+                <b>💡 꿀팁:</b> 우측 <b>[기록필터] 탭을 꾹~ 길게 누르면</b> 위아래 원하는 곳으로 자유롭게 이동시킬 수 있어요!
             </div>
 
             <label for="mountainInput">1. 산 이름 검색</label>
@@ -321,7 +305,7 @@
         let selectedFilterMonth = 'all';
 
         window.addEventListener('load', () => {
-            // 💡 맵 초기화 시 doubleClickZoom 끄기 (직접 커스텀 줌아웃을 구현하기 위해)
+            // 💡 더블 탭 충돌 방지를 위해 자체 줌 아웃 기능 사용
             map = L.map('map', { zoomControl: false, doubleClickZoom: false }).setView([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7);
             L.control.zoom({ position: 'topright' }).addTo(map);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
@@ -333,19 +317,36 @@
                 iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36], tooltipAnchor: [0, -36]
             });
 
-            // 💡 지도 더블 터치(클릭) 이벤트: 전체 지도 보기 + 창 최소화
-            map.on('dblclick', () => {
-                map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7, { animate: true, duration: 1 });
-                if(window.innerWidth <= 768) {
-                    currentSidebarState = 0; // collapsed (최소화 상태)
-                    updateSidebarState();
+            // 💡 PC 지도 더블클릭 이벤트 (화면 리셋)
+            map.on('dblclick', resetMapToDefault);
+            
+            // 💡 모바일 지도 더블탭 이벤트 (화면 리셋을 위한 수동 구현)
+            let lastTapTime = 0;
+            document.getElementById('map').addEventListener('touchstart', function(e) {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTapTime;
+                
+                // 350ms 안에 두 번 터치시 더블 탭으로 간주
+                if (tapLength < 350 && tapLength > 0) {
+                    resetMapToDefault();
+                    e.preventDefault(); 
                 }
-            });
+                lastTapTime = currentTime;
+            }, {passive: false});
 
-            // 캘린더 휠 아이템 생성
             generateWheelItems();
             initDB();
         });
+
+        // 💡 화면 완벽 초기화 함수 (어떤 화면에서도 한국 전경 + 기록창 최소화)
+        function resetMapToDefault() {
+            map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7, { animate: true, duration: 1 });
+            if(window.innerWidth <= 768) {
+                currentSidebarState = 0; // 최소화 상태로
+                updateSidebarState();
+            }
+            document.getElementById('calendarDrawer').classList.remove('open'); // 필터 서랍 닫기
+        }
 
         window.addEventListener('resize', () => { setTimeout(() => { if(map) map.invalidateSize(); }, 200); });
 
@@ -355,27 +356,23 @@
         let allRecords = []; 
         let groupedMarkers = {}; 
 
-        // 📱 모바일 사이드바 상태 제어 
+        // 📱 모바일 사이드바 제어
         const sidebar = document.getElementById('sidebar');
-        const handle = document.getElementById('dragHandle');
+        const handleDrag = document.getElementById('dragHandle');
         const dragText = document.querySelector('.drag-text');
         let startY = 0;
-        let currentSidebarState = 0; // 💡 기본 상태를 0(collapsed)으로 변경
+        let currentSidebarState = 0; // 기본 최소화 
         const states = ['collapsed', 'half', 'full'];
 
-        handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
-        handle.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); 
+        handleDrag.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
+        handleDrag.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); 
 
-        handle.addEventListener('touchend', e => {
+        handleDrag.addEventListener('touchend', e => {
             const endY = e.changedTouches[0].clientY;
             const diff = startY - endY; 
-
             if (Math.abs(diff) > 50) { 
-                if (diff > 0) { 
-                    if (currentSidebarState < 2) currentSidebarState++;
-                } else { 
-                    if (currentSidebarState > 0) currentSidebarState--;
-                }
+                if (diff > 0) { if (currentSidebarState < 2) currentSidebarState++; } 
+                else { if (currentSidebarState > 0) currentSidebarState--; }
                 updateSidebarState();
             }
         });
@@ -389,61 +386,119 @@
             else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
         }
 
-        // 💡 우측에서 나오는 캘린더 필터 제어 로직
-        function toggleCalendar() { document.getElementById('calendarDrawer').classList.toggle('open'); }
+        // 💡 기록 필터 탭 (자유 상하 이동 기능)
+        const filterHandle = document.getElementById('calendarHandle');
+        let isDraggingTab = false;
+        let pressTimer;
+        let initialY = 0;
+        let initialTop = 0;
+
+        function startTabDrag(e) {
+            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            initialY = clientY;
+            
+            const style = window.getComputedStyle(filterHandle);
+            initialTop = parseInt(style.top, 10);
+            
+            // 0.4초 길게 누르면 드래그 모드 활성화
+            pressTimer = setTimeout(() => {
+                isDraggingTab = true;
+                filterHandle.style.background = '#1b5e20'; // 시각적 피드백
+                filterHandle.style.transform = 'scale(1.05)';
+            }, 400); 
+        }
+
+        function moveTabDrag(e) {
+            if (!isDraggingTab) {
+                // 시간 안에 움직이면 단순 스와이프로 간주하고 롱프레스 취소
+                clearTimeout(pressTimer);
+                return;
+            }
+            e.preventDefault(); // 화면 스크롤 방지
+            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            let deltaY = clientY - initialY;
+            
+            let newTop = initialTop + deltaY;
+            // 화면 밖으로 나가지 않도록 한계 설정
+            if (newTop < 50) newTop = 50;
+            if (newTop > window.innerHeight - 150) newTop = window.innerHeight - 150;
+
+            filterHandle.style.top = newTop + 'px';
+        }
+
+        function endTabDrag(e) {
+            clearTimeout(pressTimer);
+            if (isDraggingTab) {
+                // 드래그가 끝났으므로 클릭 이벤트로 넘어가지 못하게 살짝 딜레이 처리
+                setTimeout(() => { isDraggingTab = false; }, 100); 
+                filterHandle.style.background = '#2E7D32';
+                filterHandle.style.transform = 'scale(1)';
+            } else {
+                // 드래그가 아니었으면 단순 클릭(열기/닫기)
+                document.getElementById('calendarDrawer').classList.toggle('open');
+            }
+        }
+
+        // 터치 및 마우스 이벤트 바인딩
+        filterHandle.addEventListener('touchstart', startTabDrag, {passive: false});
+        filterHandle.addEventListener('touchmove', moveTabDrag, {passive: false});
+        filterHandle.addEventListener('touchend', endTabDrag);
         
-        // 오른쪽 모서리 스와이프로 캘린더 꺼내기
+        filterHandle.addEventListener('mousedown', startTabDrag);
+        document.addEventListener('mousemove', moveTabDrag);
+        document.addEventListener('mouseup', endTabDrag);
+
+        
+        // 오른쪽 화면 모서리 스와이프로 서랍 열기
         let bodyStartX = 0;
         document.body.addEventListener('touchstart', e => { bodyStartX = e.touches[0].clientX; }, {passive: true});
         document.body.addEventListener('touchend', e => {
             const diffX = bodyStartX - e.changedTouches[0].clientX;
             const drawer = document.getElementById('calendarDrawer');
-            if (bodyStartX > window.innerWidth - 60 && diffX > 40) drawer.classList.add('open');
+            if (bodyStartX > window.innerWidth - 50 && diffX > 40) drawer.classList.add('open');
             if (diffX < -40 && drawer.classList.contains('open')) drawer.classList.remove('open');
         });
 
+        // 휠 아이템 생성
         function generateWheelItems() {
             const wheelYear = document.getElementById('wheelYear');
             const wheelMonth = document.getElementById('wheelMonth');
             
-            // 연도 추가 (2010 ~ 2030)
             for(let y=2015; y<=2030; y++) {
                 const div = document.createElement('div'); div.className = 'wheel-item'; div.innerText = y + '년'; div.setAttribute('data-val', y);
-                wheelYear.insertBefore(div, wheelYear.lastElementChild);
+                wheelYear.appendChild(div);
             }
-            // 월 추가 (1 ~ 12)
+            const emptyY = document.createElement('div'); emptyY.className = 'wheel-item'; wheelYear.appendChild(emptyY);
+
             for(let m=1; m<=12; m++) {
                 const div = document.createElement('div'); div.className = 'wheel-item'; div.innerText = m + '월'; 
-                div.setAttribute('data-val', m < 10 ? '0'+m : m.toString()); // 01, 02 형태
-                wheelMonth.insertBefore(div, wheelMonth.lastElementChild);
+                div.setAttribute('data-val', m < 10 ? '0'+m : m.toString()); 
+                wheelMonth.appendChild(div);
             }
+            const emptyM = document.createElement('div'); emptyM.className = 'wheel-item'; wheelMonth.appendChild(emptyM);
 
-            // 스크롤 이벤트 연동 (Debounce 적용)
             let scrollTimeout;
             wheelYear.addEventListener('scroll', () => { clearTimeout(scrollTimeout); scrollTimeout = setTimeout(() => handleWheelStop(wheelYear, 'year'), 150); });
             wheelMonth.addEventListener('scroll', () => { clearTimeout(scrollTimeout); scrollTimeout = setTimeout(() => handleWheelStop(wheelMonth, 'month'), 150); });
         }
 
         function handleWheelStop(wheelElem, type) {
-            const itemHeight = 60; // .wheel-item height
+            const itemHeight = 60; 
             const index = Math.round(wheelElem.scrollTop / itemHeight);
             
-            // UI 업데이트 (active 클래스 변경)
             Array.from(wheelElem.children).forEach((child, i) => {
-                if (i === index + 1) child.classList.add('active'); // +1 because of padding item
+                if (i === index + 1) child.classList.add('active'); 
                 else child.classList.remove('active');
             });
             
-            // 값 추출
             const activeElem = wheelElem.children[index + 1];
             if(activeElem) {
                 if(type === 'year') selectedFilterYear = activeElem.getAttribute('data-val');
                 if(type === 'month') selectedFilterMonth = activeElem.getAttribute('data-val');
-                applyDateFilter(); // 필터 적용
+                applyDateFilter(); 
             }
         }
 
-        // DB 초기화
         let db;
         function initDB() {
             const request = indexedDB.open("PeakLogDB", 1);
@@ -545,7 +600,7 @@
 
         function createGroupMarker(group) {
             const marker = L.marker([group.lat, group.lng], {icon: mountainIcon}).addTo(markerLayerGroup);
-            groupedMarkers[group.key] = { marker: marker, data: group }; // 마커 객체와 원본 데이터를 함께 저장
+            groupedMarkers[group.key] = { marker: marker, data: group }; 
 
             const iconElement = marker.getElement();
             if(iconElement) iconElement.classList.add('drop-marker');
@@ -628,8 +683,8 @@
 
             if (isFirstLoad) {
                 setTimeout(() => {
-                    sidebar.classList.remove('hidden'); // collapsed 상태(최소화)로 등장
-                    applyDateFilter(); // 혹시 필터가 걸려있다면 적용
+                    sidebar.classList.remove('hidden');
+                    applyDateFilter(); 
                     isFirstLoad = false;
                 }, delay + 100);
             } else {
@@ -660,9 +715,8 @@
             });
         }
 
-        // 💡 선택한 시기 필터링 및 지도 시각적 강조 효과 적용 함수
+        // 💡 필터 시각 효과 
         function applyDateFilter() {
-            let matchCount = 0;
             const filterActive = (selectedFilterYear !== 'all' || selectedFilterMonth !== 'all');
 
             for (let key in groupedMarkers) {
@@ -674,14 +728,12 @@
                 if (!domElement) continue;
 
                 if (!filterActive) {
-                    // 전체 상태일 때 (필터 해제)
                     domElement.classList.remove('highlight-marker', 'dim-marker');
                     if (tooltipElement) tooltipElement.classList.remove('highlight-marker-tooltip');
                     marker.setZIndexOffset(0);
                     continue;
                 }
 
-                // 해당 산을 등반한 기록(climbs) 중 선택한 연/월이 포함되어 있는지 확인
                 let isMatch = false;
                 item.data.climbs.forEach(climb => {
                     const climbYear = climb.date.split('-')[0];
@@ -697,8 +749,7 @@
                     domElement.classList.remove('dim-marker');
                     domElement.classList.add('highlight-marker');
                     if (tooltipElement) tooltipElement.classList.add('highlight-marker-tooltip');
-                    marker.setZIndexOffset(1000); // 제일 위로 올리기
-                    matchCount++;
+                    marker.setZIndexOffset(1000); 
                 } else {
                     domElement.classList.remove('highlight-marker');
                     domElement.classList.add('dim-marker');
