@@ -309,8 +309,11 @@
 
             map.on('dblclick', resetMapToDefault);
             
-            let lastTapTime = 0;
+         let lastTapTime = 0;
             document.getElementById('map').addEventListener('touchstart', function(e) {
+                // 💡 두 손가락 이상 터치(확대/축소 등 멀티터치 제스처)일 때는 더블터치 로직을 즉시 패스합니다.
+                if (e.touches.length > 1) return;
+
                 const currentTime = new Date().getTime();
                 const tapLength = currentTime - lastTapTime;
                 
