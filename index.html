@@ -374,65 +374,64 @@
             else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
         }
 
-       // 💡 기록 필터 탭 (터치 & 상하 드래그 & 탭 좌측 스와이프)
+        // 💡 기록 필터 탭 (터치 & 드래그 버그 수정 완료)
         const filterHandle = document.getElementById('calendarHandle');
-        const calendarDrawer = document.getElementById('calendarDrawer');
         let isDraggingTab = false;
-        let handleStartX = 0, handleStartY = 0, initialTop = 0;
+        let pressTimer;
+        let initialY = 0;
+        let initialTop = 0;
 
-        filterHandle.addEventListener('touchstart', (e) => {
+        filterHandle.addEventListener('pointerdown', (e) => {
             isDraggingTab = false;
-            handleStartX = e.touches[0].clientX;
-            handleStartY = e.touches[0].clientY;
-            initialTop = filterHandle.offsetTop;
-            filterHandle.style.background = '#1b5e20';
-        }, {passive: true});
-
-        filterHandle.addEventListener('touchmove', (e) => {
-            let deltaY = e.touches[0].clientY - handleStartY;
-            let deltaX = e.touches[0].clientX - handleStartX;
+            initialY = e.clientY;
+            const style = window.getComputedStyle(filterHandle);
+            initialTop = parseInt(style.top, 10);
             
-            // 가로(스와이프)보다 세로(위아래 드래그)로 더 많이, 10px 이상 움직이면 탭 이동으로 간주
-            if (Math.abs(deltaY) > 10 && Math.abs(deltaY) > Math.abs(deltaX)) { 
+            filterHandle.setPointerCapture(e.pointerId); 
+            
+            pressTimer = setTimeout(() => {
                 isDraggingTab = true;
-                e.preventDefault(); 
-                let newTop = initialTop + deltaY;
-                if (newTop < 50) newTop = 50;
-                if (newTop > window.innerHeight - 150) newTop = window.innerHeight - 150;
-                filterHandle.style.top = newTop + 'px';
-            }
-        }, {passive: false});
+                filterHandle.style.background = '#1b5e20'; 
+                filterHandle.style.transform = 'scale(1.05)';
+            }, 300);
+        });
 
-        filterHandle.addEventListener('touchend', (e) => {
-            filterHandle.style.background = '#2E7D32';
-            
-            const endX = e.changedTouches[0].clientX;
-            const diffX = handleStartX - endX; // 양수면 탭을 왼쪽으로 민 것
-
+        filterHandle.addEventListener('pointermove', (e) => {
             if (!isDraggingTab) {
-                // 상하 드래그가 아닐 때: 왼쪽으로 30px 이상 밀었거나, 제자리 터치(클릭)했으면 서랍 열기
-                if (diffX > 30 || Math.abs(diffX) < 10) {
-                    calendarDrawer.classList.toggle('open');
-                }
+                // 살짝 움직이면 단순 탭으로 간주하고 타이머 취소
+                if (Math.abs(e.clientY - initialY) > 10) clearTimeout(pressTimer);
+                return;
+            }
+            e.preventDefault(); 
+            let deltaY = e.clientY - initialY;
+            let newTop = initialTop + deltaY;
+            
+            if (newTop < 50) newTop = 50;
+            if (newTop > window.innerHeight - 150) newTop = window.innerHeight - 150;
+            filterHandle.style.top = newTop + 'px';
+        });
+
+        filterHandle.addEventListener('pointerup', (e) => {
+            clearTimeout(pressTimer);
+            filterHandle.releasePointerCapture(e.pointerId);
+            
+            if (isDraggingTab) {
+                setTimeout(() => { isDraggingTab = false; }, 100); 
+                filterHandle.style.background = '#2E7D32';
+                filterHandle.style.transform = 'scale(1)';
+            } else {
+                // 단순 클릭 시 열림/닫힘 작동
+                document.getElementById('calendarDrawer').classList.toggle('open');
             }
         });
 
-        // 💡 열린 서랍을 오른쪽으로 스와이프해서 닫기 (지도 영역은 건드리지 않음)
-        const drawerContent = document.querySelector('.drawer-content');
-        let drawerStartX = 0;
-
-        drawerContent.addEventListener('touchstart', (e) => {
-            drawerStartX = e.touches[0].clientX;
-        }, {passive: true});
-
-        drawerContent.addEventListener('touchend', (e) => {
-            const endX = e.changedTouches[0].clientX;
-            const diffX = endX - drawerStartX; // 양수면 서랍을 오른쪽으로 민 것
-            
-            // 서랍 안쪽에서 오른쪽으로 40px 이상 밀면 서랍 닫기
-            if (diffX > 40) {
-                calendarDrawer.classList.remove('open');
-            }
+        let bodyStartX = 0;
+        document.body.addEventListener('touchstart', e => { bodyStartX = e.touches[0].clientX; }, {passive: true});
+        document.body.addEventListener('touchend', e => {
+            const diffX = bodyStartX - e.changedTouches[0].clientX;
+            const drawer = document.getElementById('calendarDrawer');
+            if (bodyStartX > window.innerWidth - 50 && diffX > 40) drawer.classList.add('open');
+            if (diffX < -40 && drawer.classList.contains('open')) drawer.classList.remove('open');
         });
 
         function generateWheelItems() {
