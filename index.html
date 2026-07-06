@@ -72,7 +72,8 @@
         .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1s cubic-bezier(0.2, 0.8, 0.2, 1); width: 100%; }
         .splash-title { font-size: 3.5rem; margin: 0; font-weight: 900; letter-spacing: -2px; white-space: nowrap; text-shadow: 2px 4px 15px rgba(0,0,0,0.6); border-bottom: 4px solid #4CAF50; padding-bottom: 10px; }
         @media (max-width: 768px) { .splash-title { font-size: 3.2rem; } }
-        .splash-subtitle { font-size: 1.2rem; margin-top: 15px; font-weight: 400; letter-spacing: 1px; text-shadow: 1px 2px 5px rgba(0,0,0,0.5); }
+        /* 💡 영문으로 변경된 간결한 서브타이틀 */
+        .splash-subtitle { font-size: 1.4rem; margin-top: 15px; font-weight: 500; letter-spacing: 1.5px; text-shadow: 1px 2px 5px rgba(0,0,0,0.5); }
         
         #splashCounterContainer { opacity: 0; transform: translateY(20px); margin-top: 40px; text-align: center; transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
         #splashCounterContainer.show { opacity: 1; transform: translateY(0); }
@@ -91,26 +92,38 @@
             position: fixed; right: 20px; bottom: 110px; z-index: 1000;
             touch-action: none;
         }
+        
         #filterFab {
             width: 58px; height: 58px; border-radius: 50%;
             background: rgba(46, 125, 50, 0.85); color: white; font-weight: 900; font-size: 0.8em; letter-spacing: -0.5px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             box-shadow: 0 4px 15px rgba(0,0,0,0.25); backdrop-filter: blur(5px);
-            transition: transform 0.2s, background 0.2s; cursor: pointer; user-select: none;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s, background 0.2s;
+            cursor: pointer; user-select: none; position: relative; z-index: 20;
         }
         #filterFab::before { content: '📅'; font-size: 1.4em; margin-bottom: -2px; }
+        
+        #filterWidget.open #filterFab {
+            transform: scale(0); opacity: 0; pointer-events: none;
+        }
         
         #filterDial {
             position: absolute; top: 50%; left: 50%;
             width: 270px; height: 270px; margin-top: -135px; margin-left: -135px;
-            border-radius: 50%; background: rgba(255, 255, 255, 0.95);
+            border-radius: 50%; 
+            background: rgba(255, 255, 255, 0.5); 
             box-shadow: 0 10px 40px rgba(0,0,0,0.3); backdrop-filter: blur(10px);
             transform: scale(0.1); opacity: 0; pointer-events: none;
             transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
-            z-index: -1;
+            z-index: 10;
         }
         #filterWidget.open #filterDial {
             transform: scale(1); opacity: 1; pointer-events: auto;
+        }
+
+        #filterDial.year-expanded .month-btn {
+            opacity: 0 !important;
+            pointer-events: none;
         }
         
         .month-btn {
@@ -119,7 +132,7 @@
             font-size: 0.95em; font-weight: bold; color: #2E7D32;
             background: #e8f5e9; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             top: 50%; left: 50%; margin-top: -22px; margin-left: -22px;
-            transition: all 0.2s; cursor: pointer; user-select: none;
+            transition: all 0.3s; cursor: pointer; user-select: none;
         }
         .month-btn.active {
             background: #2E7D32; color: white; transform: scale(1.25) !important; box-shadow: 0 4px 12px rgba(46,125,50,0.5);
@@ -131,19 +144,18 @@
             box-shadow: inset 0 2px 10px rgba(0,0,0,0.1), 0 4px 15px rgba(0,0,0,0.15);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             cursor: ns-resize; user-select: none; z-index: 10;
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s;
         }
+        
+        #filterDial.year-expanded .year-center {
+            transform: translate(-50%, -50%) scale(1.8);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.05), 0 8px 25px rgba(0,0,0,0.25);
+        }
+
         .year-center::before { content: '▲'; font-size: 10px; color: #aaa; position: absolute; top: 8px; }
         .year-center::after { content: '▼'; font-size: 10px; color: #aaa; position: absolute; bottom: 8px; }
         .year-val { font-size: 1.5em; font-weight: 900; color: #1b5e20; line-height: 1; margin-top: 2px;}
         .year-label { font-size: 0.75em; color: #777; margin-top: 2px; }
-        
-        .reset-filter-btn {
-            position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
-            background: #FF9800; color: white; border-radius: 20px; padding: 6px 16px;
-            font-size: 0.85em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            white-space: nowrap; transition: 0.2s; user-select: none; z-index: 15;
-        }
-        .reset-filter-btn:active { transform: translateX(-50%) scale(0.95); }
 
         .custom-leaflet-icon { background: transparent; border: none; transition: opacity 0.3s, transform 0.3s; }
         .pin-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-end; transform-origin: bottom center; }
@@ -151,7 +163,6 @@
         @keyframes dropBounce { 0% { transform: translateY(-100px); opacity: 0; } 50% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(-15px); } 100% { transform: translateY(0); } }
         .drop-marker .pin-wrapper { animation: dropBounce 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
         
-        /* 필터 선택 시 통통 튀는 효과 */
         @keyframes filterPopBounce { 
             0% { transform: scale(1) translateY(0); } 
             40% { transform: scale(1.5) translateY(-25px); filter: drop-shadow(0 15px 15px rgba(255,235,59,0.8)); } 
@@ -172,7 +183,7 @@
         h2 { color: #2E7D32; margin-top: 0; font-size: 1.8em; font-weight: 900; letter-spacing: -1px; } 
         .instruction { font-size: 0.85em; color: #555; margin-bottom: 15px; background: #e8f5e9; padding: 12px; border-radius: 6px; border-left: 4px solid #4CAF50;}
         label { font-size: 0.9em; font-weight: bold; color: #333; display: block; margin-top: 14px; margin-bottom: 5px;}
-        input[type="text"], input[type="date"], input[type="file"], input[type="number"] { width: 100%; padding: 11px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        input[type="text"], input[type="date"], input[type="file"], input[type="number"] { width: 100%; padding: 11px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; } /* 패딩을 약간 줄여 좁은 화면에서도 글씨가 잘림 방지 */
         .search-wrapper { position: relative; width: 100%; }
         .search-container { display: flex; gap: 6px; }
         .search-btn { padding: 0 18px; background: #2E7D32; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 0.95em; white-space: nowrap; cursor: pointer; }
@@ -209,7 +220,8 @@
     <div id="splash">
         <div class="splash-content">
             <h1 class="splash-title">나의 등산기</h1>
-            <p class="splash-subtitle">나만의 대한민국 등산 지도</p>
+            <!-- 💡 변경된 서브타이틀 -->
+            <p class="splash-subtitle">My Hiking Atlas</p>
             
             <div id="splashCounterContainer">
                 <div class="splash-alt-label">🔥 나의 누적 등반 고도</div>
@@ -233,9 +245,8 @@
                 <div class="year-val" id="yearVal">전체</div>
                 <div class="year-label">년도</div>
             </div>
-            <div class="reset-filter-btn" onclick="resetFilters(event)">모두 보기</div>
         </div>
-        <div id="filterFab">필터</div>
+        <div id="filterFab">검색</div>
     </div>
 
     <div id="map"></div>
@@ -250,7 +261,7 @@
             <h2>🏔️ 나의 등산기</h2>
             <div class="instruction">
                 <b>💡 꿀팁:</b> 지도의 빈 공간을 **두 번 터치(다닥!)**하면 <b>한국 전체 지도</b>가 보입니다.<br>
-                <b>💡 꿀팁:</b> 지도 우측 <b>[필터] 버튼을 꾹 누르면</b> 위치를 자유롭게 이동시킬 수 있어요!
+                <b>💡 꿀팁:</b> 지도 우측 <b>[검색] 버튼을 꾹 누르면</b> 위치를 자유롭게 이동시킬 수 있어요!
             </div>
 
             <label for="mountainInput">1. 산 이름 검색</label>
@@ -262,9 +273,10 @@
                 <ul id="searchResults"></ul>
             </div>
 
-            <div style="display: flex; gap: 10px;">
-                <div style="flex: 1;"><label>2. 등산 날짜</label><input type="date" id="hikeDate"></div>
-                <div style="flex: 1;"><label>3. 고도 (m)</label><input type="number" id="hikeAlt" placeholder="예: 836"></div>
+            <!-- 💡 날짜와 고도 입력창 비율 및 겹침 방지(min-width: 0) 적용 -->
+            <div style="display: flex; gap: 8px; width: 100%;">
+                <div style="flex: 1.5; min-width: 0;"><label>2. 등산 날짜 (연도-월-일)</label><input type="date" id="hikeDate"></div>
+                <div style="flex: 1; min-width: 0;"><label>3. 고도 (m)</label><input type="number" id="hikeAlt" placeholder="예: 836"></div>
             </div>
 
             <label>4. 등산 사진 (여러 장 가능)</label>
@@ -319,7 +331,6 @@
         
         let filterWidget, filterFab, filterDial, yearCenter, yearVal;
 
-        // 💡 화면 로딩 지연 방지 패치 (DOMContentLoaded 적용)
         document.addEventListener('DOMContentLoaded', () => {
             map = L.map('map', { zoomControl: false, doubleClickZoom: false }).setView([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7);
             L.control.zoom({ position: 'topright' }).addTo(map);
@@ -358,7 +369,10 @@
                 currentSidebarState = 0; 
                 updateSidebarState();
             }
-            if(filterWidget) filterWidget.classList.remove('open');
+            if(filterWidget) {
+                filterWidget.classList.remove('open');
+                filterDial.classList.remove('year-expanded');
+            }
         }
 
         window.addEventListener('resize', () => { setTimeout(() => { if(map) map.invalidateSize(); }, 200); });
@@ -398,7 +412,6 @@
             else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
         }
 
-        /* 💡 투명 원형 필터 위젯 스크립트 */
         function initFilterWidget() {
             filterWidget = document.getElementById('filterWidget');
             filterFab = document.getElementById('filterFab');
@@ -406,16 +419,23 @@
             yearCenter = document.getElementById('yearCenter');
             yearVal = document.getElementById('yearVal');
             
-            // 1. 월 원형 배치 (12시 방향부터 1월 시작)
+            document.addEventListener('pointerdown', (e) => {
+                if (filterWidget && filterWidget.classList.contains('open')) {
+                    if (!filterWidget.contains(e.target)) {
+                        filterWidget.classList.remove('open');
+                        filterDial.classList.remove('year-expanded'); 
+                    }
+                }
+            });
+
             for(let i=1; i<=12; i++) {
                 const btn = document.createElement('div');
                 btn.className = 'month-btn';
                 btn.innerText = i + '월';
                 btn.dataset.val = (i < 10 ? '0'+i : i.toString());
                 
-                // 각도 계산 (1월을 맨 위 -90도로 설정)
                 const angle = (i - 1 - 3) * 30 * (Math.PI / 180);
-                const radius = 100; // 원형 궤도 반지름
+                const radius = 100;
                 const x = Math.cos(angle) * radius;
                 const y = Math.sin(angle) * radius;
                 
@@ -429,7 +449,6 @@
                 monthBtns.push(btn);
             }
 
-            // 2. FAB 버튼 드래그 및 터치
             let fwStartX, fwStartY, fwInitLeft, fwInitTop;
             let isFwDragging = false, fwDragTimer = null;
             
@@ -439,7 +458,6 @@
                 fwInitLeft = rect.left; fwInitTop = rect.top;
                 isFwDragging = false;
                 
-                // 꾹 누르면(400ms) 드래그 모드
                 fwDragTimer = setTimeout(() => {
                     isFwDragging = true;
                     filterFab.style.transform = 'scale(1.1)';
@@ -449,7 +467,7 @@
 
             filterFab.addEventListener('touchmove', (e) => {
                 if (isFwDragging) {
-                    e.preventDefault(); // 화면 스크롤 방지
+                    e.preventDefault(); 
                     let dx = e.touches[0].clientX - fwStartX;
                     let dy = e.touches[0].clientY - fwStartY;
                     filterWidget.style.right = 'auto'; 
@@ -459,7 +477,7 @@
                 } else {
                     let dx = Math.abs(e.touches[0].clientX - fwStartX);
                     let dy = Math.abs(e.touches[0].clientY - fwStartY);
-                    if (dx > 10 || dy > 10) clearTimeout(fwDragTimer); // 움직이면 롱탭 취소
+                    if (dx > 10 || dy > 10) clearTimeout(fwDragTimer); 
                 }
             }, {passive: false});
 
@@ -468,12 +486,13 @@
                 filterFab.style.transform = '';
                 filterFab.style.background = '';
                 if (!isFwDragging) {
-                    // 드래그가 아니었다면 클릭으로 간주하여 서랍 열기
                     filterWidget.classList.toggle('open');
+                    if (!filterWidget.classList.contains('open')) {
+                        filterDial.classList.remove('year-expanded');
+                    }
                 }
             });
 
-            // 3. 다이얼 위에서 원형 스와이프 시 월 선택
             filterDial.addEventListener('touchmove', (e) => {
                 if(!filterWidget.classList.contains('open')) return;
                 
@@ -484,12 +503,10 @@
                 const dx = touch.clientX - cx;
                 const dy = touch.clientY - cy;
                 
-                // 중앙(년도)을 제외한 바깥쪽 테두리 영역에서만 월 스와이프 감지
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 if (dist > 60 && dist < 140) {
                     e.preventDefault();
-                    let angle = Math.atan2(dy, dx) * (180 / Math.PI); // -180 ~ 180도
-                    // 각도를 1~12월로 변환 (-90도가 1월)
+                    let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                     let month = Math.round((angle + 90) / 30) + 1;
                     if (month <= 0) month += 12;
                     if (month > 12) month -= 12;
@@ -497,21 +514,33 @@
                 }
             }, {passive: false});
 
-            // 4. 중앙 년도 위아래 스와이프
-            let yearStartY = 0, yearInitIndex = 0;
-            yearCenter.addEventListener('touchstart', (e) => {
-                e.stopPropagation();
-                yearStartY = e.touches[0].clientY;
-                yearInitIndex = currentYearIndex;
-            }, {passive: true});
+            let isYearDragging = false;
+            let hasSwipedYear = false;
+            let yearPointerStartY = 0;
+            let yearInitIndex = 0;
             
-            yearCenter.addEventListener('touchmove', (e) => {
-                e.stopPropagation(); e.preventDefault();
-                const dy = e.touches[0].clientY - yearStartY;
+            yearCenter.addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                isYearDragging = true;
+                hasSwipedYear = false; 
+                yearPointerStartY = e.clientY;
+                yearInitIndex = currentYearIndex;
+                yearCenter.setPointerCapture(e.pointerId);
+            });
+            
+            yearCenter.addEventListener('pointermove', (e) => {
+                if (!isYearDragging) return;
+                e.stopPropagation(); 
+                e.preventDefault();
                 
-                // 20px 움직일 때마다 1년씩 변경
-                let steps = Math.floor(dy / 20);
-                let newIndex = yearInitIndex - steps; 
+                const dy = e.clientY - yearPointerStartY;
+                
+                if (Math.abs(dy) > 10) {
+                    hasSwipedYear = true;
+                }
+                
+                let steps = Math.round(-dy / 25);
+                let newIndex = yearInitIndex + steps; 
                 
                 if(newIndex < 0) newIndex = 0;
                 if(newIndex >= yearsList.length) newIndex = yearsList.length - 1;
@@ -522,11 +551,24 @@
                     yearVal.innerText = selectedFilterYear === 'all' ? '전체' : selectedFilterYear;
                     applyDateFilter();
                 }
-            }, {passive: false});
+            });
+            
+            yearCenter.addEventListener('pointerup', (e) => {
+                isYearDragging = false;
+                yearCenter.releasePointerCapture(e.pointerId);
+                
+                if (!hasSwipedYear) {
+                    filterDial.classList.toggle('year-expanded');
+                } else {
+                    if (filterDial.classList.contains('year-expanded')) {
+                        filterDial.classList.remove('year-expanded');
+                    }
+                }
+            });
         }
 
         function selectMonth(val) {
-            if(selectedFilterMonth === val) return; // 이미 선택됨
+            if(selectedFilterMonth === val) return; 
             selectedFilterMonth = val;
             
             monthBtns.forEach(btn => {
@@ -536,20 +578,6 @@
             
             applyDateFilter();
         }
-
-        window.resetFilters = function(e) {
-            if(e) e.stopPropagation();
-            currentYearIndex = 0;
-            selectedFilterYear = 'all';
-            if(yearVal) yearVal.innerText = '전체';
-            
-            selectedFilterMonth = 'all';
-            monthBtns.forEach(b => b.classList.remove('active'));
-            
-            applyDateFilter();
-            if(filterWidget) filterWidget.classList.remove('open');
-        }
-
 
         let db;
         function initDB() {
@@ -563,7 +591,6 @@
                     db = e.target.result; 
                     loadSavedRecords(); 
                 };
-                // 💡 DB 차단 시 무한 로딩 방지 패치
                 request.onerror = function(e) {
                     console.error("IndexedDB error", e);
                     alert("시크릿 모드 등으로 인해 데이터베이스 접근이 차단되었습니다.\n일부 기능이 제한된 상태로 시작합니다.");
@@ -786,7 +813,6 @@
             });
         }
 
-        // 💡 필터 조건에 맞게 마커 효과 업데이트
         function applyDateFilter() {
             const filterActive = (selectedFilterYear !== 'all' || selectedFilterMonth !== 'all');
 
@@ -820,9 +846,8 @@
                     domElement.classList.remove('dim-marker');
                     domElement.classList.add('highlight-marker');
                     
-                    // 필터 시 톡 튀어오르는 애니메이션 리플레이 트리거
                     domElement.classList.remove('pop-animation');
-                    void domElement.offsetWidth; // reflow 강제 발생 (애니메이션 재시작을 위해)
+                    void domElement.offsetWidth; 
                     domElement.classList.add('pop-animation');
                     
                     if (tooltipElement) tooltipElement.classList.add('highlight-marker-tooltip');
