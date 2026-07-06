@@ -86,13 +86,11 @@
         @keyframes popFinish { 0% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(76,175,80,0)); } 50% { transform: scale(1.15); color: #FFEB3B; filter: drop-shadow(0 0 25px rgba(255,235,59,0.8)); } 100% { transform: scale(1); color: #ffffff; filter: drop-shadow(0 0 10px rgba(76,175,80,0.8)); } }
         .pop-effect { animation: popFinish 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 
-        /* 💡 자물쇠 휠(달력) UI 패널 */
+        /* 자물쇠 휠(달력) UI 패널 */
         #calendarDrawer {
-            position: fixed; right: -230px; 
-            top: 0; width: 230px; height: 100vh;
+            position: fixed; right: -230px; top: 0; width: 230px; height: 100vh;
             pointer-events: none; z-index: 1000;
         }
-        
         .drawer-content {
             position: absolute; right: 0; top: 15vh; width: 230px;
             background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
@@ -103,7 +101,6 @@
         }
         #calendarDrawer.open .drawer-content { transform: translateX(0); }
         
-        /* 💡 기록필터 탭 (터치/드래그 모두 원활하게) */
         #calendarHandle {
             position: absolute; left: -38px; top: 15vh; 
             width: 38px; height: 110px; background: #2E7D32; color: white;
@@ -111,7 +108,7 @@
             box-shadow: -3px 0 10px rgba(0,0,0,0.15); cursor: pointer; pointer-events: auto;
             writing-mode: vertical-rl; text-orientation: upright; font-weight: bold; font-size: 0.95em; 
             letter-spacing: 3px; padding: 10px 0; user-select: none; transition: background 0.2s, transform 0.1s;
-            touch-action: none; /* 브라우저 기본 스크롤 방지 */
+            touch-action: none; /* 브라우저 기본 드래그 방지 */
         }
 
         .picker-container { display: flex; gap: 2px; height: 150px; position: relative; margin-top: 15px; background: #f0f0f0; border-radius: 12px; overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1); }
@@ -160,6 +157,7 @@
         .edit-btn { background: #1976D2; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 0.8em; font-weight: bold; cursor: pointer; }
         .delete-btn { background: #d32f2f; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 0.8em; font-weight: bold; cursor: pointer; }
 
+        /* 사진 확대 오버레이 */
         #photoOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
         #photoOverlay.show { opacity: 1; visibility: visible; }
         #expandedPhoto { max-width: 90%; max-height: 80%; object-fit: contain; border-radius: 4px; user-select: none; }
@@ -172,7 +170,6 @@
 </head>
 <body>
 
-    <!-- 1. 메인 스플래시 화면 -->
     <div id="splash">
         <div class="splash-content">
             <h1 class="splash-title">나의 등산기</h1>
@@ -186,7 +183,6 @@
         </div>
     </div>
 
-    <!-- 사진 확대 오버레이 -->
     <div id="photoOverlay" onclick="closePhoto(event)">
         <span class="close-btn" onclick="closePhoto(event)">×</span>
         <span class="nav-btn prev" onclick="changePhoto(-1, event)">&#10094;</span>
@@ -195,7 +191,6 @@
         <div class="photo-counter" id="photoCounter">1 / 1</div>
     </div>
 
-    <!-- 2. 자물쇠 휠 캘린더 드로어 & 자유 이동 손잡이 -->
     <div id="calendarDrawer">
         <div id="calendarHandle">기록필터</div>
         
@@ -218,10 +213,8 @@
         </div>
     </div>
 
-    <!-- 3. 지도 영역 -->
     <div id="map"></div>
 
-    <!-- 4. 사이드바 (기록 창) -->
     <div id="sidebar" class="hidden collapsed">
         <div id="dragHandle">
             <div class="bar"></div>
@@ -231,8 +224,8 @@
         <div id="sidebarContent">
             <h2>🏔️ 나의 등산기</h2>
             <div class="instruction">
-                <b>💡 꿀팁:</b> 지도의 빈 공간을 **두 번 연속 터치(다닥!)**하면 언제든 <b>한국 전체 지도</b>가 보이며 기록창이 최소화됩니다.<br>
-                <b>💡 꿀팁:</b> 우측 <b>[기록필터] 탭을 꾹~ 길게 누르면</b> 위아래 원하는 곳으로 자유롭게 이동시킬 수 있어요!
+                <b>💡 꿀팁:</b> 지도의 빈 공간을 **두 번 연속 터치(다닥!)**하면 언제든 <b>한국 전체 지도</b>가 보입니다.<br>
+                <b>💡 꿀팁:</b> 우측 <b>[기록필터] 탭을 터치하거나 왼쪽으로 스와이프</b>하면 창이 열립니다. 길게 누르면 위아래로 이동할 수 있어요!
             </div>
 
             <label for="mountainInput">1. 산 이름 검색</label>
@@ -296,6 +289,7 @@
         let selectedFilterMonth = 'all';
 
         window.addEventListener('load', () => {
+            // 더블 클릭 줌을 끄지만, dblclick 이벤트 자체는 살아있도록 설정
             map = L.map('map', { zoomControl: false, doubleClickZoom: false }).setView([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7);
             L.control.zoom({ position: 'topright' }).addTo(map);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
@@ -307,22 +301,9 @@
                 iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36], tooltipAnchor: [0, -36]
             });
 
+            // 💡 [핵심 수정] 핀치 줌을 방해하던 커스텀 터치 코드를 전부 지우고, 
+            // Leaflet에 내장된 'dblclick(더블클릭/더블탭)' 이벤트를 직접 활용하여 완벽하게 해결!
             map.on('dblclick', resetMapToDefault);
-            
-         let lastTapTime = 0;
-            document.getElementById('map').addEventListener('touchstart', function(e) {
-                // 💡 두 손가락 이상 터치(확대/축소 등 멀티터치 제스처)일 때는 더블터치 로직을 즉시 패스합니다.
-                if (e.touches.length > 1) return;
-
-                const currentTime = new Date().getTime();
-                const tapLength = currentTime - lastTapTime;
-                
-                if (tapLength < 350 && tapLength > 0) {
-                    resetMapToDefault();
-                    e.preventDefault(); 
-                }
-                lastTapTime = currentTime;
-            }, {passive: false});
 
             generateWheelItems();
             initDB();
@@ -374,21 +355,27 @@
             else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
         }
 
-        // 💡 기록 필터 탭 (터치 & 드래그 버그 수정 완료)
+        // 💡 [핵심 수정] 기록 필터 탭: 클릭(탭) / 왼쪽 스와이프 / 길게 눌러 드래그 완벽 분리
         const filterHandle = document.getElementById('calendarHandle');
-        let isDraggingTab = false;
         let pressTimer;
-        let initialY = 0;
+        let tabStartX = 0, tabStartY = 0;
         let initialTop = 0;
+        let isDraggingTab = false;
+        let hasMovedTab = false;
 
+        // 마우스와 터치를 모두 안정적으로 지원하는 Pointer Event 사용
         filterHandle.addEventListener('pointerdown', (e) => {
-            isDraggingTab = false;
-            initialY = e.clientY;
+            if (!e.isPrimary) return;
+            tabStartX = e.clientX;
+            tabStartY = e.clientY;
             const style = window.getComputedStyle(filterHandle);
             initialTop = parseInt(style.top, 10);
             
-            filterHandle.setPointerCapture(e.pointerId); 
-            
+            isDraggingTab = false;
+            hasMovedTab = false;
+            filterHandle.setPointerCapture(e.pointerId);
+
+            // 0.3초 누르고 있으면 드래그 모드 활성화
             pressTimer = setTimeout(() => {
                 isDraggingTab = true;
                 filterHandle.style.background = '#1b5e20'; 
@@ -397,41 +384,47 @@
         });
 
         filterHandle.addEventListener('pointermove', (e) => {
-            if (!isDraggingTab) {
-                // 살짝 움직이면 단순 탭으로 간주하고 타이머 취소
-                if (Math.abs(e.clientY - initialY) > 10) clearTimeout(pressTimer);
-                return;
+            if (!e.isPrimary) return;
+            let diffX = tabStartX - e.clientX;
+            let diffY = Math.abs(tabStartY - e.clientY);
+
+            // 조금이라도 움직이면 "움직임" 상태로 판정
+            if (diffX > 10 || diffY > 10) hasMovedTab = true;
+
+            if (isDraggingTab) {
+                e.preventDefault(); 
+                let newTop = initialTop + (e.clientY - tabStartY);
+                if (newTop < 50) newTop = 50;
+                if (newTop > window.innerHeight - 150) newTop = window.innerHeight - 150;
+                filterHandle.style.top = newTop + 'px';
+            } else {
+                // 길게 누르기 전에 움직였다면 타이머 취소
+                if (hasMovedTab) clearTimeout(pressTimer);
             }
-            e.preventDefault(); 
-            let deltaY = e.clientY - initialY;
-            let newTop = initialTop + deltaY;
-            
-            if (newTop < 50) newTop = 50;
-            if (newTop > window.innerHeight - 150) newTop = window.innerHeight - 150;
-            filterHandle.style.top = newTop + 'px';
         });
 
         filterHandle.addEventListener('pointerup', (e) => {
+            if (!e.isPrimary) return;
             clearTimeout(pressTimer);
             filterHandle.releasePointerCapture(e.pointerId);
-            
+
+            let diffX = tabStartX - e.clientX; // 양수면 왼쪽으로 스와이프한 것
+
             if (isDraggingTab) {
+                // 드래그 종료 시
                 setTimeout(() => { isDraggingTab = false; }, 100); 
                 filterHandle.style.background = '#2E7D32';
                 filterHandle.style.transform = 'scale(1)';
             } else {
-                // 단순 클릭 시 열림/닫힘 작동
-                document.getElementById('calendarDrawer').classList.toggle('open');
+                // 왼쪽으로 30px 이상 밀었으면 (스와이프)
+                if (diffX > 30) {
+                    document.getElementById('calendarDrawer').classList.add('open');
+                } 
+                // 움직임이 거의 없었다면 단순 터치(클릭)로 간주하여 토글(열림/닫힘)
+                else if (!hasMovedTab) {
+                    document.getElementById('calendarDrawer').classList.toggle('open');
+                }
             }
-        });
-
-        let bodyStartX = 0;
-        document.body.addEventListener('touchstart', e => { bodyStartX = e.touches[0].clientX; }, {passive: true});
-        document.body.addEventListener('touchend', e => {
-            const diffX = bodyStartX - e.changedTouches[0].clientX;
-            const drawer = document.getElementById('calendarDrawer');
-            if (bodyStartX > window.innerWidth - 50 && diffX > 40) drawer.classList.add('open');
-            if (diffX < -40 && drawer.classList.contains('open')) drawer.classList.remove('open');
         });
 
         function generateWheelItems() {
