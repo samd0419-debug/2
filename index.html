@@ -59,8 +59,8 @@
         #dragHandle .bar { width: 50px; height: 6px; background: #ccc; border-radius: 5px; margin-top: 10px; }
         #dragHandle .drag-text { font-size: 0.75em; color: #999; font-weight: bold; margin-top: 5px; margin-bottom: 5px; }
         
-        /* 하단 끝까지 스크롤되도록 padding-bottom 대폭 증가 및 touch-action 변경 */
-        #sidebarContent { flex: 1; overflow-y: auto; padding: 0 20px 100px 20px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+        /* 💡 리스트 끝까지 내려가도록 padding-bottom 150px로 대폭 증가 */
+        #sidebarContent { flex: 1; overflow-y: auto; padding: 0 20px 150px 20px; padding-bottom: calc(150px + env(safe-area-inset-bottom)); overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 
         .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
@@ -94,7 +94,7 @@
         .m100-item:hover { background: #f9f9f9; }
         .m100-item-content { flex: 1; }
         .m100-name { font-weight: bold; color: #333; font-size: 1.1em; }
-        .m100-desc { font-size: 0.85em; color: #666; margin-top: 5px; }
+        .m100-desc { font-size: 0.85em; color: #666; margin-top: 5px; line-height: 1.4; }
 
         /* 핀 애니메이션 및 마커 */
         @keyframes dropIn { 0% { transform: translateY(-50px) scale(0.5); opacity: 0; } 60% { transform: translateY(10px) scale(1.1); opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
@@ -139,7 +139,7 @@
         .btn-backup { background: #607D8B; } .btn-restore { background: #795548; }
         .total-alt-banner { background: #e8f5e9; border: 2px solid #4CAF50; border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 15px; color: #2E7D32; font-weight: bold; font-size: 1.1em; }
 
-        /* 사진 다중 슬라이더(캐러셀) 스타일 */
+        /* 사진 다중 슬라이더(팝업 캐러셀) 스타일 */
         .carousel { position: relative; width: 100%; max-width: 200px; margin: 10px auto; overflow: hidden; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .carousel-inner { display: flex; transition: transform 0.3s ease-in-out; }
         .carousel-item { min-width: 100%; box-sizing: border-box; }
@@ -251,8 +251,12 @@
         </div>
     </div>
 
-    <div id="photoOverlay" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); z-index:10000; display:none; justify-content:center; align-items:center;" onclick="this.style.display='none'">
-        <img id="expandedPhoto" src="" style="max-width:90%; max-height:80%; object-fit:contain; border-radius:4px;">
+    <div id="photoOverlay" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); z-index:10000; display:none; justify-content:center; align-items:center;">
+        <div id="photoNavLeft" style="position:absolute; left:10px; color:white; font-size:2.5em; z-index:10001; padding:20px; cursor:pointer;" onclick="prevPhoto(event)">&#10094;</div>
+        <img id="expandedPhoto" src="" style="max-width:90%; max-height:80%; object-fit:contain; border-radius:4px; transition: transform 0.3s ease;">
+        <div id="photoNavRight" style="position:absolute; right:10px; color:white; font-size:2.5em; z-index:10001; padding:20px; cursor:pointer;" onclick="nextPhoto(event)">&#10095;</div>
+        <div id="photoClose" style="position:absolute; top:20px; right:20px; color:white; font-size:3em; z-index:10001; padding:10px; cursor:pointer; line-height:1;" onclick="closePhotoOverlay(event)">&times;</div>
+        <div id="photoIndicator" style="position:absolute; bottom:30px; color:white; font-size:1.2em; font-weight:bold; z-index:10001; background:rgba(0,0,0,0.5); padding:5px 15px; border-radius:15px;"></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -590,7 +594,6 @@
                 group.climbs.forEach(c => {
                     popupContent += `<div style="font-size:0.9em; margin-bottom:5px; color:#555;">📅 ${c.date}</div>`;
                     
-                    // 사진 다중 슬라이더(Carousel) 적용
                     if (c.photos && c.photos.length > 0) {
                         const carouselId = 'carousel_' + Math.random().toString(36).substr(2, 9);
                         popupContent += `<div class="carousel" id="${carouselId}">`;
@@ -601,7 +604,6 @@
                         });
                         popupContent += `</div>`;
                         
-                        // 사진이 여러장일 때만 양옆 버튼과 도트 표시
                         if (c.photos.length > 1) {
                             popupContent += `<button class="carousel-control prev" onclick="moveCarousel('${carouselId}', -1, event)">&#10094;</button>`;
                             popupContent += `<button class="carousel-control next" onclick="moveCarousel('${carouselId}', 1, event)">&#10095;</button>`;
@@ -625,7 +627,6 @@
             renderRecordList();
         }
 
-        // 캐러셀 좌우 이동 제어 함수
         window.moveCarousel = function(id, dir, event) {
             if(event) event.stopPropagation();
             const state = window[`state_${id}`];
@@ -645,23 +646,25 @@
             }
         };
 
-        // 내 기록 리스트 렌더링 및 핀 연동
         function renderRecordList() {
             document.getElementById('recordList').innerHTML = '';
             
             allRecords.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(data => {
                 const div = document.createElement('div'); div.className = 'record-card';
                 
-                // 산 탭시 지도 이동 및 핀 팝업 표출 연동
+                // 💡 내기록에서 리스트 선택 시 하단 창이 자동으로 최소화 창으로 변경
                 div.onclick = () => { 
                     openTab('tabMyLog'); 
                     map.flyTo([data.lat, data.lng], 14, {animate: true}); 
                     
+                    currentSidebarState = 0; 
+                    updateSidebarState();
+
                     const key = `${parseFloat(data.lat).toFixed(4)},${parseFloat(data.lng).toFixed(4)}`;
                     if(groupedMarkers[key]) {
                         setTimeout(() => {
                             groupedMarkers[key].marker.openPopup();
-                        }, 500); // 지도 이동(flyTo) 애니메이션 대기 후 팝업
+                        }, 500);
                     }
                 };
                 
@@ -734,19 +737,33 @@
                     matchedRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
                     let latest = matchedRecords[0];
                     
-                    marker.bindPopup(`<div style="text-align:center;"><b>🏆 ${m.name} (완등)</b><br><span style="color:#FF8F00; font-weight:bold;">최근 등반: ${latest.date}</span></div>`);
+                    // 💡 도전 100 팝업에 지역과 고도, 등반일자 표시
+                    marker.bindPopup(`<div style="text-align:center;">
+                        <b style="font-size:1.1em;">🏆 ${m.name} (완등)</b><br>
+                        <span style="color:#1565C0; font-size:0.9em;">${m.region} | ${m.alt}m</span><br>
+                        <hr style="margin:5px 0;">
+                        <span style="color:#FF8F00; font-weight:bold;">최근 등반: ${latest.date}</span>
+                    </div>`);
                     climbedCount++;
                     
                     const li = document.createElement('li'); li.className = 'm100-item';
+                    
+                    // 💡 도전 100 리스트에 지역과 고도 표시
                     li.innerHTML = `
                         <div class="m100-item-content">
                             <div class="m100-name">${m.name} <span style="font-size:0.7em; color:#FF8F00; vertical-align:middle;">🏆</span></div>
-                            <div class="m100-desc">📅 ${latest.date}</div>
+                            <div class="m100-desc">${m.region} | ${m.alt}m <br>📅 ${latest.date}</div>
                         </div>`;
                     li.onclick = () => { map.flyTo([m.lat, m.lng], 13); marker.openPopup(); currentSidebarState = 0; updateSidebarState(); };
                     list.appendChild(li);
                 } else {
-                    marker.bindPopup(`<div style="text-align:center;"><b>🇰🇷 ${m.name}</b><br><span style="color:#777;">아직 등반하지 않은 명산입니다.</span></div>`);
+                    // 💡 미등반 산 정보에도 지역과 고도 표시
+                    marker.bindPopup(`<div style="text-align:center;">
+                        <b style="font-size:1.1em;">🇰🇷 ${m.name}</b><br>
+                        <span style="color:#666; font-size:0.9em;">${m.region} | ${m.alt}m</span><br>
+                        <hr style="margin:5px 0;">
+                        <span style="color:#777;">아직 등반하지 않은 명산입니다.</span>
+                    </div>`);
                 }
                 marker.on('click', () => { map.flyTo([m.lat, m.lng], 13); });
             });
@@ -822,6 +839,73 @@
             openTab('tabMyLog'); currentSidebarState = 2; updateSidebarState();
         }
 
+        /* ---------------- 💡 전체 사진 갤러리 슬라이드 및 스와이프 제어 ---------------- */
+        let carouselPhotosArr = [];
+        let currentCarouselIndex = 0;
+
+        window.openCarousel = function(encodedPhotos, startIndex, event) {
+            if(event) event.stopPropagation(); 
+            carouselPhotosArr = JSON.parse(decodeURIComponent(encodedPhotos));
+            currentCarouselIndex = startIndex;
+            updateCarouselPhoto();
+            document.getElementById('photoOverlay').style.display = 'flex';
+        }
+
+        window.updateCarouselPhoto = function() {
+            document.getElementById('expandedPhoto').src = carouselPhotosArr[currentCarouselIndex];
+            
+            const indicator = document.getElementById('photoIndicator');
+            if(indicator) indicator.innerText = (currentCarouselIndex + 1) + " / " + carouselPhotosArr.length;
+            
+            const btnLeft = document.getElementById('photoNavLeft');
+            const btnRight = document.getElementById('photoNavRight');
+            if(btnLeft) btnLeft.style.display = currentCarouselIndex > 0 ? 'block' : 'none';
+            if(btnRight) btnRight.style.display = currentCarouselIndex < carouselPhotosArr.length - 1 ? 'block' : 'none';
+        }
+
+        window.nextPhoto = function(e) {
+            if(e) e.stopPropagation();
+            if (currentCarouselIndex < carouselPhotosArr.length - 1) {
+                currentCarouselIndex++;
+                updateCarouselPhoto();
+            }
+        }
+
+        window.prevPhoto = function(e) {
+            if(e) e.stopPropagation();
+            if (currentCarouselIndex > 0) {
+                currentCarouselIndex--;
+                updateCarouselPhoto();
+            }
+        }
+
+        window.closePhotoOverlay = function(e) {
+            if(e) e.stopPropagation();
+            document.getElementById('photoOverlay').style.display = 'none';
+        }
+
+        // 터치 스와이프 기능
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const photoOverlayEl = document.getElementById('photoOverlay');
+        
+        photoOverlayEl.addEventListener('touchstart', e => { 
+            touchStartX = e.changedTouches[0].screenX; 
+        }, {passive: true});
+        
+        photoOverlayEl.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            if (touchEndX < touchStartX - 40) window.nextPhoto(); // 왼쪽으로 밀면 다음 사진
+            if (touchEndX > touchStartX + 40) window.prevPhoto(); // 오른쪽으로 밀면 이전 사진
+        }, {passive: true});
+        
+        // 배경 클릭 시 닫기
+        photoOverlayEl.addEventListener('click', e => {
+            if(e.target === photoOverlayEl) window.closePhotoOverlay();
+        });
+
+
+        /* ---------------- 데이터 등록, 수정 ---------------- */
         function resizeImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -833,11 +917,6 @@
                     }; img.src = e.target.result;
                 }; reader.readAsDataURL(file);
             });
-        }
-
-        window.openCarousel = function(encodedPhotos, startIndex, event) {
-            if(event) event.stopPropagation(); let carouselPhotos = JSON.parse(decodeURIComponent(encodedPhotos));
-            document.getElementById('expandedPhoto').src = carouselPhotos[startIndex]; document.getElementById('photoOverlay').style.display = 'flex';
         }
 
         window.editRecord = function(id, event) {
