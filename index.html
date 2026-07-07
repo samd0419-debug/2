@@ -8,23 +8,16 @@
     <meta name="theme-color" content="#2E7D32">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="manifest" href="manifest.json">
     <title>나의 등산기</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
-            });
-        }
-    </script>
-
     <style>
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        input, textarea { user-select: auto; -webkit-user-select: auto; }
+        
         body { 
-            margin: 0; display: flex; height: 100vh; font-family: 'Malgun Gothic', sans-serif; 
+            margin: 0; display: flex; height: 100vh; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; 
             background-color: #f4f6f8; flex-direction: row; overflow: hidden; 
             overscroll-behavior: none; touch-action: pan-x pan-y;
         }
@@ -34,9 +27,9 @@
         #sidebar { 
             flex: 1; min-width: 340px; max-width: 420px; background: #ffffff; 
             box-shadow: -2px 0 15px rgba(0,0,0,0.1); z-index: 2; display: flex; flex-direction: column;
-            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); 
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); 
         }
-        #sidebar.hidden { transform: translateX(100%) !important; }
+        #sidebar.hidden { transform: translateX(100%) !important; opacity: 0; pointer-events: none; }
         #dragHandle { display: none; }
         #sidebarContent { flex: 1; overflow-y: auto; padding: 24px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 
@@ -46,173 +39,164 @@
             #sidebar { 
                 position: fixed; bottom: 0; left: 0; width: 100%; height: 85vh; 
                 max-width: 100%; border-radius: 20px 20px 0 0; background: #fff;
-                transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+                transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
                 z-index: 999;
             }
             
-            #sidebar.hidden { transform: translateY(100vh) !important; }
-            #sidebar.collapsed { transform: translateY(calc(100% - 90px - env(safe-area-inset-bottom))); } 
-            #sidebar.half { transform: translateY(45%); } 
-            #sidebar.full { transform: translateY(0); } 
+            #sidebar.hidden { transform: translateY(100vh) !important; opacity: 0; }
+            #sidebar.collapsed { transform: translateY(calc(100% - 90px - env(safe-area-inset-bottom))); opacity: 1;} 
+            #sidebar.half { transform: translateY(45%); opacity: 1;} 
+            #sidebar.full { transform: translateY(0); opacity: 1;} 
 
             #dragHandle {
                 display: flex; flex-direction: column; align-items: center; justify-content: center;
                 height: 65px; width: 100%; border-radius: 20px 20px 0 0; background: #fff;
-                box-shadow: 0 -2px 10px rgba(0,0,0,0.05); cursor: grab; z-index: 10;
-                touch-action: none; 
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.05); cursor: grab; z-index: 10; touch-action: none; 
             }
             #dragHandle .bar { width: 50px; height: 6px; background: #ccc; border-radius: 5px; margin-bottom: 8px; }
             #dragHandle .drag-text { font-size: 0.8em; color: #777; font-weight: bold; }
-            
             #sidebarContent { padding: 0 16px 24px 16px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
         }
 
         #splash { position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999; background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&q=80') no-repeat center center/cover; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; cursor: pointer; }
-        #splash::before { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); }
+        #splash::before { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); }
         .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1s cubic-bezier(0.2, 0.8, 0.2, 1); width: 100%; }
-        .splash-title { font-size: 3.5rem; margin: 0; font-weight: 900; letter-spacing: -2px; white-space: nowrap; text-shadow: 2px 4px 15px rgba(0,0,0,0.6); border-bottom: 4px solid #4CAF50; padding-bottom: 10px; }
-        @media (max-width: 768px) { .splash-title { font-size: 3.2rem; } }
-        /* 💡 영문으로 변경된 간결한 서브타이틀 */
-        .splash-subtitle { font-size: 1.4rem; margin-top: 15px; font-weight: 500; letter-spacing: 1.5px; text-shadow: 1px 2px 5px rgba(0,0,0,0.5); }
+        .splash-title { font-size: 3.8rem; margin: 0; font-weight: 800; letter-spacing: -3px; white-space: nowrap; text-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .splash-subtitle { font-size: 1.1rem; margin-top: 5px; font-weight: 300; letter-spacing: 6px; color: #e8f5e9; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        @media (max-width: 768px) { .splash-title { font-size: 3.2rem; } .splash-subtitle { font-size: 0.95rem; letter-spacing: 4px; } }
         
         #splashCounterContainer { opacity: 0; transform: translateY(20px); margin-top: 40px; text-align: center; transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
         #splashCounterContainer.show { opacity: 1; transform: translateY(0); }
-        .splash-alt-label { font-size: 1.1rem; color: #A5D6A7; font-weight: bold; margin-bottom: 5px; text-shadow: 1px 2px 4px rgba(0,0,0,0.5); letter-spacing: 1px; }
-        .splash-alt-number { font-size: 4.8rem; font-weight: 900; color: #ffffff; letter-spacing: -3px; text-shadow: 2px 4px 15px rgba(0,0,0,0.6); display: inline-block; }
+        .splash-alt-label { font-size: 1rem; color: #A5D6A7; font-weight: bold; margin-bottom: 5px; text-shadow: 1px 2px 4px rgba(0,0,0,0.5); letter-spacing: 1px; }
+        .splash-alt-number { font-size: 4.5rem; font-weight: 900; color: #ffffff; letter-spacing: -2px; text-shadow: 2px 4px 15px rgba(0,0,0,0.6); display: inline-block; }
         .splash-alt-unit { font-size: 1.5rem; margin-left: 5px; color: #A5D6A7; font-weight: bold; }
-        .touch-hint { font-size: 1rem; margin-top: 50px; color: #A5D6A7; font-weight: bold; padding: 10px 20px; border-radius: 30px; background: rgba(0,0,0,0.3); border: 1px solid #4CAF50; animation: blinkHint 1.5s infinite; opacity: 0; transition: opacity 0.5s; }
+        .touch-hint { font-size: 0.95rem; margin-top: 50px; color: #A5D6A7; font-weight: bold; padding: 10px 25px; border-radius: 30px; background: rgba(0,0,0,0.3); border: 1px solid rgba(76,175,80,0.5); animation: blinkHint 1.5s infinite; opacity: 0; transition: opacity 0.5s; }
 
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.9) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
         @keyframes blinkHint { 0%, 100% { transform: scale(0.95); opacity: 0.6; } 50% { transform: scale(1.05); opacity: 1; } }
-        @keyframes popFinish { 0% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(76,175,80,0)); } 50% { transform: scale(1.15); color: #FFEB3B; filter: drop-shadow(0 0 25px rgba(255,235,59,0.8)); } 100% { transform: scale(1); color: #ffffff; filter: drop-shadow(0 0 10px rgba(76,175,80,0.8)); } }
-        .pop-effect { animation: popFinish 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 
-        /* 💡 투명 원형 필터 다이얼 UI 패널 */
-        #filterWidget {
-            position: fixed; right: 20px; bottom: 110px; z-index: 1000;
-            touch-action: none;
+        /* 필터 및 위젯 공통 (FAB) */
+        .fab-btn {
+            width: 58px; height: 58px; border-radius: 50%; color: white; font-weight: 900; font-size: 0.8em; letter-spacing: -0.5px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.25); backdrop-filter: blur(5px);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s, background 0.2s; cursor: pointer; position: relative; z-index: 20;
         }
-        
-        #filterFab {
-            width: 58px; height: 58px; border-radius: 50%;
-            background: rgba(46, 125, 50, 0.85); color: white; font-weight: 900; font-size: 0.8em; letter-spacing: -0.5px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.25); backdrop-filter: blur(5px);
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s, background 0.2s;
-            cursor: pointer; user-select: none; position: relative; z-index: 20;
+
+        /* 기본값: 가로화면 (우측 하단) */
+        #filterWidget { position: fixed; right: 20px; bottom: 110px; z-index: 1000; touch-action: none; }
+        #m100Widget { position: fixed; right: 20px; bottom: 180px; z-index: 1000; touch-action: none; }
+        #challengeWidget { position: fixed; right: 20px; bottom: 250px; z-index: 1000; touch-action: none; }
+
+        /* 세로화면: 우측 상단 정렬 */
+        @media (orientation: portrait) {
+            #challengeWidget { top: 20px; bottom: auto; }
+            #m100Widget { top: 90px; bottom: auto; }
+            #filterWidget { top: 160px; bottom: auto; }
         }
-        #filterFab::before { content: '📅'; font-size: 1.4em; margin-bottom: -2px; }
-        
-        #filterWidget.open #filterFab {
-            transform: scale(0); opacity: 0; pointer-events: none;
-        }
+
+        #filterFab { background: rgba(46, 125, 50, 0.85); }
+        #filterFab::before { content: '🔍'; font-size: 1.4em; margin-bottom: -2px; }
+        #filterWidget.open #filterFab { transform: scale(0); opacity: 0; pointer-events: none; }
         
         #filterDial {
-            position: absolute; top: 50%; left: 50%;
-            width: 270px; height: 270px; margin-top: -135px; margin-left: -135px;
-            border-radius: 50%; 
-            background: rgba(255, 255, 255, 0.5); 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3); backdrop-filter: blur(10px);
-            transform: scale(0.1); opacity: 0; pointer-events: none;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
-            z-index: 10;
+            position: absolute; top: 50%; left: 50%; width: 270px; height: 270px; margin-top: -135px; margin-left: -135px; border-radius: 50%; 
+            background: rgba(255, 255, 255, 0.5); box-shadow: 0 10px 40px rgba(0,0,0,0.3); backdrop-filter: blur(10px);
+            transform: scale(0.1); opacity: 0; pointer-events: none; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s; z-index: 10;
         }
-        #filterWidget.open #filterDial {
-            transform: scale(1); opacity: 1; pointer-events: auto;
-        }
-
-        #filterDial.year-expanded .month-btn {
-            opacity: 0 !important;
-            pointer-events: none;
-        }
+        #filterWidget.open #filterDial { transform: scale(1); opacity: 1; pointer-events: auto; }
+        #filterDial.year-expanded .month-btn { opacity: 0 !important; pointer-events: none; }
         
         .month-btn {
-            position: absolute; width: 44px; height: 44px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.95em; font-weight: bold; color: #2E7D32;
-            background: #e8f5e9; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            top: 50%; left: 50%; margin-top: -22px; margin-left: -22px;
-            transition: all 0.3s; cursor: pointer; user-select: none;
+            position: absolute; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.95em; font-weight: bold; color: #2E7D32; background: #e8f5e9; box-shadow: 0 2px 5px rgba(0,0,0,0.1); top: 50%; left: 50%; margin-top: -22px; margin-left: -22px; transition: all 0.3s; cursor: pointer;
         }
-        .month-btn.active {
-            background: #2E7D32; color: white; transform: scale(1.25) !important; box-shadow: 0 4px 12px rgba(46,125,50,0.5);
-        }
+        .month-btn.active { background: #2E7D32; color: white; transform: scale(1.25) !important; box-shadow: 0 4px 12px rgba(46,125,50,0.5); }
         
         .year-center {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 90px; height: 90px; background: white; border-radius: 50%;
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1), 0 4px 15px rgba(0,0,0,0.15);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            cursor: ns-resize; user-select: none; z-index: 10;
-            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90px; height: 90px; background: white; border-radius: 50%;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1), 0 4px 15px rgba(0,0,0,0.15); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: ns-resize; z-index: 10; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s;
         }
-        
-        #filterDial.year-expanded .year-center {
-            transform: translate(-50%, -50%) scale(1.8);
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.05), 0 8px 25px rgba(0,0,0,0.25);
-        }
-
+        #filterDial.year-expanded .year-center { transform: translate(-50%, -50%) scale(1.8); box-shadow: inset 0 2px 10px rgba(0,0,0,0.05), 0 8px 25px rgba(0,0,0,0.25); }
         .year-center::before { content: '▲'; font-size: 10px; color: #aaa; position: absolute; top: 8px; }
         .year-center::after { content: '▼'; font-size: 10px; color: #aaa; position: absolute; bottom: 8px; }
         .year-val { font-size: 1.5em; font-weight: 900; color: #1b5e20; line-height: 1; margin-top: 2px;}
         .year-label { font-size: 0.75em; color: #777; margin-top: 2px; }
 
-        .custom-leaflet-icon { background: transparent; border: none; transition: opacity 0.3s, transform 0.3s; }
-        .pin-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-end; transform-origin: bottom center; }
+        #m100Fab { background: rgba(21, 101, 192, 0.85); font-size: 0.75em; }
+        #m100Fab::before { content: '⛰️'; font-size: 1.6em; margin-bottom: 2px; }
         
-        @keyframes dropBounce { 0% { transform: translateY(-100px); opacity: 0; } 50% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(-15px); } 100% { transform: translateY(0); } }
-        .drop-marker .pin-wrapper { animation: dropBounce 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-        
-        @keyframes filterPopBounce { 
-            0% { transform: scale(1) translateY(0); } 
-            40% { transform: scale(1.5) translateY(-25px); filter: drop-shadow(0 15px 15px rgba(255,235,59,0.8)); } 
-            70% { transform: scale(1.3) translateY(5px); } 
-            100% { transform: scale(1.4) translateY(0); filter: drop-shadow(0 0 12px #FFEB3B); } 
+        #challengeFab { background: rgba(255, 143, 0, 0.9); font-size: 0.75em; }
+        #challengeFab::before { content: '🏆'; font-size: 1.6em; margin-bottom: 2px; }
+
+        /* 공통 우측 패널 */
+        .side-panel {
+            position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+            transition: right 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 1000; display: flex; flex-direction: column; box-shadow: -5px 0 25px rgba(0,0,0,0.2);
         }
-        .highlight-marker .pin-wrapper svg { transition: all 0.3s; }
-        .pop-animation .pin-wrapper svg { animation: filterPopBounce 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        .side-panel.open { right: 0; }
         
+        .m100-header { padding: 20px; background: #1565C0; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .challenge-header { padding: 20px; background: #FF8F00; color: white; display: flex; justify-content: space-between; align-items: center; }
+        
+        .m100-header h3, .challenge-header h3 { margin: 0; font-size: 1.2em; font-weight: bold; }
+        .close-panel { color: white; font-size: 1.5em; cursor: pointer; padding: 0 10px; }
+        
+        .m100-controls { padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: center; }
+        .m100-btn { background: #E3F2FD; color: #1565C0; border: 1px solid #90CAF9; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.9em; }
+        .m100-btn.active { background: #1565C0; color: white; }
+        
+        .challenge-stats { padding: 15px; text-align: center; font-size: 1.1em; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; background: #FFF8E1; }
+        
+        .m100-list { flex: 1; overflow-y: auto; padding: 0; margin: 0; list-style: none; overscroll-behavior: contain; }
+        .m100-item { padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; transition: background 0.2s; }
+        .m100-item:hover { background: #f5f5f5; }
+        
+        .m100-thumb { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; margin-right: 12px; flex-shrink: 0; background: #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .m100-item-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .m100-name { font-weight: bold; color: #333; font-size: 1.05em; }
+        .m100-desc { font-size: 0.8em; color: #666; margin-top: 3px; }
+        .m100-alt { font-weight: bold; color: #1565C0; font-size: 0.9em; margin-left: 10px; white-space: nowrap; }
+
+        /* 마커 효과 */
+        .pin-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-end; transform-origin: bottom center; }
+        .highlight-marker .pin-wrapper svg { transition: all 0.3s; transform: scale(1.4); filter: drop-shadow(0 0 10px rgba(255,235,59,0.8)); }
         .highlight-marker .pin-wrapper path { fill: #D32F2F; stroke: #FFEB3B; stroke-width: 2px; }
         .dim-marker { opacity: 0.2 !important; filter: grayscale(100%); transition: all 0.3s; }
         
+        @keyframes challengeGlow { 0% { filter: drop-shadow(0 0 8px rgba(255, 143, 0, 0.6)); transform: scale(1.3); } 50% { filter: drop-shadow(0 0 18px rgba(255, 143, 0, 1)); transform: scale(1.5); } 100% { filter: drop-shadow(0 0 8px rgba(255, 143, 0, 0.6)); transform: scale(1.3); } }
+        .challenge-climbed .pin-wrapper svg { animation: challengeGlow 2s infinite; }
+        .challenge-climbed .pin-wrapper path { fill: #FF8F00 !important; stroke: #FFF8E1 !important; stroke-width: 2px; }
+        
         .leaflet-tooltip.mountain-label { background: rgba(255, 255, 255, 0.95); border: 2px solid #2E7D32; border-radius: 5px; color: #1b5e20; font-weight: bold; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); padding: 4px 8px; }
         .leaflet-tooltip-top:before { border-top-color: #2E7D32; }
-        .highlight-marker-tooltip { background: #FFEB3B !important; border-color: #F57F17 !important; color: #b71c1c !important; transform: scale(1.1); font-size: 14px !important; z-index: 1000 !important; }
-        .highlight-marker-tooltip:before { border-top-color: #F57F17 !important; }
+        
+        .challenge-tooltip { background: #FF8F00 !important; border-color: #E65100 !important; color: white !important; font-size: 14px !important; transform: scale(1.1); z-index: 1000 !important; }
+        .challenge-tooltip:before { border-top-color: #FF8F00 !important; }
 
         h2 { color: #2E7D32; margin-top: 0; font-size: 1.8em; font-weight: 900; letter-spacing: -1px; } 
         .instruction { font-size: 0.85em; color: #555; margin-bottom: 15px; background: #e8f5e9; padding: 12px; border-radius: 6px; border-left: 4px solid #4CAF50;}
         label { font-size: 0.9em; font-weight: bold; color: #333; display: block; margin-top: 14px; margin-bottom: 5px;}
-        input[type="text"], input[type="date"], input[type="file"], input[type="number"] { width: 100%; padding: 11px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; } /* 패딩을 약간 줄여 좁은 화면에서도 글씨가 잘림 방지 */
+        input[type="text"], input[type="date"], input[type="file"], input[type="number"] { width: 100%; padding: 11px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
         .search-wrapper { position: relative; width: 100%; }
         .search-container { display: flex; gap: 6px; }
         .search-btn { padding: 0 18px; background: #2E7D32; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 0.95em; white-space: nowrap; cursor: pointer; }
         #searchResults { position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; list-style: none; padding: 0; margin: 5px 0 0 0; max-height: 180px; overflow-y: auto; border: 2px solid #2E7D32; border-radius: 6px; display: none; background: #fff; box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
         #searchResults li { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
         .save-btn { width: 100%; padding: 14px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); cursor: pointer; transition: 0.2s; }
-        .save-btn.edit-mode { background: #1976D2; }
         
         .photo-gallery { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; padding-bottom: 5px; }
         .photo-gallery img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; cursor: pointer; transition: transform 0.2s; }
-        .leaflet-popup-content .photo-gallery img { width: 75px; height: 75px; }
         
-        .record-card { position: relative; background: #fafafa; padding: 14px; margin-top: 15px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.02); cursor: pointer; transition: background 0.2s; }
-        .record-card:hover { background: #f0f5f1; }
+        .record-card { position: relative; background: #fafafa; padding: 14px; margin-top: 15px; border-radius: 8px; border: 1px solid #eee; cursor: pointer; }
         .record-card h4 { margin: 0 0 5px 0; color: #333; font-size: 1.1em; padding-right: 90px; }
         .record-card p { margin: 0; font-size: 0.85em; color: #666; }
         .action-btns { position: absolute; top: 14px; right: 14px; display: flex; gap: 5px; }
-        .edit-btn { background: #1976D2; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 0.8em; font-weight: bold; cursor: pointer; }
-        .delete-btn { background: #d32f2f; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 0.8em; font-weight: bold; cursor: pointer; }
-
+        .edit-btn, .delete-btn { color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 0.8em; font-weight: bold; cursor: pointer; }
+        .edit-btn { background: #1976D2; } .delete-btn { background: #d32f2f; }
+        
         #photoOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
         #photoOverlay.show { opacity: 1; visibility: visible; }
-        #expandedPhoto { max-width: 90%; max-height: 80%; object-fit: contain; border-radius: 4px; user-select: none; }
-        .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); color: white; font-size: 3rem; cursor: pointer; padding: 20px; user-select: none; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-        .nav-btn.prev { left: 10px; }
-        .nav-btn.next { right: 10px; }
-        .close-btn { position: absolute; top: 20px; right: 20px; color: white; font-size: 2.5rem; cursor: pointer; user-select: none; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-        .photo-counter { position: absolute; bottom: 30px; color: white; font-size: 1.2rem; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; }
+        #expandedPhoto { max-width: 90%; max-height: 80%; object-fit: contain; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -220,9 +204,7 @@
     <div id="splash">
         <div class="splash-content">
             <h1 class="splash-title">나의 등산기</h1>
-            <!-- 💡 변경된 서브타이틀 -->
-            <p class="splash-subtitle">My Hiking Atlas</p>
-            
+            <p class="splash-subtitle">MY HIKING ATLAS</p>
             <div id="splashCounterContainer">
                 <div class="splash-alt-label">🔥 나의 누적 등반 고도</div>
                 <div class="splash-alt-number" id="splashCounter">0</div><span class="splash-alt-unit">m</span>
@@ -231,12 +213,31 @@
         </div>
     </div>
 
-    <div id="photoOverlay" onclick="closePhoto(event)">
-        <span class="close-btn" onclick="closePhoto(event)">×</span>
-        <span class="nav-btn prev" onclick="changePhoto(-1, event)">&#10094;</span>
-        <img id="expandedPhoto" src="">
-        <span class="nav-btn next" onclick="changePhoto(1, event)">&#10095;</span>
-        <div class="photo-counter" id="photoCounter">1 / 1</div>
+    <div id="photoOverlay" onclick="closePhoto(event)"><img id="expandedPhoto" src=""></div>
+
+    <div id="challengeWidget"><div id="challengeFab" class="fab-btn">도전100</div></div>
+    <div id="m100Widget"><div id="m100Fab" class="fab-btn">명산100</div></div>
+    
+    <div id="m100Panel" class="side-panel">
+        <div class="m100-header">
+            <h3>🇰🇷 우리나라 100대 명산</h3>
+            <span class="close-panel" onclick="closeM100Panel()">×</span>
+        </div>
+        <div class="m100-controls">
+            <button class="m100-btn" id="m100ViewAllBtn" onclick="toggleM100All()">지도에 모두 보기</button>
+        </div>
+        <ul class="m100-list" id="m100List"></ul>
+    </div>
+
+    <div id="challengePanel" class="side-panel">
+        <div class="challenge-header">
+            <h3>🏆 나의 도전 100</h3>
+            <span class="close-panel" onclick="closeChallengePanel()">×</span>
+        </div>
+        <div class="challenge-stats">
+            완등 <span id="challengeCount" style="color:#E65100; font-size:1.3em;">0</span> / 100
+        </div>
+        <ul class="m100-list" id="challengeList"></ul>
     </div>
 
     <div id="filterWidget">
@@ -246,24 +247,19 @@
                 <div class="year-label">년도</div>
             </div>
         </div>
-        <div id="filterFab">검색</div>
+        <div id="filterFab" class="fab-btn">검색</div>
     </div>
 
     <div id="map"></div>
 
     <div id="sidebar" class="hidden collapsed">
-        <div id="dragHandle">
-            <div class="bar"></div>
-            <div class="drag-text">쓸어올려서 기록 보기 🔼</div>
-        </div>
-        
+        <div id="dragHandle"><div class="bar"></div><div class="drag-text">쓸어올려서 기록 보기 🔼</div></div>
         <div id="sidebarContent">
             <h2>🏔️ 나의 등산기</h2>
             <div class="instruction">
-                <b>💡 꿀팁:</b> 지도의 빈 공간을 **두 번 터치(다닥!)**하면 <b>한국 전체 지도</b>가 보입니다.<br>
-                <b>💡 꿀팁:</b> 지도 우측 <b>[검색] 버튼을 꾹 누르면</b> 위치를 자유롭게 이동시킬 수 있어요!
+                <b>💡 꿀팁:</b> 지도를 **두 번 터치(다닥!)**하면 초기화면으로 돌아옵니다.<br>
+                <b>💡 꿀팁:</b> 우측 검색/명산 버튼을 꾹 누르면 이동 가능해요!
             </div>
-
             <label for="mountainInput">1. 산 이름 검색</label>
             <div class="search-wrapper">
                 <div class="search-container">
@@ -272,862 +268,659 @@
                 </div>
                 <ul id="searchResults"></ul>
             </div>
-
-            <!-- 💡 날짜와 고도 입력창 비율 및 겹침 방지(min-width: 0) 적용 -->
             <div style="display: flex; gap: 8px; width: 100%;">
                 <div style="flex: 1.5; min-width: 0;"><label>2. 등산 날짜 (연도-월-일)</label><input type="date" id="hikeDate"></div>
                 <div style="flex: 1; min-width: 0;"><label>3. 고도 (m)</label><input type="number" id="hikeAlt" placeholder="예: 836"></div>
             </div>
-
             <label>4. 등산 사진 (여러 장 가능)</label>
             <input type="file" id="hikePhoto" accept="image/*" multiple>
             <input type="hidden" id="lat"><input type="hidden" id="lng">
-
             <button class="save-btn" id="mainSaveBtn" onclick="saveRecord()">지도에 내 기록 남기기</button>
-            
             <hr style="margin: 25px 0 15px 0; border: 0; border-top: 1px solid #eee;">
-            
             <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                 <button class="save-btn" style="background:#FFA000; margin-top:0; font-size:0.95em;" onclick="exportData()">💾 백업하기</button>
                 <button class="save-btn" style="background:#757575; margin-top:0; font-size:0.95em;" onclick="document.getElementById('importFile').click()">📂 불러오기</button>
                 <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
             </div>
-
-            <div style="background: linear-gradient(135deg, #4CAF50, #2E7D32); padding: 20px; border-radius: 12px; margin-bottom: 25px; text-align: center; color: white; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3);">
-                <div style="font-size: 0.95em; font-weight: bold; opacity: 0.9; margin-bottom: 5px;">🔥 나의 누적 등반 고도</div>
-                <div style="font-size: 2.8em; font-weight: 900; letter-spacing: -1px; text-shadow: 1px 2px 4px rgba(0,0,0,0.2);">
-                    <span id="totalAlt">0</span><span style="font-size: 0.4em; font-weight: 600; margin-left: 3px;">m</span>
-                </div>
-                <div id="motivationText" style="font-size: 0.85em; margin-top: 8px; opacity: 0.9; background: rgba(0,0,0,0.15); padding: 5px; border-radius: 20px;">
-                    첫 등산을 기록해보세요!
-                </div>
-            </div>
-
             <h3 style="color: #333; margin: 0 0 10px 0;">나의 완등 리스트</h3>
             <div id="recordList"></div>
+            <div id="totalAlt" style="display:none;"></div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const customPinSvg = `
-            <div class="pin-wrapper">
-                <svg viewBox="0 0 24 24" width="36" height="36" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 16 8 16s8-10.75 8-16c0-4.42-3.58-8-8-8zm0 11.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 4.5 12 4.5 15.5 6.07 15.5 8 13.93 11.5 12 11.5z" fill="#E53935" stroke="#ffffff" stroke-width="1.5"/>
-                </svg>
-            </div>
-        `;
-        let mountainIcon;
-        let map, markerLayerGroup;
-        let totalAltitudeData = 0; 
+        const customPinSvg = `<div class="pin-wrapper"><svg viewBox="0 0 24 24" width="36" height="36" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 16 8 16s8-10.75 8-16c0-4.42-3.58-8-8-8zm0 11.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 4.5 12 4.5 15.5 6.07 15.5 8 13.93 11.5 12 11.5z" fill="#E53935" stroke="#ffffff" stroke-width="1.5"/></svg></div>`;
+        const m100PinSvg = `<div class="pin-wrapper"><svg viewBox="0 0 24 24" width="36" height="36" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 16 8 16s8-10.75 8-16c0-4.42-3.58-8-8-8zm0 11.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 4.5 12 4.5 15.5 6.07 15.5 8 13.93 11.5 12 11.5z" fill="#1565C0" stroke="#ffffff" stroke-width="1.5"/></svg></div>`;
+        const challengePinSvg = `<div class="pin-wrapper"><svg viewBox="0 0 24 24" width="40" height="40" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 16 8 16s8-10.75 8-16c0-4.42-3.58-8-8-8zm0 11.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 4.5 12 4.5 15.5 6.07 15.5 8 13.93 11.5 12 11.5z" fill="#FF8F00" stroke="#FFF8E1" stroke-width="1.5"/></svg></div>`;
+
+        let mountainIcon, m100Icon, map, markerLayerGroup, m100LayerGroup, challengeLayerGroup;
+        let totalAltitudeData = 0, selectedFilterYear = 'all', selectedFilterMonth = 'all';
         
-        let selectedFilterYear = 'all';
-        let selectedFilterMonth = 'all';
-        
-        const yearsList = ['all'];
-        for(let y=2015; y<=2030; y++) yearsList.push(y.toString());
-        let currentYearIndex = 0; 
-        let monthBtns = [];
-        
-        let filterWidget, filterFab, filterDial, yearCenter, yearVal;
+        const yearsList = ['all']; for(let y=2015; y<=2030; y++) yearsList.push(y.toString());
+        let currentYearIndex = 0, monthBtns = [], filterWidget, filterFab, filterDial, yearCenter, yearVal;
+
+        const m100Data = [
+            { name: "가리산", region: "강원 춘천", alt: 1051, lat: 37.8711, lng: 127.9544, desc: "소양호 피아골의 비경을 간직한 산" },
+            { name: "가리왕산", region: "강원 정선", alt: 1561, lat: 37.4616, lng: 128.5638, desc: "전국 제일의 숲과 원시림을 간직한 산" },
+            { name: "가야산", region: "경남 합천", alt: 1430, lat: 35.8239, lng: 128.1172, desc: "해인사를 품은 조선 8경 중 하나" },
+            { name: "가지산", region: "울산 울주", alt: 1241, lat: 35.6200, lng: 129.0069, desc: "영남 알프스의 최고봉" },
+            { name: "감악산", region: "경기 파주", alt: 675, lat: 37.9133, lng: 126.9619, desc: "임꺽정봉과 출렁다리가 유명한 경기 5악" },
+            { name: "강천산", region: "전북 순창", alt: 581, lat: 35.3995, lng: 127.0545, desc: "호남의 소금강이라 불리는 붉은 단풍 명소" },
+            { name: "계룡산", region: "충남 공주", alt: 845, lat: 36.3562, lng: 127.2119, desc: "풍수지리적 명산, 수려한 산세" },
+            { name: "계방산", region: "강원 평창", alt: 1577, lat: 37.7337, lng: 128.4682, desc: "남한에서 5번째로 높은 겨울 눈꽃 명산" },
+            { name: "공작산", region: "강원 홍천", alt: 887, lat: 37.7471, lng: 127.9946, desc: "공작새가 날개를 편 듯한 산세" },
+            { name: "관악산", region: "서울 관악", alt: 632, lat: 37.4445, lng: 126.9640, desc: "수도권의 대표적인 바위 명산" },
+            { name: "구병산", region: "충북 보은", alt: 876, lat: 36.4678, lng: 127.8765, desc: "아홉 폭 병풍을 두른 듯한 기암절벽" },
+            { name: "구봉산", region: "전북 진안", alt: 1002, lat: 35.9080, lng: 127.4208, desc: "아홉 개의 기암 봉우리가 절경인 곳" },
+            { name: "금산", region: "경남 남해", alt: 705, lat: 34.7562, lng: 127.9818, desc: "보리암과 남해 바다의 절경" },
+            { name: "금수산", region: "충북 제천", alt: 1016, lat: 36.9616, lng: 128.2575, desc: "비단에 수를 놓은 듯 아름다운 산" },
+            { name: "금오산", region: "경북 구미", alt: 977, lat: 36.0847, lng: 128.3075, desc: "기암괴석과 대혜폭포가 있는 영남 8경" },
+            { name: "금정산", region: "부산 금정", alt: 801, lat: 35.2818, lng: 129.0558, desc: "부산의 진산, 국내 최대 산성인 금정산성" },
+            { name: "깃대봉", region: "전남 신안", alt: 368, lat: 34.7212, lng: 125.1051, desc: "홍도의 최고봉으로 다도해 절경 감상" },
+            { name: "남산", region: "경북 경주", alt: 494, lat: 35.7951, lng: 129.2195, desc: "노천 박물관이라 불리는 신라의 불교 유적지" },
+            { name: "내연산", region: "경북 포항", alt: 710, lat: 36.2625, lng: 129.3005, desc: "12폭포가 빚어내는 청하골 계곡 절경" },
+            { name: "내장산", region: "전북 정읍", alt: 763, lat: 35.4851, lng: 126.8860, desc: "가을 단풍이 아름다운 호남의 금강" },
+            { name: "대둔산", region: "충남 논산", alt: 878, lat: 36.1215, lng: 127.3204, desc: "구름다리와 기암괴석이 일품" },
+            { name: "대암산", region: "강원 양구", alt: 1304, lat: 38.2250, lng: 128.1251, desc: "용늪을 품고 있는 생태계의 보고" },
+            { name: "대야산", region: "경북 문경", alt: 931, lat: 36.6341, lng: 127.9351, desc: "용추폭포와 기암절벽이 어우러진 명산" },
+            { name: "덕숭산", region: "충남 예산", alt: 495, lat: 36.6669, lng: 126.6210, desc: "수덕사를 품은 호서의 금강" },
+            { name: "덕유산", region: "전북 무주", alt: 1614, lat: 35.8601, lng: 127.7471, desc: "상고대가 아름다운 향적봉 겨울 명산" },
+            { name: "덕항산", region: "강원 삼척", alt: 1071, lat: 37.3188, lng: 129.0067, desc: "환선굴을 품은 석회암 지대의 명산" },
+            { name: "도락산", region: "충북 단양", alt: 964, lat: 36.8770, lng: 128.3189, desc: "우암 송시열이 이름 붙인 기암 산수" },
+            { name: "도봉산", region: "서울 도봉", alt: 740, lat: 37.6970, lng: 127.0143, desc: "자운봉, 만장봉 등 화강암 암봉의 전시장" },
+            { name: "동악산", region: "전남 곡성", alt: 735, lat: 35.2891, lng: 127.2882, desc: "도림사와 청류동 계곡이 아름다운 산" },
+            { name: "두륜산", region: "전남 해남", alt: 700, lat: 34.4752, lng: 126.6180, desc: "대흥사와 남도의 풍광을 조망하는 명산" },
+            { name: "두타산", region: "강원 동해", alt: 1353, lat: 37.4338, lng: 128.9866, desc: "무릉계곡과 청옥산이 이어지는 웅장한 산" },
+            { name: "마니산", region: "인천 강화", alt: 472, lat: 37.6186, lng: 126.4354, desc: "단군이 제를 올렸다는 참성단이 있는 곳" },
+            { name: "마이산", region: "전북 진안", alt: 686, lat: 35.7629, lng: 127.4168, desc: "말의 귀를 닮은 두 개의 신비로운 암봉" },
+            { name: "명성산", region: "경기 포천", alt: 923, lat: 38.0934, lng: 127.3508, desc: "산정호수와 광활한 억새밭이 펼쳐진 산" },
+            { name: "명지산", region: "경기 가평", alt: 1267, lat: 37.9357, lng: 127.4182, desc: "경기도에서 두 번째로 높은 가을 단풍 명산" },
+            { name: "모악산", region: "전북 김제", alt: 793, lat: 35.7270, lng: 127.0869, desc: "어머니가 아이를 안고 있는 듯한 넉넉한 산" },
+            { name: "무등산", region: "광주 동구", alt: 1187, lat: 35.1321, lng: 126.9880, desc: "천연기념물 서석대와 입석대가 있는 진산" },
+            { name: "무학산", region: "경남 창원", alt: 761, lat: 35.1970, lng: 128.5367, desc: "학이 춤추는 형상, 진달래와 마산만 조망" },
+            { name: "미륵산", region: "경남 통영", alt: 461, lat: 34.8021, lng: 128.4069, desc: "한려수도의 절경이 한눈에 들어오는 산" },
+            { name: "민주지산", region: "충북 영동", alt: 1241, lat: 36.0594, lng: 127.8541, desc: "삼도봉에서 충북, 전북, 경북이 만나는 산" },
+            { name: "방장산", region: "전남 장성", alt: 743, lat: 35.4344, lng: 126.7725, desc: "넓고 깊은 품으로 평야를 굽어보는 산" },
+            { name: "방태산", region: "강원 인제", alt: 1444, lat: 37.8931, lng: 128.3758, desc: "이단폭포와 원시림을 품은 오지 명산" },
+            { name: "백덕산", region: "강원 영월", alt: 1350, lat: 37.3995, lng: 128.3106, desc: "사자산과 이어지는 겨울 설경의 백미" },
+            { name: "백암산", region: "전남 장성", alt: 741, lat: 35.4357, lng: 126.8778, desc: "백양사와 아기단풍이 붉게 물드는 명소" },
+            { name: "백운산(광양)", region: "전남 광양", alt: 1222, lat: 35.1114, lng: 127.6186, desc: "섬진강을 굽어보는 고로쇠나무 자생지" },
+            { name: "백운산(정선)", region: "강원 정선", alt: 882, lat: 37.2889, lng: 128.6655, desc: "동강을 따라 기암절벽이 펼쳐진 산" },
+            { name: "백운산(포천)", region: "경기 포천", alt: 903, lat: 38.0772, lng: 127.4695, desc: "광덕령을 거쳐 맑은 계곡을 자랑하는 산" },
+            { name: "변산", region: "전북 부안", alt: 508, lat: 35.6327, lng: 126.5861, desc: "내소사와 직소폭포를 품은 서해안의 진주" },
+            { name: "북한산", region: "서울 강북", alt: 836, lat: 37.6617, lng: 126.9928, desc: "수도권을 대표하는 거대한 화강암 바위산" },
+            { name: "비슬산", region: "대구 달성", alt: 1084, lat: 35.7196, lng: 128.5241, desc: "봄철 진달래 군락지와 기암이 빚어낸 비경" },
+            { name: "삼악산", region: "강원 춘천", alt: 654, lat: 37.8344, lng: 127.6719, desc: "의암호를 굽어보는 세 개의 험준한 바위봉" },
+            { name: "서대산", region: "충남 금산", alt: 904, lat: 36.1969, lng: 127.5255, desc: "충남 최고봉, 기암괴석이 빼어난 옥천의 지붕" },
+            { name: "선운산", region: "전북 고창", alt: 336, lat: 35.4854, lng: 126.5771, desc: "선운사와 동백나무 숲이 어우러진 도립공원" },
+            { name: "설악산", region: "강원 속초", alt: 1708, lat: 38.1193, lng: 128.4655, desc: "기암절벽이 빚어낸 한국 최고의 비경 대청봉" },
+            { name: "성인봉", region: "경북 울릉", alt: 984, lat: 37.5023, lng: 130.8643, desc: "울릉도의 중심, 원시림을 간직한 화산" },
+            { name: "소백산", region: "충북 단양", alt: 1439, lat: 36.9587, lng: 128.4831, desc: "부드러운 비로봉 능선과 봄철 철쭉" },
+            { name: "소요산", region: "경기 동두천", alt: 587, lat: 37.9404, lng: 127.0863, desc: "경기의 소금강이라 불리는 단풍 명산" },
+            { name: "속리산", region: "충북 보은", alt: 1058, lat: 36.5367, lng: 127.8920, desc: "정이품송과 법주사를 품은 암릉의 절경" },
+            { name: "신불산", region: "울산 울주", alt: 1159, lat: 35.5398, lng: 129.0531, desc: "영남알프스를 대표하는 거대한 억새 평원" },
+            { name: "연화산", region: "경남 고성", alt: 528, lat: 35.0560, lng: 128.2435, desc: "연꽃이 반쯤 핀 형상을 한 옥천사 품은 산" },
+            { name: "오대산", region: "강원 평창", alt: 1563, lat: 37.7958, lng: 128.5638, desc: "비로봉과 월정사 전나무 숲길의 명소" },
+            { name: "오봉산", region: "강원 춘천", alt: 779, lat: 37.9944, lng: 127.8041, desc: "소양호와 청평사를 안고 있는 다섯 봉우리" },
+            { name: "용문산", region: "경기 양평", alt: 1157, lat: 37.5614, lng: 127.5457, desc: "천년 은행나무와 웅장한 산세" },
+            { name: "용화산", region: "강원 화천", alt: 878, lat: 38.0163, lng: 127.7538, desc: "용이 하늘로 오르는 듯한 형상의 기암" },
+            { name: "운문산", region: "경북 청도", alt: 1188, lat: 35.6315, lng: 128.9839, desc: "영남 알프스의 웅장함과 운문사" },
+            { name: "운악산", region: "경기 가평", alt: 935, lat: 37.8761, lng: 127.3243, desc: "경기 5악 중 하나, 기암괴석과 현등사" },
+            { name: "운장산", region: "전북 진안", alt: 1126, lat: 35.8856, lng: 127.3912, desc: "운일암 반일암 계곡을 품은 고산" },
+            { name: "월악산", region: "충북 제천", alt: 1097, lat: 36.8524, lng: 128.0931, desc: "영봉의 암벽과 충주호의 조화가 절경" },
+            { name: "월출산", region: "전남 영암", alt: 809, lat: 34.7645, lng: 126.6975, desc: "호남의 소금강, 깎아지른 기암 봉우리들" },
+            { name: "유명산", region: "경기 가평", alt: 862, lat: 37.5921, lng: 127.4947, desc: "마을 이름을 딴 억새밭과 유명계곡" },
+            { name: "응봉산", region: "경북 울진", alt: 999, lat: 37.0673, lng: 129.2081, desc: "덕구온천과 용소골의 비경을 지닌 산" },
+            { name: "장안산", region: "전북 장수", alt: 1237, lat: 35.5977, lng: 127.5359, desc: "가을 덕산계곡과 억새밭이 빼어난 100대 명산" },
+            { name: "재약산", region: "경남 밀양", alt: 1108, lat: 35.5524, lng: 128.9818, desc: "사자평 억새밭과 표충사를 품은 영남알프스" },
+            { name: "적상산", region: "전북 무주", alt: 1034, lat: 35.9521, lng: 127.6749, desc: "가을 단풍이 여인의 치마폭 같은 형상" },
+            { name: "점봉산", region: "강원 인제", alt: 1424, lat: 38.0433, lng: 128.4239, desc: "설악산과 마주보는 야생화의 천국" },
+            { name: "조계산", region: "전남 순천", alt: 884, lat: 35.0069, lng: 127.3297, desc: "송광사와 선암사를 품고 있는 불교의 요람" },
+            { name: "주왕산", region: "경북 청송", alt: 720, lat: 36.4011, lng: 129.1764, desc: "수많은 기암절벽과 폭포가 빚은 자연 예술" },
+            { name: "주흘산", region: "경북 문경", alt: 1075, lat: 36.7865, lng: 128.1065, desc: "문경새재를 내려다보는 조령의 진산" },
+            { name: "지리산", region: "경남 산청", alt: 1915, lat: 35.3369, lng: 127.7306, desc: "국립공원 1호, 남한 내륙 최고봉 천왕봉" },
+            { name: "지리산(통영)", region: "경남 통영", alt: 398, lat: 34.8436, lng: 128.2045, desc: "사량도에 위치해 한려수도를 조망하는 바다 산" },
+            { name: "천관산", region: "전남 장흥", alt: 723, lat: 34.5422, lng: 126.9360, desc: "호남 5대 명산, 기암과 억새의 앙상블" },
+            { name: "천마산", region: "경기 남양주", alt: 812, lat: 37.6789, lng: 127.2721, desc: "하늘을 만질 듯 높고 푸른 남양주의 진산" },
+            { name: "천성산", region: "경남 양산", alt: 922, lat: 35.4056, lng: 129.1098, desc: "원효대사의 전설과 화엄늪이 있는 고산" },
+            { name: "천태산", region: "충북 영동", alt: 715, lat: 36.1601, lng: 127.6163, desc: "충북의 설악이라 불리는 기암 절벽 명산" },
+            { name: "청량산", region: "경북 봉화", alt: 870, lat: 36.7909, lng: 128.9248, desc: "퇴계 이황이 머물던 청량사와 하늘다리" },
+            { name: "추월산", region: "전남 담양", alt: 731, lat: 35.4121, lng: 126.9692, desc: "담양호를 굽어보는 가을 단풍이 아름다운 바위산" },
+            { name: "축령산", region: "경기 남양주", alt: 886, lat: 37.7663, lng: 127.3090, desc: "잣나무 숲과 수려한 산림욕장으로 유명한 산" },
+            { name: "치악산", region: "강원 원주", alt: 1288, lat: 37.3717, lng: 128.0506, desc: "사계절 빼어난 험준한 산세, 비로봉 미륵불탑" },
+            { name: "칠갑산", region: "충남 청양", alt: 561, lat: 36.3888, lng: 126.8378, desc: "노래로도 유명한 충남의 알프스" },
+            { name: "태백산", region: "강원 태백", alt: 1567, lat: 37.0984, lng: 128.9157, desc: "민족의 영산, 천제단과 주목 군락지" },
+            { name: "태화산", region: "강원 영월", alt: 1027, lat: 37.1264, lng: 128.5292, desc: "남한강을 굽어보고 고씨동굴을 품은 산" },
+            { name: "팔공산", region: "대구 동구", alt: 1192, lat: 36.0125, lng: 128.6978, desc: "대구의 진산, 갓바위 부처님으로 유명" },
+            { name: "팔봉산", region: "강원 홍천", alt: 327, lat: 37.7126, lng: 127.6534, desc: "홍천강이 휘감아 도는 여덟 개의 암봉" },
+            { name: "한라산", region: "제주도", alt: 1947, lat: 33.3615, lng: 126.5292, desc: "백록담을 품은 대한민국 남한 최고봉" },
+            { name: "화악산", region: "경기 가평", alt: 1468, lat: 37.9942, lng: 127.5348, desc: "경기도에서 가장 높은 웅장한 산" },
+            { name: "화왕산", region: "경남 창녕", alt: 756, lat: 35.5413, lng: 128.5284, desc: "광활한 억새밭과 화산 분화구 형상의 산성" },
+            { name: "황매산", region: "경남 합천", alt: 1108, lat: 35.5804, lng: 127.9785, desc: "봄에는 철쭉, 가을에는 억새가 덮이는 평전" },
+            { name: "황석산", region: "경남 함양", alt: 1190, lat: 35.6601, lng: 127.7667, desc: "황석산성과 기암괴석이 일품인 영남 명산" },
+            { name: "황악산", region: "경북 김천", alt: 1111, lat: 36.1158, lng: 127.9939, desc: "직지사를 품은 백두대간의 수려한 산" },
+            { name: "희양산", region: "경북 문경", alt: 999, lat: 36.7118, lng: 127.9984, desc: "거대한 화강암 덩어리로 덮인 특이한 산세" }
+        ];
+
+        let is100MountainsMode = false, isChallengeMode = false, isM100AllShowing = false, singleM100Marker = null;
 
         document.addEventListener('DOMContentLoaded', () => {
-            map = L.map('map', { zoomControl: false, doubleClickZoom: false }).setView([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7);
-            L.control.zoom({ position: 'topright' }).addTo(map);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
-            markerLayerGroup = L.layerGroup().addTo(map);
+            map = L.map('map', { zoomControl: false, doubleClickZoom: false, preferCanvas: true }).setView([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7);
             
-            mountainIcon = L.divIcon({
-                className: 'custom-leaflet-icon',
-                html: customPinSvg,
-                iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36], tooltipAnchor: [0, -36]
-            });
+            // 세로/가로 환경에서 버튼들과 겹치지 않도록 확대축소 버튼을 좌측 상단으로 이동 
+            L.control.zoom({ position: 'topleft' }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
+            
+            markerLayerGroup = L.layerGroup().addTo(map); 
+            m100LayerGroup = L.layerGroup(); 
+            challengeLayerGroup = L.layerGroup(); 
+            
+            mountainIcon = L.divIcon({ className: 'custom-leaflet-icon', html: customPinSvg, iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36], tooltipAnchor: [0, -36] });
+            m100Icon = L.divIcon({ className: 'custom-leaflet-icon', html: m100PinSvg, iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36], tooltipAnchor: [0, -36] });
 
             map.on('dblclick', resetMapToDefault);
-            
             let lastTapTime = 0;
             document.getElementById('map').addEventListener('touchstart', function(e) {
                 if (e.touches.length > 1) return;
-
                 const currentTime = new Date().getTime();
-                const tapLength = currentTime - lastTapTime;
-                
-                if (tapLength < 350 && tapLength > 0) {
-                    resetMapToDefault();
-                    e.preventDefault(); 
-                }
+                if (currentTime - lastTapTime < 350 && currentTime - lastTapTime > 0) { resetMapToDefault(); e.preventDefault(); }
                 lastTapTime = currentTime;
             }, {passive: false});
 
-            initFilterWidget();
-            initDB();
+            initFilterWidget(); initM100Widget(); initChallengeWidget(); initDB();
         });
+
+        // 💡 패널을 열고 닫을 때 검색 버튼 노출 관리 함수 추가
+        function updateFilterVisibility() {
+            if(filterWidget) {
+                if (is100MountainsMode || isChallengeMode) { filterWidget.style.display = 'none'; } 
+                else { filterWidget.style.display = 'block'; }
+            }
+        }
 
         function resetMapToDefault() {
             map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7, { animate: true, duration: 1 });
-            if(window.innerWidth <= 768) {
-                currentSidebarState = 0; 
-                updateSidebarState();
+            if(window.innerWidth <= 768) { currentSidebarState = 0; updateSidebarState(); }
+            
+            if(filterWidget) { filterWidget.classList.remove('open'); filterDial.classList.remove('year-expanded'); }
+            selectedFilterYear = 'all'; selectedFilterMonth = 'all'; applyDateFilter();
+            
+            closeM100Panel(true);
+            closeChallengePanel(true);
+            
+            if(!map.hasLayer(markerLayerGroup)) map.addLayer(markerLayerGroup);
+            document.getElementById('sidebar').classList.remove('hidden');
+            updateFilterVisibility();
+        }
+
+        function initM100Widget() {
+            const m100Widget = document.getElementById('m100Widget'), m100Fab = document.getElementById('m100Fab');
+            const m100Panel = document.getElementById('m100Panel'), m100List = document.getElementById('m100List');
+
+            m100Data.sort((a,b) => a.name.localeCompare(b.name));
+            m100Data.forEach((m, index) => {
+                const li = document.createElement('li'); li.className = 'm100-item';
+                li.innerHTML = `
+                    <img class="m100-thumb" src="https://picsum.photos/seed/m${index}/100/100?grayscale=false" loading="lazy">
+                    <div class="m100-item-content">
+                        <div class="m100-name">${m.name}</div>
+                        <div class="m100-desc">${m.region}</div>
+                    </div>
+                    <div class="m100-alt">${m.alt}m</div>
+                `;
+                li.onclick = () => showSingleM100(m); m100List.appendChild(li);
+            });
+
+            setupDraggableFab(m100Fab, m100Widget, () => {
+                closeChallengePanel(true); 
+                m100Panel.classList.add('open'); is100MountainsMode = true; map.removeLayer(markerLayerGroup);
+                if(filterWidget) filterWidget.classList.remove('open');
+                document.getElementById('sidebar').classList.add('hidden');
+                updateFilterVisibility();
+            });
+        }
+
+        function closeM100Panel(preventSidebarRestore = false) {
+            document.getElementById('m100Panel').classList.remove('open'); is100MountainsMode = false;
+            map.removeLayer(m100LayerGroup); if (singleM100Marker) map.removeLayer(singleM100Marker);
+            isM100AllShowing = false;
+            document.getElementById('m100ViewAllBtn').classList.remove('active'); document.getElementById('m100ViewAllBtn').innerText = "지도에 모두 보기";
+            
+            if(!preventSidebarRestore && !isChallengeMode) {
+                if(!map.hasLayer(markerLayerGroup)) map.addLayer(markerLayerGroup);
+                document.getElementById('sidebar').classList.remove('hidden');
             }
-            if(filterWidget) {
-                filterWidget.classList.remove('open');
-                filterDial.classList.remove('year-expanded');
+            updateFilterVisibility();
+        }
+
+        function showSingleM100(mountain) {
+            isM100AllShowing = false;
+            document.getElementById('m100ViewAllBtn').classList.remove('active'); document.getElementById('m100ViewAllBtn').innerText = "지도에 모두 보기";
+            map.removeLayer(m100LayerGroup); if (singleM100Marker) map.removeLayer(singleM100Marker);
+            
+            singleM100Marker = L.marker([mountain.lat, mountain.lng], {icon: m100Icon}).addTo(map);
+            singleM100Marker.bindPopup(`<div style="text-align:center;"><b>🇰🇷 ${mountain.name}</b><br><span style="color:#1565C0;">${mountain.alt}m | ${mountain.region}</span><hr style="margin:5px 0;">${mountain.desc}</div>`).openPopup();
+            map.flyTo([mountain.lat, mountain.lng], 12);
+        }
+
+        function toggleM100All() {
+            const btn = document.getElementById('m100ViewAllBtn');
+            if (singleM100Marker) map.removeLayer(singleM100Marker);
+
+            if (isM100AllShowing) {
+                map.removeLayer(m100LayerGroup); btn.classList.remove('active'); btn.innerText = "지도에 모두 보기"; isM100AllShowing = false;
+            } else {
+                m100LayerGroup.clearLayers();
+                m100Data.forEach(m => {
+                    const marker = L.marker([m.lat, m.lng], {icon: m100Icon}).addTo(m100LayerGroup);
+                    marker.bindTooltip(`${m.name} (${m.alt}m)`, { permanent: false, direction: 'top', className: 'mountain-label' });
+                    marker.bindPopup(`<div style="text-align:center;"><b>🇰🇷 ${m.name}</b><br><span style="color:#1565C0;">${m.alt}m</span><br>${m.desc}</div>`);
+                });
+                map.addLayer(m100LayerGroup); map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7);
+                btn.classList.add('active'); btn.innerText = "지도에서 숨기기"; isM100AllShowing = true;
             }
         }
 
-        window.addEventListener('resize', () => { setTimeout(() => { if(map) map.invalidateSize(); }, 200); });
+        function initChallengeWidget() {
+            const widget = document.getElementById('challengeWidget'), fab = document.getElementById('challengeFab');
+            setupDraggableFab(fab, widget, () => {
+                closeM100Panel(true); 
+                if(filterWidget) filterWidget.classList.remove('open');
+                document.getElementById('sidebar').classList.add('hidden');
+                
+                document.getElementById('challengePanel').classList.add('open'); 
+                isChallengeMode = true; 
+                
+                map.removeLayer(markerLayerGroup);
+                map.removeLayer(m100LayerGroup);
+                
+                updateFilterVisibility();
+                renderChallengeMapAndList();
+            });
+        }
 
-        let editingId = null; 
-        let isFirstLoad = true; 
-        let tempMarker = null;
-        let allRecords = []; 
-        let groupedMarkers = {}; 
-
-        const sidebar = document.getElementById('sidebar');
-        const handleDrag = document.getElementById('dragHandle');
-        const dragText = document.querySelector('.drag-text');
-        let startY = 0;
-        let currentSidebarState = 0; 
-        const states = ['collapsed', 'half', 'full'];
-
-        handleDrag.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
-        handleDrag.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); 
-
-        handleDrag.addEventListener('touchend', e => {
-            const endY = e.changedTouches[0].clientY;
-            const diff = startY - endY; 
-            if (Math.abs(diff) > 50) { 
-                if (diff > 0) { if (currentSidebarState < 2) currentSidebarState++; } 
-                else { if (currentSidebarState > 0) currentSidebarState--; }
-                updateSidebarState();
+        function closeChallengePanel(preventSidebarRestore = false) {
+            document.getElementById('challengePanel').classList.remove('open'); isChallengeMode = false;
+            map.removeLayer(challengeLayerGroup);
+            if(!preventSidebarRestore && !is100MountainsMode) {
+                if(!map.hasLayer(markerLayerGroup)) map.addLayer(markerLayerGroup);
+                document.getElementById('sidebar').classList.remove('hidden');
             }
-        });
+            updateFilterVisibility();
+        }
 
-        function updateSidebarState() {
-            sidebar.classList.remove('collapsed', 'half', 'full');
-            sidebar.classList.add(states[currentSidebarState]);
+        function renderChallengeMapAndList() {
+            const list = document.getElementById('challengeList');
+            list.innerHTML = '';
+            challengeLayerGroup.clearLayers();
+            let climbedCount = 0;
+
+            m100Data.forEach((m, index) => {
+                let matchedRecords = allRecords.filter(r => r.name.includes(m.name) || m.name.includes(r.name));
+                let isClimbed = matchedRecords.length > 0;
+
+                let iconHtml = isClimbed ? challengePinSvg : m100PinSvg;
+                let className = isClimbed ? 'custom-leaflet-icon challenge-climbed' : 'custom-leaflet-icon dim-marker';
+                
+                let icon = L.divIcon({ className: className, html: iconHtml, iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36], tooltipAnchor: [0, -36] });
+                let marker = L.marker([m.lat, m.lng], {icon: icon, zIndexOffset: isClimbed ? 1000 : 0}).addTo(challengeLayerGroup);
+                
+                if(isClimbed) {
+                    matchedRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
+                    let latestDate = matchedRecords[0].date;
+                    
+                    marker.bindTooltip(`${m.name} 🏆`, { permanent: true, direction: 'top', className: 'mountain-label challenge-tooltip', offset: [0, -25] });
+                    marker.bindPopup(`<div style="text-align:center;"><b>🏆 ${m.name} (완등)</b><br><span style="color:#FF8F00; font-weight:bold;">최근 등반: ${latestDate}</span><hr style="margin:5px 0;">${m.desc}</div>`);
+                    
+                    climbedCount++;
+                    const li = document.createElement('li'); li.className = 'm100-item';
+                    li.innerHTML = `
+                        <img class="m100-thumb" src="https://picsum.photos/seed/m${index}/100/100?grayscale=false" loading="lazy">
+                        <div class="m100-item-content">
+                            <div class="m100-name">${m.name} <span style="font-size:0.7em; color:#FF8F00; vertical-align:middle;">🏆</span></div>
+                            <div class="m100-desc">📅 ${latestDate}</div>
+                        </div>
+                    `;
+                    li.onclick = () => { map.flyTo([m.lat, m.lng], 13); marker.openPopup(); };
+                    list.appendChild(li);
+                } else {
+                    marker.bindTooltip(`${m.name}`, { permanent: false, direction: 'top', className: 'mountain-label' });
+                    marker.bindPopup(`<div style="text-align:center;"><b>🇰🇷 ${m.name}</b><br><span style="color:#777;">아직 등반하지 않은 명산입니다.</span><hr style="margin:5px 0;">${m.desc}</div>`);
+                }
+            });
+
+            document.getElementById('challengeCount').innerText = climbedCount;
+            if(climbedCount === 0) {
+                list.innerHTML = `<div style="padding: 40px 20px; text-align:center; color:#777; line-height:1.6;">아직 완등한 100대 명산이 없습니다.<br>나의 등산기에서 첫 도전을 기록해보세요!</div>`;
+            }
             
-            if (currentSidebarState === 0) dragText.innerText = '올려서 기록 보기 🔼';
-            else if (currentSidebarState === 1) dragText.innerText = '더 크게 / 접기 ↕️';
-            else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
+            map.addLayer(challengeLayerGroup);
+            map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7, { animate: true, duration: 1 });
+        }
+
+        function setupDraggableFab(fab, widget, onClickCallback) {
+            let startX, startY, initLeft, initTop, isDragging = false, dragTimer = null;
+            fab.addEventListener('pointerdown', (e) => {
+                if(!e.isPrimary) return;
+                startX = e.clientX; startY = e.clientY;
+                const rect = widget.getBoundingClientRect(); initLeft = rect.left; initTop = rect.top;
+                isDragging = false; fab.setPointerCapture(e.pointerId);
+                dragTimer = setTimeout(() => { isDragging = true; fab.style.transform = 'scale(1.1)'; fab.style.boxShadow = '0 8px 20px rgba(0,0,0,0.4)'; }, 300); 
+            });
+            fab.addEventListener('pointermove', (e) => {
+                if (isDragging) {
+                    e.preventDefault(); 
+                    widget.style.right = 'auto'; widget.style.bottom = 'auto';
+                    widget.style.left = (initLeft + (e.clientX - startX)) + 'px'; widget.style.top = (initTop + (e.clientY - startY)) + 'px';
+                } else if (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) clearTimeout(dragTimer); 
+            });
+            fab.addEventListener('pointerup', (e) => {
+                clearTimeout(dragTimer); fab.style.transform = ''; fab.style.boxShadow = ''; fab.releasePointerCapture(e.pointerId);
+                if (!isDragging && onClickCallback) onClickCallback();
+            });
         }
 
         function initFilterWidget() {
-            filterWidget = document.getElementById('filterWidget');
-            filterFab = document.getElementById('filterFab');
-            filterDial = document.getElementById('filterDial');
-            yearCenter = document.getElementById('yearCenter');
-            yearVal = document.getElementById('yearVal');
+            filterWidget = document.getElementById('filterWidget'); filterFab = document.getElementById('filterFab');
+            filterDial = document.getElementById('filterDial'); yearCenter = document.getElementById('yearCenter'); yearVal = document.getElementById('yearVal');
             
+            const currentYearStr = new Date().getFullYear().toString();
+            currentYearIndex = yearsList.indexOf(currentYearStr); if(currentYearIndex === -1) currentYearIndex = yearsList.length - 1;
+
             document.addEventListener('pointerdown', (e) => {
-                if (filterWidget && filterWidget.classList.contains('open')) {
-                    if (!filterWidget.contains(e.target)) {
-                        filterWidget.classList.remove('open');
-                        filterDial.classList.remove('year-expanded'); 
-                    }
+                if (filterWidget && filterWidget.classList.contains('open') && !filterWidget.contains(e.target)) {
+                    filterWidget.classList.remove('open'); filterDial.classList.remove('year-expanded'); 
                 }
             });
 
             for(let i=1; i<=12; i++) {
-                const btn = document.createElement('div');
-                btn.className = 'month-btn';
-                btn.innerText = i + '월';
-                btn.dataset.val = (i < 10 ? '0'+i : i.toString());
-                
-                const angle = (i - 1 - 3) * 30 * (Math.PI / 180);
-                const radius = 100;
-                const x = Math.cos(angle) * radius;
-                const y = Math.sin(angle) * radius;
-                
-                btn.style.transform = `translate(${x}px, ${y}px)`;
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    selectMonth(btn.dataset.val);
-                });
-                
-                filterDial.appendChild(btn);
-                monthBtns.push(btn);
+                const btn = document.createElement('div'); btn.className = 'month-btn'; btn.innerText = i + '월'; btn.dataset.val = (i < 10 ? '0'+i : i.toString());
+                const angle = (i - 1 - 3) * 30 * (Math.PI / 180); btn.style.transform = `translate(${Math.cos(angle) * 100}px, ${Math.sin(angle) * 100}px)`;
+                btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); selectMonth(btn.dataset.val); }); filterDial.appendChild(btn); monthBtns.push(btn);
             }
 
-            let fwStartX, fwStartY, fwInitLeft, fwInitTop;
-            let isFwDragging = false, fwDragTimer = null;
-            
-            filterFab.addEventListener('touchstart', (e) => {
-                fwStartX = e.touches[0].clientX; fwStartY = e.touches[0].clientY;
-                const rect = filterWidget.getBoundingClientRect();
-                fwInitLeft = rect.left; fwInitTop = rect.top;
-                isFwDragging = false;
-                
-                fwDragTimer = setTimeout(() => {
-                    isFwDragging = true;
-                    filterFab.style.transform = 'scale(1.1)';
-                    filterFab.style.background = '#1b5e20';
-                }, 400); 
-            }, {passive: true});
+            setupDraggableFab(filterFab, filterWidget, () => {
+                filterWidget.classList.toggle('open');
+                if(filterWidget.classList.contains('open')) {
+                    selectedFilterYear = yearsList[currentYearIndex]; yearVal.innerText = selectedFilterYear === 'all' ? '전체' : selectedFilterYear; applyDateFilter();
+                } else { filterDial.classList.remove('year-expanded'); }
+            });
 
-            filterFab.addEventListener('touchmove', (e) => {
-                if (isFwDragging) {
-                    e.preventDefault(); 
-                    let dx = e.touches[0].clientX - fwStartX;
-                    let dy = e.touches[0].clientY - fwStartY;
-                    filterWidget.style.right = 'auto'; 
-                    filterWidget.style.bottom = 'auto';
-                    filterWidget.style.left = (fwInitLeft + dx) + 'px';
-                    filterWidget.style.top = (fwInitTop + dy) + 'px';
-                } else {
-                    let dx = Math.abs(e.touches[0].clientX - fwStartX);
-                    let dy = Math.abs(e.touches[0].clientY - fwStartY);
-                    if (dx > 10 || dy > 10) clearTimeout(fwDragTimer); 
-                }
-            }, {passive: false});
-
-            filterFab.addEventListener('touchend', (e) => {
-                clearTimeout(fwDragTimer);
-                filterFab.style.transform = '';
-                filterFab.style.background = '';
-                if (!isFwDragging) {
-                    filterWidget.classList.toggle('open');
-                    if (!filterWidget.classList.contains('open')) {
-                        filterDial.classList.remove('year-expanded');
-                    }
+            filterDial.addEventListener('pointermove', (e) => {
+                if(!filterWidget.classList.contains('open') || !e.isPrimary) return;
+                const rect = filterDial.getBoundingClientRect(); const dx = e.clientX - (rect.left + rect.width / 2); const dy = e.clientY - (rect.top + rect.height / 2);
+                if (Math.sqrt(dx*dx + dy*dy) > 60 && Math.sqrt(dx*dx + dy*dy) < 140) {
+                    let angle = Math.atan2(dy, dx) * (180 / Math.PI); let month = Math.round((angle + 90) / 30) + 1;
+                    if (month <= 0) month += 12; if (month > 12) month -= 12; selectMonth(month < 10 ? '0'+month : month.toString());
                 }
             });
 
-            filterDial.addEventListener('touchmove', (e) => {
-                if(!filterWidget.classList.contains('open')) return;
-                
-                const touch = e.touches[0];
-                const rect = filterDial.getBoundingClientRect();
-                const cx = rect.left + rect.width / 2;
-                const cy = rect.top + rect.height / 2;
-                const dx = touch.clientX - cx;
-                const dy = touch.clientY - cy;
-                
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist > 60 && dist < 140) {
-                    e.preventDefault();
-                    let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                    let month = Math.round((angle + 90) / 30) + 1;
-                    if (month <= 0) month += 12;
-                    if (month > 12) month -= 12;
-                    selectMonth(month < 10 ? '0'+month : month.toString());
-                }
-            }, {passive: false});
-
-            let isYearDragging = false;
-            let hasSwipedYear = false;
-            let yearPointerStartY = 0;
-            let yearInitIndex = 0;
-            
+            let isYearDragging = false, hasSwipedYear = false, yearPointerStartY = 0, yearInitIndex = 0;
             yearCenter.addEventListener('pointerdown', (e) => {
-                e.stopPropagation();
-                isYearDragging = true;
-                hasSwipedYear = false; 
-                yearPointerStartY = e.clientY;
-                yearInitIndex = currentYearIndex;
-                yearCenter.setPointerCapture(e.pointerId);
+                if(!e.isPrimary) return; e.stopPropagation(); isYearDragging = true; hasSwipedYear = false; yearPointerStartY = e.clientY; yearInitIndex = currentYearIndex; yearCenter.setPointerCapture(e.pointerId);
             });
-            
             yearCenter.addEventListener('pointermove', (e) => {
-                if (!isYearDragging) return;
-                e.stopPropagation(); 
-                e.preventDefault();
-                
-                const dy = e.clientY - yearPointerStartY;
-                
-                if (Math.abs(dy) > 10) {
-                    hasSwipedYear = true;
-                }
-                
-                let steps = Math.round(-dy / 25);
-                let newIndex = yearInitIndex + steps; 
-                
-                if(newIndex < 0) newIndex = 0;
-                if(newIndex >= yearsList.length) newIndex = yearsList.length - 1;
-                
+                if (!isYearDragging || !e.isPrimary) return; e.stopPropagation(); e.preventDefault();
+                if (Math.abs(e.clientY - yearPointerStartY) > 10) hasSwipedYear = true;
+                let newIndex = yearInitIndex + Math.round(-(e.clientY - yearPointerStartY) / 25); 
+                if(newIndex < 0) newIndex = 0; if(newIndex >= yearsList.length) newIndex = yearsList.length - 1;
                 if(currentYearIndex !== newIndex) {
-                    currentYearIndex = newIndex;
-                    selectedFilterYear = yearsList[currentYearIndex];
-                    yearVal.innerText = selectedFilterYear === 'all' ? '전체' : selectedFilterYear;
-                    applyDateFilter();
+                    currentYearIndex = newIndex; selectedFilterYear = yearsList[currentYearIndex]; yearVal.innerText = selectedFilterYear === 'all' ? '전체' : selectedFilterYear; applyDateFilter();
                 }
             });
-            
             yearCenter.addEventListener('pointerup', (e) => {
-                isYearDragging = false;
-                yearCenter.releasePointerCapture(e.pointerId);
-                
-                if (!hasSwipedYear) {
-                    filterDial.classList.toggle('year-expanded');
-                } else {
-                    if (filterDial.classList.contains('year-expanded')) {
-                        filterDial.classList.remove('year-expanded');
-                    }
-                }
+                if(!e.isPrimary) return; isYearDragging = false; yearCenter.releasePointerCapture(e.pointerId);
+                if (!hasSwipedYear) filterDial.classList.toggle('year-expanded'); else if (filterDial.classList.contains('year-expanded')) filterDial.classList.remove('year-expanded');
             });
         }
 
         function selectMonth(val) {
-            if(selectedFilterMonth === val) return; 
-            selectedFilterMonth = val;
-            
-            monthBtns.forEach(btn => {
-                if(btn.dataset.val === val && val !== 'all') btn.classList.add('active');
-                else btn.classList.remove('active');
-            });
-            
-            applyDateFilter();
+            if(selectedFilterMonth === val) return; selectedFilterMonth = val;
+            monthBtns.forEach(btn => { if(btn.dataset.val === val && val !== 'all') btn.classList.add('active'); else btn.classList.remove('active'); }); applyDateFilter();
         }
 
-        let db;
+        let db, isFirstLoad = true, allRecords = [], groupedMarkers = {}, tempMarker = null, editingId = null;
+
         function initDB() {
             try {
                 const request = indexedDB.open("PeakLogDB", 1);
-                request.onupgradeneeded = function(e) {
-                    db = e.target.result;
-                    if (!db.objectStoreNames.contains('hike_records')) db.createObjectStore('hike_records', { keyPath: 'id', autoIncrement: true });
-                };
-                request.onsuccess = function(e) { 
-                    db = e.target.result; 
-                    loadSavedRecords(); 
-                };
-                request.onerror = function(e) {
-                    console.error("IndexedDB error", e);
-                    alert("시크릿 모드 등으로 인해 데이터베이스 접근이 차단되었습니다.\n일부 기능이 제한된 상태로 시작합니다.");
-                    finishSplashAndStart();
-                };
-            } catch (err) {
-                console.error("IndexedDB blocked:", err);
-                finishSplashAndStart();
-            }
+                request.onupgradeneeded = function(e) { db = e.target.result; if (!db.objectStoreNames.contains('hike_records')) db.createObjectStore('hike_records', { keyPath: 'id', autoIncrement: true }); };
+                request.onsuccess = function(e) { db = e.target.result; loadSavedRecords(); };
+                request.onerror = function() { finishSplashAndStart(); };
+            } catch (err) { finishSplashAndStart(); }
         }
 
         function loadSavedRecords() {
-            const transaction = db.transaction(['hike_records'], 'readonly');
-            const request = transaction.objectStore('hike_records').getAll();
-            request.onsuccess = function() {
-                allRecords = request.result;
-                if (isFirstLoad) { calculateTotalAltOnly(); playSplashIntro(); } 
-                else { renderAll(); }
-            };
+            const transaction = db.transaction(['hike_records'], 'readonly'); const request = transaction.objectStore('hike_records').getAll();
+            request.onsuccess = function() { allRecords = request.result; if (isFirstLoad) { calculateTotalAltOnly(); playSplashIntro(); } else { renderAll(); } };
         }
 
         function calculateTotalAltOnly() {
-            totalAltitudeData = 0;
-            const mountainMap = {};
-            
+            totalAltitudeData = 0; const mountainMap = {};
             allRecords.forEach(record => {
-                const key = `${record.lat.toFixed(4)},${record.lng.toFixed(4)}`;
-                if (!mountainMap[key]) mountainMap[key] = { count: 0, alt: 0 };
-                mountainMap[key].count += 1;
-                
-                const altValue = parseInt(record.alt);
-                if (!isNaN(altValue) && altValue > 0) mountainMap[key].alt = altValue; 
+                const rLat = parseFloat(record.lat) || 0; const rLng = parseFloat(record.lng) || 0;
+                const key = `${rLat.toFixed(4)},${rLng.toFixed(4)}`; if (!mountainMap[key]) mountainMap[key] = { count: 0, alt: 0 };
+                mountainMap[key].count += 1; const altValue = parseInt(record.alt); if (!isNaN(altValue) && altValue > 0) mountainMap[key].alt = altValue; 
             });
-            
-            for (let key in mountainMap) {
-                totalAltitudeData += mountainMap[key].alt * mountainMap[key].count;
-            }
+            for (let key in mountainMap) totalAltitudeData += mountainMap[key].alt * mountainMap[key].count;
         }
 
         let splashSkipTriggered = false;
-
         function playSplashIntro() {
-            const splash = document.getElementById('splash');
-            const counterContainer = document.getElementById('splashCounterContainer');
-            const counterObj = document.getElementById('splashCounter');
-            const hintObj = document.getElementById('touchHint');
-
-            splash.addEventListener('click', skipSplash);
-            splash.addEventListener('touchstart', skipSplash, {passive: true});
+            const splash = document.getElementById('splash'), counterContainer = document.getElementById('splashCounterContainer'), counterObj = document.getElementById('splashCounter'), hintObj = document.getElementById('touchHint');
+            splash.addEventListener('pointerdown', skipSplash);
 
             function skipSplash() {
-                if (splashSkipTriggered) return;
-                splashSkipTriggered = true; 
-                counterObj.innerText = totalAltitudeData.toLocaleString();
-                counterObj.classList.add('pop-effect');
-                finishSplashAndStart();
+                if (splashSkipTriggered) return; splashSkipTriggered = true; counterObj.innerText = totalAltitudeData.toLocaleString(); counterObj.classList.add('pop-effect'); finishSplashAndStart();
             }
 
             setTimeout(() => {
-                if (splashSkipTriggered) return;
-                counterContainer.classList.add('show');
-                hintObj.style.opacity = '1';
-                hintObj.innerText = "터치 시 바로 시작할 수 있습니다";
-                
+                if (splashSkipTriggered) return; counterContainer.classList.add('show'); hintObj.style.opacity = '1'; hintObj.innerText = "터치 시 바로 시작할 수 있습니다";
                 setTimeout(() => {
-                    if (splashSkipTriggered) return;
-                    let startTimestamp = null;
-                    const duration = 1500; 
-                    
+                    if (splashSkipTriggered) return; let startTimestamp = null; const duration = 1500; 
                     const step = (timestamp) => {
-                        if (splashSkipTriggered) return; 
-                        
-                        if (!startTimestamp) startTimestamp = timestamp;
+                        if (splashSkipTriggered) return; if (!startTimestamp) startTimestamp = timestamp;
                         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                        const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-                        counterObj.innerText = Math.floor(easeProgress * totalAltitudeData).toLocaleString();
-                        
-                        if (progress < 1) {
-                            window.requestAnimationFrame(step);
-                        } else {
-                            counterObj.classList.add('pop-effect');
-                            hintObj.innerText = "화면을 터치하여 지도 보기 🗺️"; 
-                            hintObj.style.animation = 'blinkHint 1s infinite';
-                        }
-                    };
-                    window.requestAnimationFrame(step);
+                        counterObj.innerText = Math.floor((progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress)) * totalAltitudeData).toLocaleString();
+                        if (progress < 1) window.requestAnimationFrame(step); else { counterObj.classList.add('pop-effect'); hintObj.innerText = "화면을 터치하여 지도 보기 🗺️"; hintObj.style.animation = 'blinkHint 1s infinite'; }
+                    }; window.requestAnimationFrame(step);
                 }, 300); 
             }, 600); 
         }
 
         function finishSplashAndStart() {
             const splash = document.getElementById('splash');
-            if(splash) {
-                splash.style.opacity = '0'; 
-                setTimeout(() => {
-                    splash.style.display = 'none'; 
-                    if (map) map.invalidateSize(); 
-                    renderAll(); 
-                }, 500);
-            } else {
-                if (map) map.invalidateSize(); 
-                renderAll();
-            }
+            if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; if (map) map.invalidateSize(); renderAll(); }, 500); } 
+            else { if (map) map.invalidateSize(); renderAll(); }
         }
 
         function createGroupMarker(group) {
-            const marker = L.marker([group.lat, group.lng], {icon: mountainIcon}).addTo(markerLayerGroup);
-            groupedMarkers[group.key] = { marker: marker, data: group }; 
-
-            const iconElement = marker.getElement();
-            if(iconElement) iconElement.classList.add('drop-marker');
-
-            const altText = group.altNum ? `${group.altNum}m` : "";
-            const tooltipText = altText ? `${group.name} (${altText})` : `${group.name}`;
-            const countText = group.climbs.length > 1 ? ` [${group.climbs.length}회 완등]` : "";
-            
-            setTimeout(() => {
-                marker.bindTooltip(tooltipText + countText, { permanent: true, direction: 'top', className: 'mountain-label', offset: [0, -25] });
-            }, 400);
-
+            const marker = L.marker([group.lat, group.lng], {icon: mountainIcon}).addTo(markerLayerGroup); groupedMarkers[group.key] = { marker: marker, data: group }; 
+            marker.bindTooltip((group.altNum ? `${group.name} (${group.altNum}m)` : `${group.name}`) + (group.climbs.length > 1 ? ` [${group.climbs.length}회]` : ""), { permanent: true, direction: 'top', className: 'mountain-label', offset: [0, -25] });
             let popupContent = `<div style="text-align:center; min-width:180px;"><b>⛰️ ${group.name}</b><br><span style="color:#2E7D32; font-weight:bold;">총 ${group.climbs.length}회 등반</span><hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">`;
             group.climbs.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(climb => {
                 popupContent += `<div style="margin-bottom: 12px;"><span style="color:#555; font-size:0.9em;">📅 ${climb.date}</span>`;
-                if (climb.photos && climb.photos.length > 0) {
-                    popupContent += `<div class="photo-gallery" style="justify-content:center;">`;
-                    const encoded = encodeURIComponent(JSON.stringify(climb.photos));
-                    climb.photos.forEach((url, idx) => { popupContent += `<img src="${url}" onclick="openCarousel('${encoded}', ${idx}, event)">`; });
-                    popupContent += `</div>`;
-                }
-                popupContent += `</div>`;
-            });
-            popupContent += `</div>`;
-            marker.bindPopup(popupContent);
+                if (climb.photos && climb.photos.length > 0) { popupContent += `<div class="photo-gallery" style="justify-content:center;">`; climb.photos.forEach(url => { popupContent += `<img src="${url}" onclick="openPhoto('${url}', event)">`; }); popupContent += `</div>`; } popupContent += `</div>`;
+            }); popupContent += `</div>`; marker.bindPopup(popupContent);
         }
 
         function renderAll() {
-            markerLayerGroup.clearLayers();
-            groupedMarkers = {};
-            document.getElementById('recordList').innerHTML = '';
-
-            let totalAltitude = 0;
-            const groups = {};
+            markerLayerGroup.clearLayers(); groupedMarkers = {}; document.getElementById('recordList').innerHTML = '';
+            let totalAltitude = 0; const groups = {};
             
+            // 💡 숫자형 파싱을 도입하여 에러 발생으로 인해 렌더링이 멈추고 마커가 사라지던 버그 방지
             allRecords.forEach(record => {
-                const key = `${record.lat.toFixed(4)},${record.lng.toFixed(4)}`;
-                if(!groups[key]) groups[key] = { key: key, name: record.name, lat: record.lat, lng: record.lng, climbs: [], earliestDate: record.date, altNum: 0 };
-                
-                groups[key].climbs.push(record);
-                if(new Date(record.date) < new Date(groups[key].earliestDate)) groups[key].earliestDate = record.date;
-                
-                const altValue = parseInt(record.alt);
-                if (!isNaN(altValue) && altValue > 0) {
-                    groups[key].altNum = altValue; 
-                }
+                const rLat = parseFloat(record.lat) || 0;
+                const rLng = parseFloat(record.lng) || 0;
+                const key = `${rLat.toFixed(4)},${rLng.toFixed(4)}`;
+                if(!groups[key]) groups[key] = { key: key, name: record.name, lat: rLat, lng: rLng, climbs: [], earliestDate: record.date, altNum: 0 };
+                groups[key].climbs.push(record); if(new Date(record.date) < new Date(groups[key].earliestDate)) groups[key].earliestDate = record.date;
+                const altValue = parseInt(record.alt); if (!isNaN(altValue) && altValue > 0) groups[key].altNum = altValue; 
             });
-
-            for (let key in groups) {
-                totalAltitude += groups[key].altNum * groups[key].climbs.length;
-            }
-
+            for (let key in groups) totalAltitude += groups[key].altNum * groups[key].climbs.length; 
             document.getElementById('totalAlt').innerText = totalAltitude.toLocaleString();
             
-            const motivationText = document.getElementById('motivationText');
-            if (totalAltitude === 0) {
-                motivationText.innerText = "첫 등산을 기록해보세요! 🥾";
-            } else if (totalAltitude < 1000) {
-                motivationText.innerText = "멋진 시작입니다! 계속 올라가 볼까요? 🌿";
-            } else if (totalAltitude < 3000) {
-                motivationText.innerText = "대단해요! 구름이 가까워지고 있어요 ☁️";
-            } else if (totalAltitude < 8848) {
-                motivationText.innerText = "진정한 등산 마니아! 에베레스트를 향해! 🏔️";
-            } else {
-                motivationText.innerText = "에베레스트 정복 고도 달성! 당신은 전설입니다 🏆";
-            }
-
-            const groupsArray = Object.values(groups);
-            groupsArray.sort((a,b) => new Date(a.earliestDate) - new Date(b.earliestDate));
+            Object.values(groups).sort((a,b) => new Date(a.earliestDate) - new Date(b.earliestDate)).forEach(group => createGroupMarker(group));
             
-            let delay = 0;
-            groupsArray.forEach(group => {
-                if (isFirstLoad) {
-                    setTimeout(() => { createGroupMarker(group); }, delay);
-                    delay += 100; 
-                } else {
-                    createGroupMarker(group);
-                }
-            });
-
-            if (isFirstLoad) {
-                setTimeout(() => {
-                    sidebar.classList.remove('hidden');
-                    applyDateFilter(); 
-                    isFirstLoad = false;
-                }, delay + 100);
-            } else {
-                sidebar.classList.remove('hidden');
-                applyDateFilter();
+            // 💡 명산 100/도전 100 모드가 아니라면 강제로 레이어 삽입하여 마커 보호
+            if(!is100MountainsMode && !isChallengeMode) {
+                if(!map.hasLayer(markerLayerGroup)) map.addLayer(markerLayerGroup);
+                document.getElementById('sidebar').classList.remove('hidden'); 
             }
+            applyDateFilter(); isFirstLoad = false;
 
             allRecords.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(data => {
-                const list = document.getElementById('recordList');
-                const recordCard = document.createElement('div');
-                recordCard.className = 'record-card';
-                recordCard.onclick = (e) => {
-                    if(e.target.tagName === 'BUTTON' || e.target.tagName === 'IMG') return;
-                    highlightMarker(data);
-                };
-
-                const altText = data.alt !== "정보 없음" ? `${data.alt}m` : "";
-                let cardHtml = `
-                    <div class="action-btns">
-                        <button class="edit-btn" onclick="editRecord(${data.id}, event)">수정</button>
-                        <button class="delete-btn" onclick="deleteRecord(${data.id}, event)">삭제</button>
-                    </div>
-                    <h4>⛰️ ${data.name} <span style="font-size:0.8em; color:#2E7D32;">${altText ? '('+altText+')' : ''}</span></h4>
-                    <p>📅 ${data.date}</p>
-                `;
-                recordCard.innerHTML = cardHtml;
+                const list = document.getElementById('recordList'); const recordCard = document.createElement('div'); recordCard.className = 'record-card';
+                recordCard.onclick = (e) => { if(e.target.tagName === 'BUTTON') return; highlightMarker(data); };
+                recordCard.innerHTML = `<div class="action-btns"><button class="edit-btn" onclick="editRecord(${data.id}, event)">수정</button><button class="delete-btn" onclick="deleteRecord(${data.id}, event)">삭제</button></div>
+                    <h4>⛰️ ${data.name} <span style="font-size:0.8em; color:#2E7D32;">${data.alt !== "정보 없음" ? '('+data.alt+'m)' : ''}</span></h4><p>📅 ${data.date}</p>`;
                 list.appendChild(recordCard); 
             });
+            
+            if(isChallengeMode) renderChallengeMapAndList();
         }
 
         function applyDateFilter() {
             const filterActive = (selectedFilterYear !== 'all' || selectedFilterMonth !== 'all');
-
             for (let key in groupedMarkers) {
-                const item = groupedMarkers[key];
-                const marker = item.marker;
-                const domElement = marker.getElement();
-                const tooltipElement = marker.getTooltip() ? marker.getTooltip().getElement() : null;
-                
-                if (!domElement) continue;
-
-                if (!filterActive) {
-                    domElement.classList.remove('highlight-marker', 'dim-marker', 'pop-animation');
-                    if (tooltipElement) tooltipElement.classList.remove('highlight-marker-tooltip');
-                    marker.setZIndexOffset(0);
-                    continue;
-                }
-
+                const domElement = groupedMarkers[key].marker.getElement(); if (!domElement) continue;
+                if (!filterActive) { domElement.classList.remove('highlight-marker', 'dim-marker'); groupedMarkers[key].marker.setZIndexOffset(0); continue; }
                 let isMatch = false;
-                item.data.climbs.forEach(climb => {
-                    const climbYear = climb.date.split('-')[0];
-                    const climbMonth = climb.date.split('-')[1];
-                    
-                    const yearMatch = (selectedFilterYear === 'all' || selectedFilterYear === climbYear);
-                    const monthMatch = (selectedFilterMonth === 'all' || selectedFilterMonth === climbMonth);
-                    
-                    if (yearMatch && monthMatch) isMatch = true;
+                groupedMarkers[key].data.climbs.forEach(climb => {
+                    if ((selectedFilterYear === 'all' || selectedFilterYear === climb.date.split('-')[0]) && (selectedFilterMonth === 'all' || selectedFilterMonth === climb.date.split('-')[1])) isMatch = true;
                 });
-
-                if (isMatch) {
-                    domElement.classList.remove('dim-marker');
-                    domElement.classList.add('highlight-marker');
-                    
-                    domElement.classList.remove('pop-animation');
-                    void domElement.offsetWidth; 
-                    domElement.classList.add('pop-animation');
-                    
-                    if (tooltipElement) tooltipElement.classList.add('highlight-marker-tooltip');
-                    marker.setZIndexOffset(1000); 
-                } else {
-                    domElement.classList.remove('highlight-marker', 'pop-animation');
-                    domElement.classList.add('dim-marker');
-                    if (tooltipElement) tooltipElement.classList.remove('highlight-marker-tooltip');
-                    marker.setZIndexOffset(0);
-                }
+                if (isMatch) { domElement.classList.remove('dim-marker'); domElement.classList.add('highlight-marker'); groupedMarkers[key].marker.setZIndexOffset(1000); } 
+                else { domElement.classList.remove('highlight-marker'); domElement.classList.add('dim-marker'); groupedMarkers[key].marker.setZIndexOffset(0); }
             }
+        }
+
+        const sidebar = document.getElementById('sidebar'), handleDrag = document.getElementById('dragHandle'), dragText = document.querySelector('.drag-text');
+        let currentSidebarState = 0; const states = ['collapsed', 'half', 'full']; let startY = 0;
+        handleDrag.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
+        handleDrag.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); 
+        handleDrag.addEventListener('touchend', e => {
+            const diff = startY - e.changedTouches[0].clientY; 
+            if (Math.abs(diff) > 50) { 
+                if (diff > 0) { if (currentSidebarState < 2) currentSidebarState++; } else { if (currentSidebarState > 0) currentSidebarState--; }
+                updateSidebarState();
+            }
+        });
+        function updateSidebarState() {
+            sidebar.classList.remove('collapsed', 'half', 'full'); sidebar.classList.add(states[currentSidebarState]);
+            if (currentSidebarState === 0) dragText.innerText = '올려서 기록 보기 🔼'; else if (currentSidebarState === 1) dragText.innerText = '더 크게 / 접기 ↕️'; else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
         }
 
         let debounceTimer;
-        function handleEnter(e) {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); searchMountain(); }
-            }, 500);
-        }
-
+        function handleEnter(e) { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); searchMountain(); } }, 500); }
         window.handleSearchResults = function(data) {
-            const resultsUl = document.getElementById('searchResults');
-            resultsUl.innerHTML = '';
+            const resultsUl = document.getElementById('searchResults'); resultsUl.innerHTML = '';
             if (!data || data.length === 0) { resultsUl.innerHTML = '<li style="color:#d32f2f;">결과가 없습니다.</li>'; return; }
-
             data.forEach(place => {
-                const li = document.createElement('li');
-                const shortAddress = place.display_name.split(',').slice(1).join(',').trim() || place.display_name;
+                const li = document.createElement('li'); const shortAddress = place.display_name.split(',').slice(1).join(',').trim() || place.display_name;
                 li.innerHTML = `<strong>${place.name}</strong> <span style="color:#777; font-size:0.85em; margin-left:8px;">${shortAddress}</span>`;
                 li.onclick = () => {
-                    document.getElementById('mountainInput').value = place.name;
-                    document.getElementById('lat').value = place.lat;
-                    document.getElementById('lng').value = place.lon;
+                    document.getElementById('mountainInput').value = place.name; document.getElementById('lat').value = place.lat; document.getElementById('lng').value = place.lon;
                     if (tempMarker) map.removeLayer(tempMarker);
                     tempMarker = L.marker([place.lat, place.lon], {icon: mountainIcon}).addTo(map).bindPopup("<b>이곳이 맞다면 나머지 정보를 입력 후 저장하세요.</b>").openPopup();
-                    resultsUl.style.display = 'none';
-                    map.flyTo([place.lat, place.lon], 13);
-                };
-                resultsUl.appendChild(li);
+                    resultsUl.style.display = 'none'; map.flyTo([place.lat, place.lon], 13);
+                }; resultsUl.appendChild(li);
             });
         };
-
         function searchMountain() {
-            const inputField = document.getElementById('mountainInput');
-            inputField.blur();
-            const query = inputField.value.trim();
-            if (!query) return alert("산 이름을 적어주세요.");
-            
-            const resultsUl = document.getElementById('searchResults');
-            resultsUl.style.display = 'block'; resultsUl.innerHTML = '<li>조회 중... ⏳</li>';
-
-            const oldScript = document.getElementById('jsonpSearch');
-            if (oldScript) oldScript.remove();
-
-            const script = document.createElement('script');
-            script.id = 'jsonpSearch';
+            const query = document.getElementById('mountainInput').value.trim(); if (!query) return alert("산 이름을 적어주세요.");
+            const resultsUl = document.getElementById('searchResults'); resultsUl.style.display = 'block'; resultsUl.innerHTML = '<li>조회 중... ⏳</li>';
+            const oldScript = document.getElementById('jsonpSearch'); if (oldScript) oldScript.remove();
+            const script = document.createElement('script'); script.id = 'jsonpSearch';
             script.src = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=kr&accept-language=ko&limit=10&json_callback=handleSearchResults`;
-            script.onerror = () => { resultsUl.innerHTML = '<li style="color:#d32f2f;">통신 오류 발생. 다시 시도해주세요.</li>'; };
-            document.head.appendChild(script);
+            script.onerror = () => { resultsUl.innerHTML = '<li style="color:#d32f2f;">통신 오류 발생. 다시 시도해주세요.</li>'; }; document.head.appendChild(script);
         }
 
         function highlightMarker(data) {
-            const key = `${data.lat.toFixed(4)},${data.lng.toFixed(4)}`;
+            closeM100Panel(true); closeChallengePanel(true); 
+            if(!map.hasLayer(markerLayerGroup)) map.addLayer(markerLayerGroup);
+            document.getElementById('sidebar').classList.remove('hidden');
+            
+            const key = `${parseFloat(data.lat).toFixed(4)},${parseFloat(data.lng).toFixed(4)}`; 
             const item = groupedMarkers[key];
             if(item && item.marker) {
-                if(window.innerWidth <= 768) {
-                    currentSidebarState = 0; 
-                    updateSidebarState();
-                }
-                map.flyTo([data.lat, data.lng], 14, {animate: true, duration: 1});
-                item.marker.openPopup();
-                const iconElement = item.marker.getElement();
-                if(iconElement) {
-                    iconElement.classList.add('pulse-animation');
-                    setTimeout(() => iconElement.classList.remove('pulse-animation'), 1600);
-                }
+                if(window.innerWidth <= 768) { currentSidebarState = 0; updateSidebarState(); }
+                map.flyTo([data.lat, data.lng], 14, {animate: true, duration: 1}); item.marker.openPopup();
             }
         }
 
-        let carouselPhotos = [];
-        let carouselIndex = 0;
-
-        function openCarousel(encodedPhotos, startIndex, event) {
-            if(event) event.stopPropagation();
-            carouselPhotos = JSON.parse(decodeURIComponent(encodedPhotos));
-            carouselIndex = startIndex;
-            updateCarouselUI();
-            document.getElementById('photoOverlay').classList.add('show');
-        }
-
-        function updateCarouselUI() {
-            document.getElementById('expandedPhoto').src = carouselPhotos[carouselIndex];
-            document.getElementById('photoCounter').innerText = `${carouselIndex + 1} / ${carouselPhotos.length}`;
-            const showArrows = carouselPhotos.length > 1 ? 'block' : 'none';
-            document.querySelector('.nav-btn.prev').style.display = showArrows;
-            document.querySelector('.nav-btn.next').style.display = showArrows;
-        }
-
-        function changePhoto(step, event) {
-            if(event) event.stopPropagation(); 
-            carouselIndex += step;
-            if (carouselIndex < 0) carouselIndex = carouselPhotos.length - 1;
-            if (carouselIndex >= carouselPhotos.length) carouselIndex = 0;
-            updateCarouselUI();
-        }
-
-        function closePhoto(e) {
-            if(e && (e.target.classList.contains('nav-btn') || e.target.id === 'expandedPhoto' || e.target.id === 'photoCounter')) return;
-            document.getElementById('photoOverlay').classList.remove('show');
-        }
-
-        let touchStartX = 0; let touchEndX = 0;
-        const photoOverlay = document.getElementById('photoOverlay');
-        photoOverlay.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
-        photoOverlay.addEventListener('touchend', e => {
-            touchEndX = e.changedTouches[0].screenX;
-            if (touchStartX - touchEndX > 50) changePhoto(1); 
-            if (touchEndX - touchStartX > 50) changePhoto(-1); 
-        }, {passive: true});
+        function openPhoto(url, event) { if(event) event.stopPropagation(); document.getElementById('expandedPhoto').src = url; document.getElementById('photoOverlay').classList.add('show'); }
+        function closePhoto(e) { if(e && e.target.id === 'expandedPhoto') return; document.getElementById('photoOverlay').classList.remove('show'); }
 
         function resizeImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const maxSize = 800; let width = img.width, height = img.height;
-                        if (width > height && width > maxSize) { height *= maxSize / width; width = maxSize; }
-                        else if (height > maxSize) { width *= maxSize / height; height = maxSize; }
-                        canvas.width = width; canvas.height = height;
-                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.8)); 
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
+                    const img = new Image(); img.onload = () => {
+                        const canvas = document.createElement('canvas'); const maxSize = 800; let width = img.width, height = img.height;
+                        if (width > height && width > maxSize) { height *= maxSize / width; width = maxSize; } else if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+                        canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height); resolve(canvas.toDataURL('image/jpeg', 0.8)); 
+                    }; img.src = e.target.result;
+                }; reader.readAsDataURL(file);
             });
         }
 
         function editRecord(id, event) {
-            if(event) event.stopPropagation();
-            const record = allRecords.find(r => r.id === id);
-            if(!record) return;
-
-            editingId = id; 
-            document.getElementById('mountainInput').value = record.name;
-            document.getElementById('hikeDate').value = record.date;
-            document.getElementById('hikeAlt').value = record.alt !== "정보 없음" ? record.alt : "";
-            document.getElementById('lat').value = record.lat;
-            document.getElementById('lng').value = record.lng;
+            if(event) event.stopPropagation(); const record = allRecords.find(r => r.id === id); if(!record) return;
+            editingId = id; document.getElementById('mountainInput').value = record.name; document.getElementById('hikeDate').value = record.date;
+            document.getElementById('hikeAlt').value = record.alt !== "정보 없음" ? record.alt : ""; document.getElementById('lat').value = record.lat; document.getElementById('lng').value = record.lng;
             
-            const saveBtn = document.getElementById('mainSaveBtn');
-            saveBtn.innerText = "🔄 기록 수정 완료";
-            saveBtn.classList.add('edit-mode');
-            
-            if (tempMarker) map.removeLayer(tempMarker);
-            tempMarker = L.marker([record.lat, record.lng], {icon: mountainIcon}).addTo(map);
-            map.flyTo([record.lat, record.lng], 13);
-
-            if(window.innerWidth <= 768) {
-                currentSidebarState = 2; 
-                updateSidebarState();
-            }
-            document.getElementById('sidebarContent').scrollTop = 0; 
-            
-            alert("수정 모드로 전환되었습니다.\n사진은 새로 첨부하지 않으면 기존 사진이 보존됩니다.");
+            const saveBtn = document.getElementById('mainSaveBtn'); saveBtn.innerText = "🔄 기록 수정 완료"; saveBtn.classList.add('edit-mode');
+            if (tempMarker) map.removeLayer(tempMarker); tempMarker = L.marker([record.lat, record.lng], {icon: mountainIcon}).addTo(map); map.flyTo([record.lat, record.lng], 13);
+            if(window.innerWidth <= 768) { currentSidebarState = 2; updateSidebarState(); } document.getElementById('sidebarContent').scrollTop = 0; 
         }
 
         async function saveRecord() {
-            const name = document.getElementById('mountainInput').value || "이름 없는 산";
-            const date = document.getElementById('hikeDate').value;
-            const alt = document.getElementById('hikeAlt').value || "정보 없음";
-            const lat = document.getElementById('lat').value;
-            const lng = document.getElementById('lng').value;
-            const photoInput = document.getElementById('hikePhoto');
+            const name = document.getElementById('mountainInput').value || "이름 없는 산", date = document.getElementById('hikeDate').value, alt = document.getElementById('hikeAlt').value || "정보 없음", lat = document.getElementById('lat').value, lng = document.getElementById('lng').value, photoInput = document.getElementById('hikePhoto');
+            if (!lat || !lng) return alert("검색을 통해 산 위치를 선택해주세요!"); if (!date) return alert("등산하신 날짜를 골라주세요.");
 
-            if (!lat || !lng) return alert("검색을 통해 산 위치를 선택해주세요!");
-            if (!date) return alert("등산하신 날짜를 골라주세요.");
+            const saveBtn = document.getElementById('mainSaveBtn'); saveBtn.innerText = "처리 중... ⏳"; saveBtn.disabled = true;
+            let photoUrls = []; if (photoInput.files && photoInput.files.length > 0) { for(let i = 0; i < photoInput.files.length; i++) { photoUrls.push(await resizeImage(photoInput.files[i])); } }
 
-            const saveBtn = document.getElementById('mainSaveBtn');
-            saveBtn.innerText = "처리 중... ⏳";
-            saveBtn.disabled = true;
-
-            let photoUrls = [];
-            if (photoInput.files && photoInput.files.length > 0) {
-                for(let i = 0; i < photoInput.files.length; i++) {
-                    photoUrls.push(await resizeImage(photoInput.files[i]));
-                }
-            }
-
-            const transaction = db.transaction(['hike_records'], 'readwrite');
-            const store = transaction.objectStore('hike_records');
-
+            const store = db.transaction(['hike_records'], 'readwrite').objectStore('hike_records');
             if (editingId) {
-                const request = store.get(editingId);
-                request.onsuccess = function() {
-                    const record = request.result;
-                    record.name = name; record.date = date; record.alt = alt;
-                    record.lat = parseFloat(lat); record.lng = parseFloat(lng);
-                    if (photoUrls.length > 0) record.photos = photoUrls; 
-
-                    const updateRequest = store.put(record);
-                    updateRequest.onsuccess = function() { resetAndReload(); };
+                store.get(editingId).onsuccess = function(e) {
+                    const record = e.target.result; record.name = name; record.date = date; record.alt = alt; record.lat = parseFloat(lat); record.lng = parseFloat(lng);
+                    if (photoUrls.length > 0) record.photos = photoUrls; store.put(record).onsuccess = resetAndReload;
                 };
-            } else {
-                const recordData = { name, date, alt, lat: parseFloat(lat), lng: parseFloat(lng), photos: photoUrls };
-                const addRequest = store.add(recordData);
-                addRequest.onsuccess = function(e) { resetAndReload(); };
-            }
+            } else { store.add({ name, date, alt, lat: parseFloat(lat), lng: parseFloat(lng), photos: photoUrls }).onsuccess = resetAndReload; }
 
             function resetAndReload() {
-                editingId = null;
-                saveBtn.classList.remove('edit-mode');
-                document.getElementById('mountainInput').value = ''; document.getElementById('hikeDate').value = '';
-                document.getElementById('hikeAlt').value = ''; document.getElementById('hikePhoto').value = '';
-                document.getElementById('lat').value = ''; document.getElementById('lng').value = '';
+                editingId = null; saveBtn.classList.remove('edit-mode');
+                document.getElementById('mountainInput').value = ''; document.getElementById('hikeDate').value = ''; document.getElementById('hikeAlt').value = ''; 
+                document.getElementById('hikePhoto').value = ''; document.getElementById('lat').value = ''; document.getElementById('lng').value = '';
                 if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
-                
-                saveBtn.innerText = "지도에 내 기록 남기기";
-                saveBtn.disabled = false;
-                loadSavedRecords(); 
+                saveBtn.innerText = "지도에 내 기록 남기기"; saveBtn.disabled = false; loadSavedRecords(); 
             }
         }
 
         function deleteRecord(id, event) {
-            if(event) event.stopPropagation(); 
-            if (!confirm("정말로 이 등산 기록을 삭제하시겠습니까?")) return;
-
-            const transaction = db.transaction(['hike_records'], 'readwrite');
-            const request = transaction.objectStore('hike_records').delete(id);
-            request.onsuccess = function() { loadSavedRecords(); }; 
+            if(event) event.stopPropagation(); if (!confirm("정말로 이 등산 기록을 삭제하시겠습니까?")) return;
+            db.transaction(['hike_records'], 'readwrite').objectStore('hike_records').delete(id).onsuccess = loadSavedRecords; 
         }
 
         function exportData() {
             if (allRecords.length === 0) return alert("백업할 기록이 없습니다.");
-            const dataStr = JSON.stringify(allRecords);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = "나의_등산기록_백업.json"; 
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(allRecords)], { type: "application/json" }));
+            link.download = "나의_등산기록_백업.json"; document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
 
         function importData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            if (!confirm("기존 기록에 불러온 데이터를 추가하시겠습니까?")) {
-                event.target.value = ''; 
-                return;
-            }
-
+            const file = event.target.files[0]; if (!file) return;
+            if (!confirm("기존 기록에 불러온 데이터를 추가하시겠습니까?")) { event.target.value = ''; return; }
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
-                    const importedData = JSON.parse(e.target.result);
-                    const transaction = db.transaction(['hike_records'], 'readwrite');
-                    const store = transaction.objectStore('hike_records');
-                    
-                    importedData.forEach(record => {
-                        delete record.id; 
-                        store.add(record);
-                    });
-                    
-                    transaction.oncomplete = () => {
-                        alert("기록 복원이 완료되었습니다!");
-                        loadSavedRecords(); 
-                    };
-                } catch (err) {
-                    alert("잘못된 파일입니다. 백업했던 JSON 파일을 선택해주세요.");
-                }
-            };
-            reader.readAsText(file);
-            event.target.value = ''; 
+                    const importedData = JSON.parse(e.target.result); const store = db.transaction(['hike_records'], 'readwrite').objectStore('hike_records');
+                    importedData.forEach(record => { delete record.id; store.add(record); });
+                    alert("기록 복원이 완료되었습니다!"); loadSavedRecords(); 
+                } catch (err) { alert("잘못된 파일입니다. 백업했던 JSON 파일을 선택해주세요."); }
+            }; reader.readAsText(file); event.target.value = ''; 
         }
     </script>
 </body>
