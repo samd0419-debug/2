@@ -59,7 +59,8 @@
         #dragHandle .bar { width: 50px; height: 6px; background: #ccc; border-radius: 5px; margin-top: 10px; }
         #dragHandle .drag-text { font-size: 0.75em; color: #999; font-weight: bold; margin-top: 5px; margin-bottom: 5px; }
         
-        #sidebarContent { flex: 1; overflow-y: auto; padding: 0 20px 24px 20px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+        /* 하단 끝까지 스크롤되도록 padding-bottom 대폭 증가 및 touch-action 변경 */
+        #sidebarContent { flex: 1; overflow-y: auto; padding: 0 20px 100px 20px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 
         .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
@@ -75,8 +76,7 @@
         #myLogWidget { position: fixed; right: 15px; bottom: 30px; z-index: 1000; touch-action: none; }
         #challengeWidget { position: fixed; right: 15px; bottom: 95px; z-index: 1000; touch-action: none; }
         #m100Widget { position: fixed; right: 15px; bottom: 160px; z-index: 1000; touch-action: none; }
-        #searchWidget { position: fixed; right: 15px; bottom: 225px; z-index: 1000; touch-action: none; } /* 새 검색 탭 위젯 */
-        #filterWidget { position: fixed; right: 15px; bottom: 290px; z-index: 1000; touch-action: none; }
+        #searchWidget { position: fixed; right: 15px; bottom: 225px; z-index: 1000; touch-action: none; }
 
         #myLogFab { background: rgba(46, 125, 50, 0.9); }
         #myLogFab::before { content: '🏕️'; font-size: 1.6em; margin-bottom: 2px; }
@@ -85,27 +85,8 @@
         #m100Fab { background: rgba(21, 101, 192, 0.9); }
         #m100Fab::before { content: '⛰️'; font-size: 1.6em; margin-bottom: 2px; }
         
-        /* 새로운 검색 FAB */
         #searchFab { background: rgba(103, 58, 183, 0.9); }
         #searchFab::before { content: '🔎'; font-size: 1.6em; margin-bottom: 2px; }
-
-        /* 1년동안 필터 FAB */
-        #filterFab { background: rgba(121, 85, 72, 0.9); font-size: 0.68em; line-height: 1.1; }
-        #filterFab::before { content: '📅'; font-size: 1.8em; margin-bottom: 2px; }
-        #filterWidget.open #filterFab { transform: scale(0); opacity: 0; pointer-events: none; }
-
-        /* 연도 전용 다이얼 UI (화살표 표기, 문구 삭제) */
-        #filterDial {
-            position: absolute; top: 50%; left: 50%; width: 130px; height: 130px; margin-top: -65px; margin-left: -65px; border-radius: 50%; 
-            background: rgba(255, 255, 255, 0.95); box-shadow: 0 10px 40px rgba(0,0,0,0.3); backdrop-filter: blur(10px);
-            transform: scale(0.1); opacity: 0; pointer-events: none; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s; z-index: 10;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: ns-resize; border: 4px solid rgba(121, 85, 72, 0.8);
-        }
-        #filterWidget.open #filterDial { transform: scale(1); opacity: 1; pointer-events: auto; }
-        
-        #filterDial::before { content: '▲'; position: absolute; top: 12px; font-size: 16px; color: #795548; font-weight: 900; }
-        #filterDial::after { content: '▼'; position: absolute; bottom: 12px; font-size: 16px; color: #795548; font-weight: 900; }
-        .year-val { font-size: 2em; font-weight: 900; color: #4E342E; line-height: 1; margin-top: 5px; }
 
         /* 리스트 스타일 */
         .m100-list { padding: 0; margin: 0; list-style: none; }
@@ -119,11 +100,7 @@
         @keyframes dropIn { 0% { transform: translateY(-50px) scale(0.5); opacity: 0; } 60% { transform: translateY(10px) scale(1.1); opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
         .pin-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-end; transform-origin: bottom center; animation: dropIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
         
-        .highlight-marker { z-index: 99999 !important; }
-        .highlight-marker .pin-wrapper svg { transition: all 0.3s; transform: scale(1.5); filter: drop-shadow(0 0 15px rgba(255,235,59,1)); }
-        .highlight-marker .pin-wrapper path { fill: #D32F2F; stroke: #FFEB3B; stroke-width: 2px; }
         .dim-marker { opacity: 0.2 !important; filter: grayscale(100%); transition: all 0.3s; z-index: 0 !important; }
-        
         .challenge-climbed .pin-wrapper path { fill: #FF8F00 !important; stroke: #FFF8E1 !important; stroke-width: 2px; }
         
         /* 툴팁 스타일 */
@@ -142,16 +119,13 @@
         }
         input:focus { border-color: #2E7D32; outline: none; background-color: #fff; }
 
-        /* 인라인 검색 리스트 (내 기록 및 탭 공용) */
+        /* 인라인 검색 리스트 */
         .inline-search-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; list-style: none; padding: 0; margin: 2px 0 0 0; max-height: 180px; overflow-y: auto; border: 2px solid #2E7D32; border-radius: 6px; display: none; background: #fff; box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
         .inline-search-results li { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9em; }
 
         .search-btn { padding: 0 18px; background: #2E7D32; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 0.95em; cursor: pointer; white-space: nowrap; }
         .save-btn { width: 100%; padding: 14px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); cursor: pointer; }
 
-        .photo-gallery { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; padding-bottom: 5px; }
-        .photo-gallery img { width: 70px; height: 70px; object-fit: cover; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        
         .record-card { position: relative; background: #fafafa; padding: 14px; margin-top: 15px; border-radius: 8px; border: 1px solid #eee; cursor: pointer; }
         .record-card h4 { margin: 0 0 5px 0; color: #333; font-size: 1.1em; padding-right: 90px; }
         .record-card p { margin: 0; font-size: 0.85em; color: #666; }
@@ -161,10 +135,21 @@
 
         h2.tab-title { color: #333; margin: 10px 0 15px 0; font-size: 1.5em; font-weight: 900; letter-spacing: -1px; display:flex; justify-content:space-between; align-items:center; }
         
-        /* 백업/복구 UI 및 누적 고도 배너 */
         .util-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 0.9em; cursor: pointer; }
         .btn-backup { background: #607D8B; } .btn-restore { background: #795548; }
         .total-alt-banner { background: #e8f5e9; border: 2px solid #4CAF50; border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 15px; color: #2E7D32; font-weight: bold; font-size: 1.1em; }
+
+        /* 사진 다중 슬라이더(캐러셀) 스타일 */
+        .carousel { position: relative; width: 100%; max-width: 200px; margin: 10px auto; overflow: hidden; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .carousel-inner { display: flex; transition: transform 0.3s ease-in-out; }
+        .carousel-item { min-width: 100%; box-sizing: border-box; }
+        .carousel-item img { width: 100%; height: 130px; object-fit: cover; display: block; border-radius: 6px; cursor: pointer; }
+        .carousel-control { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.6); color: white; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 10; font-weight:bold; }
+        .carousel-control.prev { left: 5px; }
+        .carousel-control.next { right: 5px; }
+        .carousel-dots { position: absolute; bottom: 6px; left: 0; right: 0; display: flex; justify-content: center; gap: 5px; z-index: 10; }
+        .carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.5); transition: background 0.2s; }
+        .carousel-dot.active { background: white; transform: scale(1.2); }
     </style>
 </head>
 <body>
@@ -183,23 +168,18 @@
 
     <div id="map"></div>
 
-    <!-- FAB 위젯 -->
-    <div id="filterWidget"><div id="filterDial"><div class="year-val" id="yearVal">전체</div></div><div id="filterFab" class="fab-btn">1년<br>동안</div></div>
     <div id="searchWidget"><div id="searchFab" class="fab-btn">검색</div></div>
     <div id="m100Widget"><div id="m100Fab" class="fab-btn">명산100</div></div>
     <div id="challengeWidget"><div id="challengeFab" class="fab-btn">도전100</div></div>
     <div id="myLogWidget"><div id="myLogFab" class="fab-btn">내기록</div></div>
 
-    <!-- 바텀시트 컨테이너 -->
     <div id="sidebar" class="hidden">
         <div id="dragHandle"><div class="bar"></div><div class="drag-text">스와이프 하여 닫기/열기</div></div>
         <div id="sidebarContent">
             
-            <!-- 🏕️ 나의 등산기 탭 -->
             <div id="tabMyLog" class="tab-content active">
                 <h2 class="tab-title">🏕️ 나의 등산기</h2>
                 
-                <!-- 누적 고도 표기 배너 -->
                 <div class="total-alt-banner">
                     🔥 총 누적 등반 고도: <span id="uiTotalAlt" style="font-size:1.3em; color:#D32F2F;">0</span> m
                 </div>
@@ -210,7 +190,6 @@
                 
                 <label>1. 등산한 산 이름 (직접 검색)</label>
                 <div style="position: relative;">
-                    <!-- 인라인 산 검색 -->
                     <input type="text" id="mountainInput" placeholder="예: 북한산, 설악산 입력 후 선택" autocomplete="off" onkeyup="handleInlineSearch(event)">
                     <ul id="inlineSearchResults" class="inline-search-results"></ul>
                 </div>
@@ -237,7 +216,6 @@
                 <h3 style="color: #333; margin: 0 0 10px 0;">나의 완등 리스트</h3>
                 <div id="recordList"></div>
 
-                <!-- 백업 & 불러오기 기능 -->
                 <div style="display: flex; gap: 10px; margin-top: 30px;">
                     <button class="util-btn btn-backup" onclick="exportData()">💾 데이터 백업</button>
                     <button class="util-btn btn-restore" onclick="document.getElementById('importFile').click()">📂 데이터 가져오기</button>
@@ -245,7 +223,6 @@
                 </div>
             </div>
 
-            <!-- 🔎 산 검색 전용 탭 신설 -->
             <div id="tabSearch" class="tab-content">
                 <h2 class="tab-title">🔎 산 검색</h2>
                 <div style="font-size: 0.85em; color: #555; margin-bottom: 15px; background: #F3E5F5; padding: 12px; border-radius: 6px; border-left: 4px solid #673AB7;">
@@ -258,13 +235,11 @@
                 <ul id="tabSearchResultsList" class="inline-search-results" style="position:relative; max-height:250px;"></ul>
             </div>
 
-            <!-- ⛰️ 명산 100 탭 -->
             <div id="tabM100" class="tab-content">
                 <h2 class="tab-title">⛰️ 우리나라 100대 명산</h2>
                 <ul class="m100-list" id="m100List"></ul>
             </div>
 
-            <!-- 🏆 도전 100 탭 -->
             <div id="tabChallenge" class="tab-content">
                 <h2 class="tab-title">🏆 나의 도전 100</h2>
                 <div style="padding: 15px; text-align: center; font-size: 1.1em; font-weight: bold; background: #FFF8E1; border-radius: 8px; margin-bottom: 10px;">
@@ -276,7 +251,6 @@
         </div>
     </div>
 
-    <!-- 사진 확대 오버레이 -->
     <div id="photoOverlay" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); z-index:10000; display:none; justify-content:center; align-items:center;" onclick="this.style.display='none'">
         <img id="expandedPhoto" src="" style="max-width:90%; max-height:80%; object-fit:contain; border-radius:4px;">
     </div>
@@ -289,9 +263,7 @@
 
         let map, markerLayerGroup, m100LayerGroup, challengeLayerGroup;
         let mountainIcon, m100Icon;
-        let selectedFilterYear = 'all';
 
-        // 100대 명산 데이터
         const m100Data = [
             { name: "가리산", region: "강원 춘천", alt: 1051, lat: 37.8711, lng: 127.9544, desc: "소양호 피아골의 비경을 간직한 산" },
             { name: "가리왕산", region: "강원 정선", alt: 1561, lat: 37.4616, lng: 128.5638, desc: "전국 제일의 숲과 원시림을 간직한 산" },
@@ -409,7 +381,6 @@
 
             map.on('dblclick', resetMapToDefault);
             
-            // 더블 탭 이벤트 (초기화면 복귀)
             let lastTapTime = 0;
             document.getElementById('map').addEventListener('touchstart', function(e) {
                 if (e.touches.length > 1) return;
@@ -418,28 +389,12 @@
                 lastTapTime = currentTime;
             }, {passive: false});
 
-            // 💡 지도를 줌아웃(Zoom < 10) 하면 팝업이 자연스럽게 사라짐
             map.on('zoomend', function() {
-                if (map.getZoom() < 10) {
-                    map.closePopup();
-                }
+                if (map.getZoom() < 10) { map.closePopup(); }
             });
 
-            // 필터 검색창 바로 닫기 기능
-            map.on('mousedown', closeFilterDial);
-            map.on('touchstart', closeFilterDial);
-            map.on('dragstart', closeFilterDial);
-
-            function closeFilterDial() {
-                const fw = document.getElementById('filterWidget');
-                if (fw && fw.classList.contains('open')) {
-                    fw.classList.remove('open');
-                }
-            }
-
-            // 반응형 위젯 위치 재배치
             window.addEventListener('resize', () => {
-                const widgets = ['myLogWidget', 'challengeWidget', 'm100Widget', 'searchWidget', 'filterWidget'];
+                const widgets = ['myLogWidget', 'challengeWidget', 'm100Widget', 'searchWidget'];
                 widgets.forEach(id => {
                     const el = document.getElementById(id);
                     if(el) { el.style.top = ''; el.style.left = ''; el.style.right = '15px'; el.style.bottom = ''; }
@@ -448,7 +403,6 @@
                 document.getElementById('challengeWidget').style.bottom = '95px';
                 document.getElementById('m100Widget').style.bottom = '160px';
                 document.getElementById('searchWidget').style.bottom = '225px';
-                document.getElementById('filterWidget').style.bottom = '290px';
             });
 
             initFABs(); initDB(); initM100List();
@@ -463,14 +417,9 @@
             map.removeLayer(challengeLayerGroup);
             if(tempMarker) map.removeLayer(tempMarker);
             
-            const filterWidget = document.getElementById('filterWidget');
-            if(filterWidget) filterWidget.classList.remove('open');
-            selectedFilterYear = 'all'; 
-            
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         }
 
-        /* 바텀시트 동작 제어 */
         const sidebar = document.getElementById('sidebar'), handleDrag = document.getElementById('dragHandle'), dragText = document.querySelector('.drag-text');
         let currentSidebarState = -1; 
         const states = ['collapsed', 'half', 'full']; 
@@ -525,49 +474,11 @@
             }
         }
 
-        const yearsList = ['all']; for(let y=2015; y<=2030; y++) yearsList.push(y.toString());
-        let currentYearIndex = 0;
-
         function initFABs() {
             setupDraggableFab(document.getElementById('myLogFab'), document.getElementById('myLogWidget'), () => openTab('tabMyLog'));
             setupDraggableFab(document.getElementById('m100Fab'), document.getElementById('m100Widget'), () => openTab('tabM100'));
             setupDraggableFab(document.getElementById('challengeFab'), document.getElementById('challengeWidget'), () => openTab('tabChallenge'));
             setupDraggableFab(document.getElementById('searchFab'), document.getElementById('searchWidget'), () => openTab('tabSearch'));
-            
-            const filterWidget = document.getElementById('filterWidget');
-            setupDraggableFab(document.getElementById('filterFab'), filterWidget, () => {
-                filterWidget.classList.toggle('open');
-                if(filterWidget.classList.contains('open')) {
-                    selectedFilterYear = yearsList[currentYearIndex]; 
-                    document.getElementById('yearVal').innerText = selectedFilterYear === 'all' ? '전체' : selectedFilterYear; 
-                    applyDateFilter();
-                }
-            });
-
-            currentYearIndex = yearsList.indexOf(new Date().getFullYear().toString());
-            if(currentYearIndex === -1) currentYearIndex = yearsList.length - 1;
-
-            const yearCenter = document.getElementById('filterDial');
-            let isYearDragging = false, yearPointerStartY = 0, yearInitIndex = 0;
-            
-            yearCenter.addEventListener('pointerdown', (e) => {
-                if(!e.isPrimary) return; e.stopPropagation(); isYearDragging = true; yearPointerStartY = e.clientY; yearInitIndex = currentYearIndex; yearCenter.setPointerCapture(e.pointerId);
-            });
-            yearCenter.addEventListener('pointermove', (e) => {
-                if (!isYearDragging || !e.isPrimary) return; e.stopPropagation(); e.preventDefault();
-                let newIndex = yearInitIndex + Math.round(-(e.clientY - yearPointerStartY) / 25); 
-                if(newIndex < 0) newIndex = 0; if(newIndex >= yearsList.length) newIndex = yearsList.length - 1;
-                
-                if(currentYearIndex !== newIndex) {
-                    currentYearIndex = newIndex; selectedFilterYear = yearsList[currentYearIndex]; 
-                    document.getElementById('yearVal').innerText = selectedFilterYear === 'all' ? '전체' : selectedFilterYear; 
-                    applyDateFilter(); // 연도 스와이프 즉시 해당 연도 산 노출
-                }
-            });
-            yearCenter.addEventListener('pointerup', (e) => {
-                if(!e.isPrimary) return; isYearDragging = false; yearCenter.releasePointerCapture(e.pointerId);
-                if(Math.abs(e.clientY - yearPointerStartY) < 10) filterWidget.classList.remove('open');
-            });
         }
 
         function setupDraggableFab(fab, widget, onClickCallback) {
@@ -588,7 +499,6 @@
             });
         }
 
-        /* ---------------- 스플래시 및 DB(내 기록) ---------------- */
         let db, allRecords = [], groupedMarkers = {}, editingId = null;
         let isFirstLoad = true, totalAltitudeData = 0;
 
@@ -601,11 +511,8 @@
         function loadSavedRecords() {
             db.transaction(['hike_records'], 'readonly').objectStore('hike_records').getAll().onsuccess = e => {
                 allRecords = e.target.result;
-                
-                // 총 합산 고도 계산 및 UI 갱신 복구
                 calculateTotalAltOnly();
                 document.getElementById('uiTotalAlt').innerText = totalAltitudeData.toLocaleString(); 
-                
                 if (isFirstLoad) { playSplashIntro(); } 
                 else { renderAll(); }
             };
@@ -677,20 +584,36 @@
                 const latestDate = group.climbs[0].date;
                 const altText = group.altNum > 0 ? ` (${group.altNum}m)` : "";
                 
-                // 💡 핀 위에 산이름, 고도, 등산 일시 툴팁 표기
                 marker.bindTooltip(`<b>${group.name}${altText}</b><br><span style="font-size:0.85em;">${latestDate}</span>`, { permanent: true, direction: 'top', className: 'mountain-label my-log-tooltip', offset: [0, -25] });
                 
-                // 💡 핀 탭 하면 팝업 열려 사진 보기 복구
-                let popupContent = `<div style="text-align:center; min-width:180px;"><b>⛰️ ${group.name}</b><br><span style="color:#D32F2F; font-weight:bold;">고도: ${group.altNum > 0 ? group.altNum + 'm' : '정보 없음'}</span><hr style="margin:5px 0; border:0; border-top:1px solid #ddd;">`;
+                let popupContent = `<div style="text-align:center; min-width:200px;"><b>⛰️ ${group.name}</b><br><span style="color:#D32F2F; font-weight:bold;">고도: ${group.altNum > 0 ? group.altNum + 'm' : '정보 없음'}</span><hr style="margin:5px 0; border:0; border-top:1px solid #ddd;">`;
                 group.climbs.forEach(c => {
                     popupContent += `<div style="font-size:0.9em; margin-bottom:5px; color:#555;">📅 ${c.date}</div>`;
+                    
+                    // 사진 다중 슬라이더(Carousel) 적용
                     if (c.photos && c.photos.length > 0) {
-                        popupContent += `<div class="photo-gallery" style="justify-content:center; margin-bottom:10px;">`;
-                        const encoded = encodeURIComponent(JSON.stringify(c.photos));
-                        c.photos.forEach((url, idx) => { 
-                            popupContent += `<img src="${url}" onclick="openCarousel('${encoded}', ${idx}, event)" style="width:60px; height:60px; object-fit:cover; border-radius:4px; margin:0 2px;">`; 
+                        const carouselId = 'carousel_' + Math.random().toString(36).substr(2, 9);
+                        popupContent += `<div class="carousel" id="${carouselId}">`;
+                        popupContent += `<div class="carousel-inner" id="inner_${carouselId}">`;
+                        c.photos.forEach((url, idx) => {
+                            const encoded = encodeURIComponent(JSON.stringify(c.photos));
+                            popupContent += `<div class="carousel-item"><img src="${url}" onclick="openCarousel('${encoded}', ${idx}, event)"></div>`;
                         });
                         popupContent += `</div>`;
+                        
+                        // 사진이 여러장일 때만 양옆 버튼과 도트 표시
+                        if (c.photos.length > 1) {
+                            popupContent += `<button class="carousel-control prev" onclick="moveCarousel('${carouselId}', -1, event)">&#10094;</button>`;
+                            popupContent += `<button class="carousel-control next" onclick="moveCarousel('${carouselId}', 1, event)">&#10095;</button>`;
+                            popupContent += `<div class="carousel-dots" id="dots_${carouselId}">`;
+                            c.photos.forEach((_, idx) => {
+                                popupContent += `<div class="carousel-dot ${idx===0 ? 'active' : ''}"></div>`;
+                            });
+                            popupContent += `</div>`;
+                        }
+                        popupContent += `</div>`;
+                        
+                        window[`state_${carouselId}`] = { current: 0, total: c.photos.length };
                     }
                 });
                 popupContent += `</div>`;
@@ -699,41 +622,49 @@
                 marker.on('click', () => { map.flyTo([group.lat, group.lng], 13); });
             });
             
-            applyDateFilter();
+            renderRecordList();
         }
 
-        // 💡 1년동안 연도 스와이프 시 핀 필터링 및 리스트 연동
-        function applyDateFilter() {
-            const filterActive = (selectedFilterYear !== 'all');
-            for (let key in groupedMarkers) {
-                const domElement = groupedMarkers[key].marker.getElement(); if (!domElement) continue;
-                if (!filterActive) { domElement.classList.remove('highlight-marker', 'dim-marker'); groupedMarkers[key].marker.setZIndexOffset(0); continue; }
-                
-                let isMatch = false;
-                groupedMarkers[key].data.climbs.forEach(climb => {
-                    if (selectedFilterYear === climb.date.split('-')[0]) isMatch = true;
-                });
-                
-                if (isMatch) { 
-                    domElement.classList.remove('dim-marker'); 
-                    domElement.classList.add('highlight-marker'); 
-                    groupedMarkers[key].marker.setZIndexOffset(99999); 
-                } else { 
-                    domElement.classList.remove('highlight-marker'); 
-                    domElement.classList.add('dim-marker'); 
-                    groupedMarkers[key].marker.setZIndexOffset(0); 
-                }
-            }
-
-            // 하단 리스트 연동
-            document.getElementById('recordList').innerHTML = '';
-            let targetRecords = filterActive ? allRecords.filter(r => r.date.startsWith(selectedFilterYear)) : allRecords;
+        // 캐러셀 좌우 이동 제어 함수
+        window.moveCarousel = function(id, dir, event) {
+            if(event) event.stopPropagation();
+            const state = window[`state_${id}`];
+            if(!state) return;
+            state.current += dir;
+            if(state.current < 0) state.current = state.total - 1;
+            if(state.current >= state.total) state.current = 0;
             
-            targetRecords.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(data => {
+            const inner = document.getElementById(`inner_${id}`);
+            if(inner) inner.style.transform = `translateX(-${state.current * 100}%)`;
+            
+            const dots = document.getElementById(`dots_${id}`);
+            if(dots) {
+                Array.from(dots.children).forEach((dot, idx) => {
+                    dot.className = `carousel-dot ${idx === state.current ? 'active' : ''}`;
+                });
+            }
+        };
+
+        // 내 기록 리스트 렌더링 및 핀 연동
+        function renderRecordList() {
+            document.getElementById('recordList').innerHTML = '';
+            
+            allRecords.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(data => {
                 const div = document.createElement('div'); div.className = 'record-card';
-                div.onclick = () => { openTab('tabMyLog'); map.flyTo([data.lat, data.lng], 14, {animate: true}); }
                 
-                // 💡 수정 기능 버튼 복구
+                // 산 탭시 지도 이동 및 핀 팝업 표출 연동
+                div.onclick = () => { 
+                    openTab('tabMyLog'); 
+                    map.flyTo([data.lat, data.lng], 14, {animate: true}); 
+                    
+                    const key = `${parseFloat(data.lat).toFixed(4)},${parseFloat(data.lng).toFixed(4)}`;
+                    if(groupedMarkers[key]) {
+                        setTimeout(() => {
+                            groupedMarkers[key].marker.openPopup();
+                        }, 500); // 지도 이동(flyTo) 애니메이션 대기 후 팝업
+                    }
+                };
+                
                 div.innerHTML = `
                     <div class="action-btns">
                         <button class="edit-btn" onclick="editRecord(${data.id}, event)">수정</button>
@@ -744,22 +675,19 @@
                 document.getElementById('recordList').appendChild(div);
             });
 
-            if(targetRecords.length === 0) {
-                document.getElementById('recordList').innerHTML = `<div style="text-align:center; padding:20px; color:#777;">해당 연도의 등산 기록이 없습니다.</div>`;
+            if(allRecords.length === 0) {
+                document.getElementById('recordList').innerHTML = `<div style="text-align:center; padding:20px; color:#777;">등산 기록이 없습니다.</div>`;
             }
         }
 
-        // 명산 100 탭
         function initM100List() {
             const list = document.getElementById('m100List');
             m100Data.forEach(m => {
                 const li = document.createElement('li'); li.className = 'm100-item';
                 li.innerHTML = `<div class="m100-item-content"><div class="m100-name">${m.name}</div><div class="m100-desc">${m.region} | ${m.alt}m</div></div>`;
                 li.onclick = () => {
-                    // 💡 산 탭하면 줌인 되면서 핀 팝업 정보 자동 오픈
                     map.flyTo([m.lat, m.lng], 12);
                     currentSidebarState = 0; updateSidebarState(); 
-                    // 팝업 열기 로직은 마커를 찾아서 열어야 하므로 해당 마커 객체 연동
                     m100LayerGroup.eachLayer(function (layer) {
                         if (layer.getLatLng().lat === m.lat && layer.getLatLng().lng === m.lng) {
                             layer.openPopup();
@@ -774,15 +702,12 @@
             m100LayerGroup.clearLayers();
             m100Data.forEach(m => {
                 const marker = L.marker([m.lat, m.lng], {icon: m100Icon}).addTo(m100LayerGroup);
-                
-                // 💡 줌아웃 시 팝업이 사라지게 설정 (위의 zoomend 리스너가 작동함)
                 marker.bindPopup(`<div style="text-align:center;">
                     <b style="font-size:1.2em; color:#1565C0;">🇰🇷 ${m.name}</b><br>
                     <span style="font-weight:bold;">${m.alt}m</span> | ${m.region}<br>
                     <hr style="margin:5px 0;">
                     <span style="color:#666; font-size:0.9em;">${m.desc}</span>
                 </div>`);
-                
                 marker.on('click', () => { map.flyTo([m.lat, m.lng], 12); });
             });
             map.addLayer(m100LayerGroup);
@@ -832,11 +757,9 @@
             map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7, { animate: true, duration: 1 });
         }
 
-        /* ---------------- 검색 기능들 ---------------- */
         let tempMarker = null;
-
-        // 💡 1. 내기록 탭에서 등산한 산이름 인라인 검색 복구
         let inlineSearchTimer;
+        
         function handleInlineSearch(e) {
             clearTimeout(inlineSearchTimer);
             inlineSearchTimer = setTimeout(() => {
@@ -864,7 +787,6 @@
             }, 500);
         }
 
-        // 💡 2. 새 검색 탭에서 이름 검색 후 정보 표출
         let tabSearchTimer;
         function handleTabSearch(e) { clearTimeout(tabSearchTimer); tabSearchTimer = setTimeout(() => { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); doTabSearch(); } }, 500); }
         function doTabSearch() {
@@ -900,7 +822,6 @@
             openTab('tabMyLog'); currentSidebarState = 2; updateSidebarState();
         }
 
-        /* ---------------- 데이터 등록, 수정 및 사진 조작 ---------------- */
         function resizeImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -919,7 +840,6 @@
             document.getElementById('expandedPhoto').src = carouselPhotos[startIndex]; document.getElementById('photoOverlay').style.display = 'flex';
         }
 
-        // 💡 산마다 수정 기능 복구
         window.editRecord = function(id, event) {
             if(event) event.stopPropagation(); const record = allRecords.find(r => r.id === id); if(!record) return;
             editingId = id; 
@@ -969,7 +889,6 @@
             };
         }
 
-        /* ---------------- 데이터 백업 및 불러오기 복구 ---------------- */
         window.exportData = function() {
             if(allRecords.length === 0) return alert('백업할 기록이 없습니다.');
             const dataStr = JSON.stringify(allRecords);
