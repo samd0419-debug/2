@@ -18,46 +18,12 @@
         
         body { 
             margin: 0; display: flex; height: 100vh; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; 
-            background-color: #f4f6f8; flex-direction: row; overflow: hidden; 
-            overscroll-behavior: none; touch-action: pan-x pan-y;
+            background-color: #f4f6f8; overflow: hidden; overscroll-behavior: none; touch-action: pan-x pan-y;
         }
         
-        #map { flex: 2; height: 100%; z-index: 1; }
-        
-        #sidebar { 
-            flex: 1; min-width: 340px; max-width: 420px; background: #ffffff; 
-            box-shadow: -2px 0 15px rgba(0,0,0,0.1); z-index: 2; display: flex; flex-direction: column;
-            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); 
-        }
-        #sidebar.hidden { transform: translateX(100%) !important; opacity: 0; pointer-events: none; }
-        #dragHandle { display: none; }
-        #sidebarContent { flex: 1; overflow-y: auto; padding: 24px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
 
-        @media (max-width: 768px) {
-            body { flex-direction: column; }
-            #map { height: 100vh; width: 100%; flex: none; }
-            #sidebar { 
-                position: fixed; bottom: 0; left: 0; width: 100%; height: 85vh; 
-                max-width: 100%; border-radius: 20px 20px 0 0; background: #fff;
-                transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
-                z-index: 999;
-            }
-            
-            #sidebar.hidden { transform: translateY(100vh) !important; opacity: 0; }
-            #sidebar.collapsed { transform: translateY(calc(100% - 90px - env(safe-area-inset-bottom))); opacity: 1;} 
-            #sidebar.half { transform: translateY(45%); opacity: 1;} 
-            #sidebar.full { transform: translateY(0); opacity: 1;} 
-
-            #dragHandle {
-                display: flex; flex-direction: column; align-items: center; justify-content: center;
-                height: 65px; width: 100%; border-radius: 20px 20px 0 0; background: #fff;
-                box-shadow: 0 -2px 10px rgba(0,0,0,0.05); cursor: grab; z-index: 10; touch-action: none; 
-            }
-            #dragHandle .bar { width: 50px; height: 6px; background: #ccc; border-radius: 5px; margin-bottom: 8px; }
-            #dragHandle .drag-text { font-size: 0.8em; color: #777; font-weight: bold; }
-            #sidebarContent { padding: 0 16px 24px 16px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
-        }
-
+        /* 타이틀 (스플래시) 화면 스타일 */
         #splash { position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999; background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&q=80') no-repeat center center/cover; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; cursor: pointer; }
         #splash::before { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); }
         .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1s cubic-bezier(0.2, 0.8, 0.2, 1); width: 100%; }
@@ -74,30 +40,60 @@
 
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.9) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
         @keyframes blinkHint { 0%, 100% { transform: scale(0.95); opacity: 0.6; } 50% { transform: scale(1.05); opacity: 1; } }
-
-        /* 필터 및 위젯 공통 (FAB) */
-        .fab-btn {
-            width: 58px; height: 58px; border-radius: 50%; color: white; font-weight: 900; font-size: 0.8em; letter-spacing: -0.5px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.25); backdrop-filter: blur(5px);
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s, background 0.2s; cursor: pointer; position: relative; z-index: 20;
-        }
-
-        /* 기본값: 가로화면 (우측 하단) */
-        #filterWidget { position: fixed; right: 20px; bottom: 110px; z-index: 1000; touch-action: none; }
-        #m100Widget { position: fixed; right: 20px; bottom: 180px; z-index: 1000; touch-action: none; }
-        #challengeWidget { position: fixed; right: 20px; bottom: 250px; z-index: 1000; touch-action: none; }
-
-        /* 세로화면: 우측 상단 정렬 */
-        @media (orientation: portrait) {
-            #challengeWidget { top: 20px; bottom: auto; }
-            #m100Widget { top: 90px; bottom: auto; }
-            #filterWidget { top: 160px; bottom: auto; }
-        }
-
-        #filterFab { background: rgba(46, 125, 50, 0.85); }
-        #filterFab::before { content: '🔍'; font-size: 1.4em; margin-bottom: -2px; }
-        #filterWidget.open #filterFab { transform: scale(0); opacity: 0; pointer-events: none; }
         
+        /* 통합 하단 바텀시트 */
+        #sidebar { 
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 85vh; 
+            background: #fff; border-radius: 20px 20px 0 0;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.15);
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
+            z-index: 999; display: flex; flex-direction: column;
+        }
+        
+        #sidebar.hidden { transform: translateY(100vh) !important; opacity: 0; pointer-events: none; }
+        #sidebar.collapsed { transform: translateY(calc(100% - 150px - env(safe-area-inset-bottom))); opacity: 1; pointer-events: auto;} 
+        #sidebar.half { transform: translateY(55%); opacity: 1; pointer-events: auto;} 
+        #sidebar.full { transform: translateY(0); opacity: 1; pointer-events: auto;} 
+
+        #dragHandle {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 40px; width: 100%; border-radius: 20px 20px 0 0; background: #fff;
+            cursor: grab; z-index: 10; touch-action: none; flex-shrink: 0;
+        }
+        #dragHandle .bar { width: 50px; height: 6px; background: #ccc; border-radius: 5px; margin-top: 10px; }
+        #dragHandle .drag-text { font-size: 0.75em; color: #999; font-weight: bold; margin-top: 5px; margin-bottom: 5px; }
+        
+        #sidebarContent { 
+            flex: 1; overflow-y: auto; padding: 0 20px 24px 20px; 
+            padding-bottom: calc(24px + env(safe-area-inset-bottom)); 
+            overscroll-behavior: contain; -webkit-overflow-scrolling: touch; 
+        }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* FAB 플로팅 아이콘 설정 */
+        .fab-btn {
+            width: 55px; height: 55px; border-radius: 50%; color: white; font-weight: 900; font-size: 0.75em; letter-spacing: -0.5px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.25); 
+            backdrop-filter: blur(5px); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s; cursor: pointer; position: relative; z-index: 20;
+        }
+        #myLogWidget { position: fixed; right: 15px; bottom: 30px; z-index: 1000; touch-action: none; }
+        #challengeWidget { position: fixed; right: 15px; bottom: 95px; z-index: 1000; touch-action: none; }
+        #m100Widget { position: fixed; right: 15px; bottom: 160px; z-index: 1000; touch-action: none; }
+        #filterWidget { position: fixed; right: 15px; bottom: 225px; z-index: 1000; touch-action: none; }
+
+        #myLogFab { background: rgba(46, 125, 50, 0.9); }
+        #myLogFab::before { content: '🏕️'; font-size: 1.6em; margin-bottom: 2px; }
+        #challengeFab { background: rgba(255, 143, 0, 0.9); }
+        #challengeFab::before { content: '🏆'; font-size: 1.6em; margin-bottom: 2px; }
+        #m100Fab { background: rgba(21, 101, 192, 0.9); }
+        #m100Fab::before { content: '⛰️'; font-size: 1.6em; margin-bottom: 2px; }
+        #filterFab { background: rgba(121, 85, 72, 0.9); }
+        #filterFab::before { content: '🔍'; font-size: 1.6em; margin-bottom: 2px; }
+        #filterWidget.open #filterFab { transform: scale(0); opacity: 0; pointer-events: none; }
+
         #filterDial {
             position: absolute; top: 50%; left: 50%; width: 270px; height: 270px; margin-top: -135px; margin-left: -135px; border-radius: 50%; 
             background: rgba(255, 255, 255, 0.5); box-shadow: 0 10px 40px rgba(0,0,0,0.3); backdrop-filter: blur(10px);
@@ -105,87 +101,68 @@
         }
         #filterWidget.open #filterDial { transform: scale(1); opacity: 1; pointer-events: auto; }
         #filterDial.year-expanded .month-btn { opacity: 0 !important; pointer-events: none; }
-        
         .month-btn {
             position: absolute; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 0.95em; font-weight: bold; color: #2E7D32; background: #e8f5e9; box-shadow: 0 2px 5px rgba(0,0,0,0.1); top: 50%; left: 50%; margin-top: -22px; margin-left: -22px; transition: all 0.3s; cursor: pointer;
+            font-size: 0.95em; font-weight: bold; color: #795548; background: #EFEBE9; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+            top: 50%; left: 50%; margin-top: -22px; margin-left: -22px; transition: all 0.3s; cursor: pointer;
         }
-        .month-btn.active { background: #2E7D32; color: white; transform: scale(1.25) !important; box-shadow: 0 4px 12px rgba(46,125,50,0.5); }
-        
+        .month-btn.active { background: #795548; color: white; transform: scale(1.25) !important; box-shadow: 0 4px 12px rgba(121,85,72,0.5); }
         .year-center {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90px; height: 90px; background: white; border-radius: 50%;
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1), 0 4px 15px rgba(0,0,0,0.15); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: ns-resize; z-index: 10; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1), 0 4px 15px rgba(0,0,0,0.15); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: ns-resize; z-index: 10; transition: transform 0.3s;
         }
-        #filterDial.year-expanded .year-center { transform: translate(-50%, -50%) scale(1.8); box-shadow: inset 0 2px 10px rgba(0,0,0,0.05), 0 8px 25px rgba(0,0,0,0.25); }
-        .year-center::before { content: '▲'; font-size: 10px; color: #aaa; position: absolute; top: 8px; }
-        .year-center::after { content: '▼'; font-size: 10px; color: #aaa; position: absolute; bottom: 8px; }
-        .year-val { font-size: 1.5em; font-weight: 900; color: #1b5e20; line-height: 1; margin-top: 2px;}
+        #filterDial.year-expanded .year-center { transform: translate(-50%, -50%) scale(1.8); }
+        .year-val { font-size: 1.5em; font-weight: 900; color: #4E342E; line-height: 1; margin-top: 2px;}
         .year-label { font-size: 0.75em; color: #777; margin-top: 2px; }
 
-        #m100Fab { background: rgba(21, 101, 192, 0.85); font-size: 0.75em; }
-        #m100Fab::before { content: '⛰️'; font-size: 1.6em; margin-bottom: 2px; }
-        
-        #challengeFab { background: rgba(255, 143, 0, 0.9); font-size: 0.75em; }
-        #challengeFab::before { content: '🏆'; font-size: 1.6em; margin-bottom: 2px; }
+        /* 리스트 스타일 (썸네일 삭제됨) */
+        .m100-list { padding: 0; margin: 0; list-style: none; }
+        .m100-item { padding: 15px 10px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; transition: background 0.2s; }
+        .m100-item:hover { background: #f9f9f9; }
+        .m100-item-content { flex: 1; }
+        .m100-name { font-weight: bold; color: #333; font-size: 1.1em; }
+        .m100-desc { font-size: 0.85em; color: #666; margin-top: 5px; }
 
-        /* 공통 우측 패널 */
-        .side-panel {
-            position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
-            transition: right 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 1000; display: flex; flex-direction: column; box-shadow: -5px 0 25px rgba(0,0,0,0.2);
-        }
-        .side-panel.open { right: 0; }
+        /* 핀 애니메이션 및 마커 디자인 */
+        @keyframes dropIn { 0% { transform: translateY(-50px) scale(0.5); opacity: 0; } 60% { transform: translateY(10px) scale(1.1); opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+        .pin-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-end; transform-origin: bottom center; animation: dropIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
         
-        .m100-header { padding: 20px; background: #1565C0; color: white; display: flex; justify-content: space-between; align-items: center; }
-        .challenge-header { padding: 20px; background: #FF8F00; color: white; display: flex; justify-content: space-between; align-items: center; }
-        
-        .m100-header h3, .challenge-header h3 { margin: 0; font-size: 1.2em; font-weight: bold; }
-        .close-panel { color: white; font-size: 1.5em; cursor: pointer; padding: 0 10px; }
-        
-        .m100-controls { padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: center; }
-        .m100-btn { background: #E3F2FD; color: #1565C0; border: 1px solid #90CAF9; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.9em; }
-        .m100-btn.active { background: #1565C0; color: white; }
-        
-        .challenge-stats { padding: 15px; text-align: center; font-size: 1.1em; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; background: #FFF8E1; }
-        
-        .m100-list { flex: 1; overflow-y: auto; padding: 0; margin: 0; list-style: none; overscroll-behavior: contain; }
-        .m100-item { padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; transition: background 0.2s; }
-        .m100-item:hover { background: #f5f5f5; }
-        
-        .m100-thumb { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; margin-right: 12px; flex-shrink: 0; background: #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .m100-item-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .m100-name { font-weight: bold; color: #333; font-size: 1.05em; }
-        .m100-desc { font-size: 0.8em; color: #666; margin-top: 3px; }
-        .m100-alt { font-weight: bold; color: #1565C0; font-size: 0.9em; margin-left: 10px; white-space: nowrap; }
-
-        /* 마커 효과 */
-        .pin-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-end; transform-origin: bottom center; }
-        .highlight-marker .pin-wrapper svg { transition: all 0.3s; transform: scale(1.4); filter: drop-shadow(0 0 10px rgba(255,235,59,0.8)); }
+        .highlight-marker { z-index: 99999 !important; }
+        .highlight-marker .pin-wrapper svg { transition: all 0.3s; transform: scale(1.5); filter: drop-shadow(0 0 15px rgba(255,235,59,1)); }
         .highlight-marker .pin-wrapper path { fill: #D32F2F; stroke: #FFEB3B; stroke-width: 2px; }
-        .dim-marker { opacity: 0.2 !important; filter: grayscale(100%); transition: all 0.3s; }
+        .dim-marker { opacity: 0.2 !important; filter: grayscale(100%); transition: all 0.3s; z-index: 0 !important; }
         
-        @keyframes challengeGlow { 0% { filter: drop-shadow(0 0 8px rgba(255, 143, 0, 0.6)); transform: scale(1.3); } 50% { filter: drop-shadow(0 0 18px rgba(255, 143, 0, 1)); transform: scale(1.5); } 100% { filter: drop-shadow(0 0 8px rgba(255, 143, 0, 0.6)); transform: scale(1.3); } }
+        @keyframes challengeGlow { 0% { filter: drop-shadow(0 0 8px rgba(255, 143, 0, 0.6)); transform: scale(1.2); } 50% { filter: drop-shadow(0 0 18px rgba(255, 143, 0, 1)); transform: scale(1.4); } 100% { filter: drop-shadow(0 0 8px rgba(255, 143, 0, 0.6)); transform: scale(1.2); } }
         .challenge-climbed .pin-wrapper svg { animation: challengeGlow 2s infinite; }
         .challenge-climbed .pin-wrapper path { fill: #FF8F00 !important; stroke: #FFF8E1 !important; stroke-width: 2px; }
         
         .leaflet-tooltip.mountain-label { background: rgba(255, 255, 255, 0.95); border: 2px solid #2E7D32; border-radius: 5px; color: #1b5e20; font-weight: bold; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); padding: 4px 8px; }
         .leaflet-tooltip-top:before { border-top-color: #2E7D32; }
-        
-        .challenge-tooltip { background: #FF8F00 !important; border-color: #E65100 !important; color: white !important; font-size: 14px !important; transform: scale(1.1); z-index: 1000 !important; }
-        .challenge-tooltip:before { border-top-color: #FF8F00 !important; }
+        /* 빨간색 핀에 맞춘 툴팁 테두리 */
+        .my-log-tooltip { border: 2px solid #D32F2F !important; color: #D32F2F !important; }
+        .my-log-tooltip:before { border-top-color: #D32F2F !important; }
 
-        h2 { color: #2E7D32; margin-top: 0; font-size: 1.8em; font-weight: 900; letter-spacing: -1px; } 
-        .instruction { font-size: 0.85em; color: #555; margin-bottom: 15px; background: #e8f5e9; padding: 12px; border-radius: 6px; border-left: 4px solid #4CAF50;}
-        label { font-size: 0.9em; font-weight: bold; color: #333; display: block; margin-top: 14px; margin-bottom: 5px;}
-        input[type="text"], input[type="date"], input[type="file"], input[type="number"] { width: 100%; padding: 11px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .input-row { display: flex; gap: 10px; width: 100%; align-items: center; }
+        .input-group { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        
+        label { font-size: 0.9em; font-weight: bold; color: #333; margin-top: 14px; margin-bottom: 5px; display: block;}
+        input[type="text"], input[type="date"], input[type="number"], input[type="file"] { 
+            width: 100%; padding: 12px 10px; border: 2px solid #e0e0e0; border-radius: 8px; 
+            font-size: 16px; background-color: #FAFAFA; transition: border-color 0.2s; box-sizing: border-box;
+            font-family: inherit;
+        }
+        input:focus { border-color: #2E7D32; outline: none; background-color: #fff; }
+
         .search-wrapper { position: relative; width: 100%; }
         .search-container { display: flex; gap: 6px; }
-        .search-btn { padding: 0 18px; background: #2E7D32; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 0.95em; white-space: nowrap; cursor: pointer; }
+        .search-btn { padding: 0 18px; background: #2E7D32; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 0.95em; cursor: pointer; white-space: nowrap; }
         #searchResults { position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; list-style: none; padding: 0; margin: 5px 0 0 0; max-height: 180px; overflow-y: auto; border: 2px solid #2E7D32; border-radius: 6px; display: none; background: #fff; box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
-        #searchResults li { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .save-btn { width: 100%; padding: 14px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); cursor: pointer; transition: 0.2s; }
+        #searchResults li { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         
+        .save-btn { width: 100%; padding: 14px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); cursor: pointer; }
+
         .photo-gallery { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; padding-bottom: 5px; }
-        .photo-gallery img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; cursor: pointer; transition: transform 0.2s; }
+        .photo-gallery img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; cursor: pointer; }
         
         .record-card { position: relative; background: #fafafa; padding: 14px; margin-top: 15px; border-radius: 8px; border: 1px solid #eee; cursor: pointer; }
         .record-card h4 { margin: 0 0 5px 0; color: #333; font-size: 1.1em; padding-right: 90px; }
@@ -193,10 +170,8 @@
         .action-btns { position: absolute; top: 14px; right: 14px; display: flex; gap: 5px; }
         .edit-btn, .delete-btn { color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 0.8em; font-weight: bold; cursor: pointer; }
         .edit-btn { background: #1976D2; } .delete-btn { background: #d32f2f; }
-        
-        #photoOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
-        #photoOverlay.show { opacity: 1; visibility: visible; }
-        #expandedPhoto { max-width: 90%; max-height: 80%; object-fit: contain; border-radius: 4px; }
+
+        h2.tab-title { color: #333; margin: 10px 0 15px 0; font-size: 1.5em; font-weight: 900; letter-spacing: -1px; display:flex; justify-content:space-between; align-items:center; }
     </style>
 </head>
 <body>
@@ -213,92 +188,80 @@
         </div>
     </div>
 
-    <div id="photoOverlay" onclick="closePhoto(event)"><img id="expandedPhoto" src=""></div>
-
-    <div id="challengeWidget"><div id="challengeFab" class="fab-btn">도전100</div></div>
-    <div id="m100Widget"><div id="m100Fab" class="fab-btn">명산100</div></div>
-    
-    <div id="m100Panel" class="side-panel">
-        <div class="m100-header">
-            <h3>🇰🇷 우리나라 100대 명산</h3>
-            <span class="close-panel" onclick="closeM100Panel()">×</span>
-        </div>
-        <div class="m100-controls">
-            <button class="m100-btn" id="m100ViewAllBtn" onclick="toggleM100All()">지도에 모두 보기</button>
-        </div>
-        <ul class="m100-list" id="m100List"></ul>
-    </div>
-
-    <div id="challengePanel" class="side-panel">
-        <div class="challenge-header">
-            <h3>🏆 나의 도전 100</h3>
-            <span class="close-panel" onclick="closeChallengePanel()">×</span>
-        </div>
-        <div class="challenge-stats">
-            완등 <span id="challengeCount" style="color:#E65100; font-size:1.3em;">0</span> / 100
-        </div>
-        <ul class="m100-list" id="challengeList"></ul>
-    </div>
-
-    <div id="filterWidget">
-        <div id="filterDial">
-            <div class="year-center" id="yearCenter">
-                <div class="year-val" id="yearVal">전체</div>
-                <div class="year-label">년도</div>
-            </div>
-        </div>
-        <div id="filterFab" class="fab-btn">검색</div>
-    </div>
-
     <div id="map"></div>
 
-    <div id="sidebar" class="hidden collapsed">
-        <div id="dragHandle"><div class="bar"></div><div class="drag-text">쓸어올려서 기록 보기 🔼</div></div>
+    <div id="filterWidget"><div id="filterDial"><div class="year-center" id="yearCenter"><div class="year-val" id="yearVal">전체</div><div class="year-label">년도</div></div></div><div id="filterFab" class="fab-btn">검색</div></div>
+    <div id="m100Widget"><div id="m100Fab" class="fab-btn">명산100</div></div>
+    <div id="challengeWidget"><div id="challengeFab" class="fab-btn">도전100</div></div>
+    <div id="myLogWidget"><div id="myLogFab" class="fab-btn">내기록</div></div>
+
+    <div id="sidebar" class="hidden">
+        <div id="dragHandle"><div class="bar"></div><div class="drag-text">스와이프 하여 닫기/열기</div></div>
         <div id="sidebarContent">
-            <h2>🏔️ 나의 등산기</h2>
-            <div class="instruction">
-                <b>💡 꿀팁:</b> 지도를 **두 번 터치(다닥!)**하면 초기화면으로 돌아옵니다.<br>
-                <b>💡 꿀팁:</b> 우측 검색/명산 버튼을 꾹 누르면 이동 가능해요!
-            </div>
-            <label for="mountainInput">1. 산 이름 검색</label>
-            <div class="search-wrapper">
-                <div class="search-container">
-                    <input type="text" id="mountainInput" placeholder="예: 북한산, 광교산" onkeyup="handleEnter(event)">
-                    <button type="button" class="search-btn" onclick="searchMountain()">검색</button>
+            
+            <div id="tabMyLog" class="tab-content active">
+                <h2 class="tab-title">🏕️ 나의 등산기</h2>
+                <div style="font-size: 0.85em; color: #555; margin-bottom: 15px; background: #e8f5e9; padding: 12px; border-radius: 6px; border-left: 4px solid #4CAF50;">
+                    <b>💡 꿀팁:</b> 지도를 **더블 탭**하면 초기 화면(기본 한국지도)으로 돌아옵니다!
                 </div>
-                <ul id="searchResults"></ul>
+                <label for="mountainInput">1. 산 이름 검색</label>
+                <div class="search-wrapper">
+                    <div class="search-container">
+                        <input type="text" id="mountainInput" placeholder="예: 북한산" onkeyup="handleEnter(event)">
+                        <button type="button" class="search-btn" onclick="searchMountain()">검색</button>
+                    </div>
+                    <ul id="searchResults"></ul>
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>2. 등산 날짜</label>
+                        <input type="date" id="hikeDate">
+                    </div>
+                    <div class="input-group">
+                        <label>3. 고도 (m)</label>
+                        <input type="number" id="hikeAlt" placeholder="예: 836">
+                    </div>
+                </div>
+                <label>4. 등산 사진</label>
+                <input type="file" id="hikePhoto" accept="image/*" multiple>
+                <input type="hidden" id="lat"><input type="hidden" id="lng">
+                <button class="save-btn" id="mainSaveBtn" onclick="saveRecord()">지도에 내 기록 남기기</button>
+                <hr style="margin: 25px 0 15px 0; border: 0; border-top: 1px solid #eee;">
+                
+                <h3 style="color: #333; margin: 0 0 10px 0;">나의 완등 리스트</h3>
+                <div id="recordList"></div>
             </div>
-            <div style="display: flex; gap: 8px; width: 100%;">
-                <div style="flex: 1.5; min-width: 0;"><label>2. 등산 날짜 (연도-월-일)</label><input type="date" id="hikeDate"></div>
-                <div style="flex: 1; min-width: 0;"><label>3. 고도 (m)</label><input type="number" id="hikeAlt" placeholder="예: 836"></div>
+
+            <div id="tabM100" class="tab-content">
+                <h2 class="tab-title">⛰️ 우리나라 100대 명산</h2>
+                <ul class="m100-list" id="m100List"></ul>
             </div>
-            <label>4. 등산 사진 (여러 장 가능)</label>
-            <input type="file" id="hikePhoto" accept="image/*" multiple>
-            <input type="hidden" id="lat"><input type="hidden" id="lng">
-            <button class="save-btn" id="mainSaveBtn" onclick="saveRecord()">지도에 내 기록 남기기</button>
-            <hr style="margin: 25px 0 15px 0; border: 0; border-top: 1px solid #eee;">
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <button class="save-btn" style="background:#FFA000; margin-top:0; font-size:0.95em;" onclick="exportData()">💾 백업하기</button>
-                <button class="save-btn" style="background:#757575; margin-top:0; font-size:0.95em;" onclick="document.getElementById('importFile').click()">📂 불러오기</button>
-                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+
+            <div id="tabChallenge" class="tab-content">
+                <h2 class="tab-title">🏆 나의 도전 100</h2>
+                <div style="padding: 15px; text-align: center; font-size: 1.1em; font-weight: bold; background: #FFF8E1; border-radius: 8px; margin-bottom: 10px;">
+                    완등 <span id="challengeCount" style="color:#E65100; font-size:1.3em;">0</span> / 100
+                </div>
+                <ul class="m100-list" id="challengeList"></ul>
             </div>
-            <h3 style="color: #333; margin: 0 0 10px 0;">나의 완등 리스트</h3>
-            <div id="recordList"></div>
-            <div id="totalAlt" style="display:none;"></div>
+
         </div>
+    </div>
+
+    <div id="photoOverlay" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); z-index:10000; display:none; justify-content:center; align-items:center;" onclick="this.style.display='none'">
+        <img id="expandedPhoto" src="" style="max-width:90%; max-height:80%; object-fit:contain; border-radius:4px;">
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // 나의 등산기 핀은 다시 빨간색(#E53935)
         const customPinSvg = `<div class="pin-wrapper"><svg viewBox="0 0 24 24" width="36" height="36" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 16 8 16s8-10.75 8-16c0-4.42-3.58-8-8-8zm0 11.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 4.5 12 4.5 15.5 6.07 15.5 8 13.93 11.5 12 11.5z" fill="#E53935" stroke="#ffffff" stroke-width="1.5"/></svg></div>`;
         const m100PinSvg = `<div class="pin-wrapper"><svg viewBox="0 0 24 24" width="36" height="36" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 16 8 16s8-10.75 8-16c0-4.42-3.58-8-8-8zm0 11.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 4.5 12 4.5 15.5 6.07 15.5 8 13.93 11.5 12 11.5z" fill="#1565C0" stroke="#ffffff" stroke-width="1.5"/></svg></div>`;
         const challengePinSvg = `<div class="pin-wrapper"><svg viewBox="0 0 24 24" width="40" height="40" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 16 8 16s8-10.75 8-16c0-4.42-3.58-8-8-8zm0 11.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 4.5 12 4.5 15.5 6.07 15.5 8 13.93 11.5 12 11.5z" fill="#FF8F00" stroke="#FFF8E1" stroke-width="1.5"/></svg></div>`;
 
-        let mountainIcon, m100Icon, map, markerLayerGroup, m100LayerGroup, challengeLayerGroup;
-        let totalAltitudeData = 0, selectedFilterYear = 'all', selectedFilterMonth = 'all';
-        
-        const yearsList = ['all']; for(let y=2015; y<=2030; y++) yearsList.push(y.toString());
-        let currentYearIndex = 0, monthBtns = [], filterWidget, filterFab, filterDial, yearCenter, yearVal;
+        let map, markerLayerGroup, m100LayerGroup, challengeLayerGroup;
+        let mountainIcon, m100Icon;
+        let selectedFilterYear = 'all', selectedFilterMonth = 'all';
 
         const m100Data = [
             { name: "가리산", region: "강원 춘천", alt: 1051, lat: 37.8711, lng: 127.9544, desc: "소양호 피아골의 비경을 간직한 산" },
@@ -403,19 +366,15 @@
             { name: "희양산", region: "경북 문경", alt: 999, lat: 36.7118, lng: 127.9984, desc: "거대한 화강암 덩어리로 덮인 특이한 산세" }
         ];
 
-        let is100MountainsMode = false, isChallengeMode = false, isM100AllShowing = false, singleM100Marker = null;
-
         document.addEventListener('DOMContentLoaded', () => {
-            map = L.map('map', { zoomControl: false, doubleClickZoom: false, preferCanvas: true }).setView([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7);
-            
-            // 세로/가로 환경에서 버튼들과 겹치지 않도록 확대축소 버튼을 좌측 상단으로 이동 
+            map = L.map('map', { zoomControl: false, doubleClickZoom: false }).setView([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7);
             L.control.zoom({ position: 'topleft' }).addTo(map);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
             
-            markerLayerGroup = L.layerGroup().addTo(map); 
+            markerLayerGroup = L.layerGroup(); 
             m100LayerGroup = L.layerGroup(); 
             challengeLayerGroup = L.layerGroup(); 
-            
+
             mountainIcon = L.divIcon({ className: 'custom-leaflet-icon', html: customPinSvg, iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36], tooltipAnchor: [0, -36] });
             m100Icon = L.divIcon({ className: 'custom-leaflet-icon', html: m100PinSvg, iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36], tooltipAnchor: [0, -36] });
 
@@ -428,234 +387,129 @@
                 lastTapTime = currentTime;
             }, {passive: false});
 
-            initFilterWidget(); initM100Widget(); initChallengeWidget(); initDB();
-        });
+            // 💡 맵 빈공간 터치(클릭) 또는 드래그 시 필터 검색창 바로 닫기 기능
+            map.on('mousedown', closeFilterDial);
+            map.on('touchstart', closeFilterDial);
+            map.on('dragstart', closeFilterDial);
 
-        // 💡 패널을 열고 닫을 때 검색 버튼 노출 관리 함수 추가
-        function updateFilterVisibility() {
-            if(filterWidget) {
-                if (is100MountainsMode || isChallengeMode) { filterWidget.style.display = 'none'; } 
-                else { filterWidget.style.display = 'block'; }
+            function closeFilterDial() {
+                const fw = document.getElementById('filterWidget');
+                const fd = document.getElementById('filterDial');
+                if (fw && fw.classList.contains('open')) {
+                    fw.classList.remove('open');
+                    if (fd) fd.classList.remove('year-expanded');
+                }
             }
-        }
+
+            window.addEventListener('resize', () => {
+                const widgets = ['myLogWidget', 'challengeWidget', 'm100Widget', 'filterWidget'];
+                widgets.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) { el.style.top = ''; el.style.left = ''; el.style.right = '15px'; el.style.bottom = ''; }
+                });
+                document.getElementById('myLogWidget').style.bottom = '30px';
+                document.getElementById('challengeWidget').style.bottom = '95px';
+                document.getElementById('m100Widget').style.bottom = '160px';
+                document.getElementById('filterWidget').style.bottom = '225px';
+            });
+
+            initFABs(); initDB(); initM100List();
+        });
 
         function resetMapToDefault() {
             map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7, { animate: true, duration: 1 });
-            if(window.innerWidth <= 768) { currentSidebarState = 0; updateSidebarState(); }
+            currentSidebarState = -1; updateSidebarState();
             
-            if(filterWidget) { filterWidget.classList.remove('open'); filterDial.classList.remove('year-expanded'); }
-            selectedFilterYear = 'all'; selectedFilterMonth = 'all'; applyDateFilter();
-            
-            closeM100Panel(true);
-            closeChallengePanel(true);
-            
-            if(!map.hasLayer(markerLayerGroup)) map.addLayer(markerLayerGroup);
-            document.getElementById('sidebar').classList.remove('hidden');
-            updateFilterVisibility();
-        }
-
-        function initM100Widget() {
-            const m100Widget = document.getElementById('m100Widget'), m100Fab = document.getElementById('m100Fab');
-            const m100Panel = document.getElementById('m100Panel'), m100List = document.getElementById('m100List');
-
-            m100Data.sort((a,b) => a.name.localeCompare(b.name));
-            m100Data.forEach((m, index) => {
-                const li = document.createElement('li'); li.className = 'm100-item';
-                li.innerHTML = `
-                    <img class="m100-thumb" src="https://picsum.photos/seed/m${index}/100/100?grayscale=false" loading="lazy">
-                    <div class="m100-item-content">
-                        <div class="m100-name">${m.name}</div>
-                        <div class="m100-desc">${m.region}</div>
-                    </div>
-                    <div class="m100-alt">${m.alt}m</div>
-                `;
-                li.onclick = () => showSingleM100(m); m100List.appendChild(li);
-            });
-
-            setupDraggableFab(m100Fab, m100Widget, () => {
-                closeChallengePanel(true); 
-                m100Panel.classList.add('open'); is100MountainsMode = true; map.removeLayer(markerLayerGroup);
-                if(filterWidget) filterWidget.classList.remove('open');
-                document.getElementById('sidebar').classList.add('hidden');
-                updateFilterVisibility();
-            });
-        }
-
-        function closeM100Panel(preventSidebarRestore = false) {
-            document.getElementById('m100Panel').classList.remove('open'); is100MountainsMode = false;
-            map.removeLayer(m100LayerGroup); if (singleM100Marker) map.removeLayer(singleM100Marker);
-            isM100AllShowing = false;
-            document.getElementById('m100ViewAllBtn').classList.remove('active'); document.getElementById('m100ViewAllBtn').innerText = "지도에 모두 보기";
-            
-            if(!preventSidebarRestore && !isChallengeMode) {
-                if(!map.hasLayer(markerLayerGroup)) map.addLayer(markerLayerGroup);
-                document.getElementById('sidebar').classList.remove('hidden');
-            }
-            updateFilterVisibility();
-        }
-
-        function showSingleM100(mountain) {
-            isM100AllShowing = false;
-            document.getElementById('m100ViewAllBtn').classList.remove('active'); document.getElementById('m100ViewAllBtn').innerText = "지도에 모두 보기";
-            map.removeLayer(m100LayerGroup); if (singleM100Marker) map.removeLayer(singleM100Marker);
-            
-            singleM100Marker = L.marker([mountain.lat, mountain.lng], {icon: m100Icon}).addTo(map);
-            singleM100Marker.bindPopup(`<div style="text-align:center;"><b>🇰🇷 ${mountain.name}</b><br><span style="color:#1565C0;">${mountain.alt}m | ${mountain.region}</span><hr style="margin:5px 0;">${mountain.desc}</div>`).openPopup();
-            map.flyTo([mountain.lat, mountain.lng], 12);
-        }
-
-        function toggleM100All() {
-            const btn = document.getElementById('m100ViewAllBtn');
-            if (singleM100Marker) map.removeLayer(singleM100Marker);
-
-            if (isM100AllShowing) {
-                map.removeLayer(m100LayerGroup); btn.classList.remove('active'); btn.innerText = "지도에 모두 보기"; isM100AllShowing = false;
-            } else {
-                m100LayerGroup.clearLayers();
-                m100Data.forEach(m => {
-                    const marker = L.marker([m.lat, m.lng], {icon: m100Icon}).addTo(m100LayerGroup);
-                    marker.bindTooltip(`${m.name} (${m.alt}m)`, { permanent: false, direction: 'top', className: 'mountain-label' });
-                    marker.bindPopup(`<div style="text-align:center;"><b>🇰🇷 ${m.name}</b><br><span style="color:#1565C0;">${m.alt}m</span><br>${m.desc}</div>`);
-                });
-                map.addLayer(m100LayerGroup); map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7);
-                btn.classList.add('active'); btn.innerText = "지도에서 숨기기"; isM100AllShowing = true;
-            }
-        }
-
-        function initChallengeWidget() {
-            const widget = document.getElementById('challengeWidget'), fab = document.getElementById('challengeFab');
-            setupDraggableFab(fab, widget, () => {
-                closeM100Panel(true); 
-                if(filterWidget) filterWidget.classList.remove('open');
-                document.getElementById('sidebar').classList.add('hidden');
-                
-                document.getElementById('challengePanel').classList.add('open'); 
-                isChallengeMode = true; 
-                
-                map.removeLayer(markerLayerGroup);
-                map.removeLayer(m100LayerGroup);
-                
-                updateFilterVisibility();
-                renderChallengeMapAndList();
-            });
-        }
-
-        function closeChallengePanel(preventSidebarRestore = false) {
-            document.getElementById('challengePanel').classList.remove('open'); isChallengeMode = false;
+            map.removeLayer(markerLayerGroup);
+            map.removeLayer(m100LayerGroup); 
             map.removeLayer(challengeLayerGroup);
-            if(!preventSidebarRestore && !is100MountainsMode) {
-                if(!map.hasLayer(markerLayerGroup)) map.addLayer(markerLayerGroup);
-                document.getElementById('sidebar').classList.remove('hidden');
-            }
-            updateFilterVisibility();
-        }
-
-        function renderChallengeMapAndList() {
-            const list = document.getElementById('challengeList');
-            list.innerHTML = '';
-            challengeLayerGroup.clearLayers();
-            let climbedCount = 0;
-
-            m100Data.forEach((m, index) => {
-                let matchedRecords = allRecords.filter(r => r.name.includes(m.name) || m.name.includes(r.name));
-                let isClimbed = matchedRecords.length > 0;
-
-                let iconHtml = isClimbed ? challengePinSvg : m100PinSvg;
-                let className = isClimbed ? 'custom-leaflet-icon challenge-climbed' : 'custom-leaflet-icon dim-marker';
-                
-                let icon = L.divIcon({ className: className, html: iconHtml, iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36], tooltipAnchor: [0, -36] });
-                let marker = L.marker([m.lat, m.lng], {icon: icon, zIndexOffset: isClimbed ? 1000 : 0}).addTo(challengeLayerGroup);
-                
-                if(isClimbed) {
-                    matchedRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
-                    let latestDate = matchedRecords[0].date;
-                    
-                    marker.bindTooltip(`${m.name} 🏆`, { permanent: true, direction: 'top', className: 'mountain-label challenge-tooltip', offset: [0, -25] });
-                    marker.bindPopup(`<div style="text-align:center;"><b>🏆 ${m.name} (완등)</b><br><span style="color:#FF8F00; font-weight:bold;">최근 등반: ${latestDate}</span><hr style="margin:5px 0;">${m.desc}</div>`);
-                    
-                    climbedCount++;
-                    const li = document.createElement('li'); li.className = 'm100-item';
-                    li.innerHTML = `
-                        <img class="m100-thumb" src="https://picsum.photos/seed/m${index}/100/100?grayscale=false" loading="lazy">
-                        <div class="m100-item-content">
-                            <div class="m100-name">${m.name} <span style="font-size:0.7em; color:#FF8F00; vertical-align:middle;">🏆</span></div>
-                            <div class="m100-desc">📅 ${latestDate}</div>
-                        </div>
-                    `;
-                    li.onclick = () => { map.flyTo([m.lat, m.lng], 13); marker.openPopup(); };
-                    list.appendChild(li);
-                } else {
-                    marker.bindTooltip(`${m.name}`, { permanent: false, direction: 'top', className: 'mountain-label' });
-                    marker.bindPopup(`<div style="text-align:center;"><b>🇰🇷 ${m.name}</b><br><span style="color:#777;">아직 등반하지 않은 명산입니다.</span><hr style="margin:5px 0;">${m.desc}</div>`);
-                }
-            });
-
-            document.getElementById('challengeCount').innerText = climbedCount;
-            if(climbedCount === 0) {
-                list.innerHTML = `<div style="padding: 40px 20px; text-align:center; color:#777; line-height:1.6;">아직 완등한 100대 명산이 없습니다.<br>나의 등산기에서 첫 도전을 기록해보세요!</div>`;
-            }
             
-            map.addLayer(challengeLayerGroup);
-            map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7, { animate: true, duration: 1 });
+            const filterWidget = document.getElementById('filterWidget');
+            if(filterWidget) filterWidget.classList.remove('open');
+            selectedFilterYear = 'all'; selectedFilterMonth = 'all'; 
         }
 
-        function setupDraggableFab(fab, widget, onClickCallback) {
-            let startX, startY, initLeft, initTop, isDragging = false, dragTimer = null;
-            fab.addEventListener('pointerdown', (e) => {
-                if(!e.isPrimary) return;
-                startX = e.clientX; startY = e.clientY;
-                const rect = widget.getBoundingClientRect(); initLeft = rect.left; initTop = rect.top;
-                isDragging = false; fab.setPointerCapture(e.pointerId);
-                dragTimer = setTimeout(() => { isDragging = true; fab.style.transform = 'scale(1.1)'; fab.style.boxShadow = '0 8px 20px rgba(0,0,0,0.4)'; }, 300); 
-            });
-            fab.addEventListener('pointermove', (e) => {
-                if (isDragging) {
-                    e.preventDefault(); 
-                    widget.style.right = 'auto'; widget.style.bottom = 'auto';
-                    widget.style.left = (initLeft + (e.clientX - startX)) + 'px'; widget.style.top = (initTop + (e.clientY - startY)) + 'px';
-                } else if (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) clearTimeout(dragTimer); 
-            });
-            fab.addEventListener('pointerup', (e) => {
-                clearTimeout(dragTimer); fab.style.transform = ''; fab.style.boxShadow = ''; fab.releasePointerCapture(e.pointerId);
-                if (!isDragging && onClickCallback) onClickCallback();
-            });
+        const sidebar = document.getElementById('sidebar'), handleDrag = document.getElementById('dragHandle'), dragText = document.querySelector('.drag-text');
+        let currentSidebarState = -1; 
+        const states = ['collapsed', 'half', 'full']; 
+        let startY = 0;
+        
+        handleDrag.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
+        handleDrag.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); 
+        handleDrag.addEventListener('touchend', e => {
+            const diff = startY - e.changedTouches[0].clientY; 
+            if (Math.abs(diff) > 40) { 
+                if (diff > 0) { if (currentSidebarState < 2) currentSidebarState++; } 
+                else { if (currentSidebarState > -1) currentSidebarState--; }
+                updateSidebarState();
+            }
+        });
+
+        function updateSidebarState() {
+            sidebar.classList.remove('hidden', 'collapsed', 'half', 'full'); 
+            if (currentSidebarState === -1) {
+                sidebar.classList.add('hidden');
+            } else {
+                sidebar.classList.add(states[currentSidebarState]);
+                if (currentSidebarState === 0) dragText.innerText = '위로 끌어올리세요'; 
+                else if (currentSidebarState === 1) dragText.innerText = '더 크게 보기 / 스와이프하여 닫기'; 
+                else dragText.innerText = '쓸어내려서 좁게 보기';
+            }
         }
 
-        function initFilterWidget() {
-            filterWidget = document.getElementById('filterWidget'); filterFab = document.getElementById('filterFab');
-            filterDial = document.getElementById('filterDial'); yearCenter = document.getElementById('yearCenter'); yearVal = document.getElementById('yearVal');
+        function openTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
             
-            const currentYearStr = new Date().getFullYear().toString();
-            currentYearIndex = yearsList.indexOf(currentYearStr); if(currentYearIndex === -1) currentYearIndex = yearsList.length - 1;
+            if (currentSidebarState === -1) currentSidebarState = 0;
+            updateSidebarState();
+            
+            map.removeLayer(markerLayerGroup);
+            map.removeLayer(m100LayerGroup); 
+            map.removeLayer(challengeLayerGroup);
+            
+            if(tabId === 'tabChallenge') {
+                renderChallengeMapAndList();
+            } else if (tabId === 'tabM100') {
+                renderM100Map();
+            } else if (tabId === 'tabMyLog') {
+                map.addLayer(markerLayerGroup);
+                renderAll(); 
+                map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7, { animate: true, duration: 1 });
+            }
+        }
 
-            document.addEventListener('pointerdown', (e) => {
-                if (filterWidget && filterWidget.classList.contains('open') && !filterWidget.contains(e.target)) {
-                    filterWidget.classList.remove('open'); filterDial.classList.remove('year-expanded'); 
-                }
+        const yearsList = ['all']; for(let y=2015; y<=2030; y++) yearsList.push(y.toString());
+        let currentYearIndex = 0, monthBtns = [];
+
+        function initFABs() {
+            setupDraggableFab(document.getElementById('myLogFab'), document.getElementById('myLogWidget'), () => openTab('tabMyLog'));
+            setupDraggableFab(document.getElementById('m100Fab'), document.getElementById('m100Widget'), () => openTab('tabM100'));
+            setupDraggableFab(document.getElementById('challengeFab'), document.getElementById('challengeWidget'), () => openTab('tabChallenge'));
+            
+            const filterWidget = document.getElementById('filterWidget');
+            const filterDial = document.getElementById('filterDial');
+            
+            setupDraggableFab(document.getElementById('filterFab'), filterWidget, () => {
+                filterWidget.classList.toggle('open');
+                if(filterWidget.classList.contains('open')) {
+                    selectedFilterYear = yearsList[currentYearIndex]; 
+                    document.getElementById('yearVal').innerText = selectedFilterYear === 'all' ? '전체' : selectedFilterYear; 
+                    applyDateFilter();
+                } else { filterDial.classList.remove('year-expanded'); }
             });
+
+            currentYearIndex = yearsList.indexOf(new Date().getFullYear().toString());
+            if(currentYearIndex === -1) currentYearIndex = yearsList.length - 1;
 
             for(let i=1; i<=12; i++) {
                 const btn = document.createElement('div'); btn.className = 'month-btn'; btn.innerText = i + '월'; btn.dataset.val = (i < 10 ? '0'+i : i.toString());
                 const angle = (i - 1 - 3) * 30 * (Math.PI / 180); btn.style.transform = `translate(${Math.cos(angle) * 100}px, ${Math.sin(angle) * 100}px)`;
-                btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); selectMonth(btn.dataset.val); }); filterDial.appendChild(btn); monthBtns.push(btn);
+                btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); selectMonth(btn.dataset.val); }); 
+                filterDial.appendChild(btn); monthBtns.push(btn);
             }
 
-            setupDraggableFab(filterFab, filterWidget, () => {
-                filterWidget.classList.toggle('open');
-                if(filterWidget.classList.contains('open')) {
-                    selectedFilterYear = yearsList[currentYearIndex]; yearVal.innerText = selectedFilterYear === 'all' ? '전체' : selectedFilterYear; applyDateFilter();
-                } else { filterDial.classList.remove('year-expanded'); }
-            });
-
-            filterDial.addEventListener('pointermove', (e) => {
-                if(!filterWidget.classList.contains('open') || !e.isPrimary) return;
-                const rect = filterDial.getBoundingClientRect(); const dx = e.clientX - (rect.left + rect.width / 2); const dy = e.clientY - (rect.top + rect.height / 2);
-                if (Math.sqrt(dx*dx + dy*dy) > 60 && Math.sqrt(dx*dx + dy*dy) < 140) {
-                    let angle = Math.atan2(dy, dx) * (180 / Math.PI); let month = Math.round((angle + 90) / 30) + 1;
-                    if (month <= 0) month += 12; if (month > 12) month -= 12; selectMonth(month < 10 ? '0'+month : month.toString());
-                }
-            });
-
+            const yearCenter = document.getElementById('yearCenter');
             let isYearDragging = false, hasSwipedYear = false, yearPointerStartY = 0, yearInitIndex = 0;
             yearCenter.addEventListener('pointerdown', (e) => {
                 if(!e.isPrimary) return; e.stopPropagation(); isYearDragging = true; hasSwipedYear = false; yearPointerStartY = e.clientY; yearInitIndex = currentYearIndex; yearCenter.setPointerCapture(e.pointerId);
@@ -666,12 +520,13 @@
                 let newIndex = yearInitIndex + Math.round(-(e.clientY - yearPointerStartY) / 25); 
                 if(newIndex < 0) newIndex = 0; if(newIndex >= yearsList.length) newIndex = yearsList.length - 1;
                 if(currentYearIndex !== newIndex) {
-                    currentYearIndex = newIndex; selectedFilterYear = yearsList[currentYearIndex]; yearVal.innerText = selectedFilterYear === 'all' ? '전체' : selectedFilterYear; applyDateFilter();
+                    currentYearIndex = newIndex; selectedFilterYear = yearsList[currentYearIndex]; 
+                    document.getElementById('yearVal').innerText = selectedFilterYear === 'all' ? '전체' : selectedFilterYear; applyDateFilter();
                 }
             });
             yearCenter.addEventListener('pointerup', (e) => {
                 if(!e.isPrimary) return; isYearDragging = false; yearCenter.releasePointerCapture(e.pointerId);
-                if (!hasSwipedYear) filterDial.classList.toggle('year-expanded'); else if (filterDial.classList.contains('year-expanded')) filterDial.classList.remove('year-expanded');
+                if (!hasSwipedYear) filterDial.classList.toggle('year-expanded'); else filterDial.classList.remove('year-expanded');
             });
         }
 
@@ -680,28 +535,58 @@
             monthBtns.forEach(btn => { if(btn.dataset.val === val && val !== 'all') btn.classList.add('active'); else btn.classList.remove('active'); }); applyDateFilter();
         }
 
-        let db, isFirstLoad = true, allRecords = [], groupedMarkers = {}, tempMarker = null, editingId = null;
+        function setupDraggableFab(fab, widget, onClickCallback) {
+            let startX, startY, initLeft, initTop, isDragging = false, dragTimer = null;
+            fab.addEventListener('pointerdown', (e) => {
+                if(!e.isPrimary) return;
+                startX = e.clientX; startY = e.clientY;
+                const rect = widget.getBoundingClientRect(); initLeft = rect.left; initTop = rect.top;
+                isDragging = false; fab.setPointerCapture(e.pointerId);
+                dragTimer = setTimeout(() => { isDragging = true; fab.style.transform = 'scale(1.1)'; }, 300); 
+            });
+            fab.addEventListener('pointermove', (e) => {
+                if (isDragging) {
+                    e.preventDefault(); 
+                    widget.style.right = 'auto'; widget.style.bottom = 'auto';
+                    widget.style.left = (initLeft + (e.clientX - startX)) + 'px'; widget.style.top = (initTop + (e.clientY - startY)) + 'px';
+                } else if (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) clearTimeout(dragTimer); 
+            });
+            fab.addEventListener('pointerup', (e) => {
+                clearTimeout(dragTimer); fab.style.transform = ''; fab.releasePointerCapture(e.pointerId);
+                if (!isDragging && onClickCallback) onClickCallback();
+            });
+        }
+
+        /* ---------------- 스플래시 및 DB 로드 ---------------- */
+        let db, allRecords = [], groupedMarkers = {};
+        let isFirstLoad = true, totalAltitudeData = 0;
 
         function initDB() {
-            try {
-                const request = indexedDB.open("PeakLogDB", 1);
-                request.onupgradeneeded = function(e) { db = e.target.result; if (!db.objectStoreNames.contains('hike_records')) db.createObjectStore('hike_records', { keyPath: 'id', autoIncrement: true }); };
-                request.onsuccess = function(e) { db = e.target.result; loadSavedRecords(); };
-                request.onerror = function() { finishSplashAndStart(); };
-            } catch (err) { finishSplashAndStart(); }
+            const req = indexedDB.open("PeakLogDB", 1);
+            req.onupgradeneeded = e => { db = e.target.result; if (!db.objectStoreNames.contains('hike_records')) db.createObjectStore('hike_records', { keyPath: 'id', autoIncrement: true }); };
+            req.onsuccess = e => { db = e.target.result; loadSavedRecords(); };
         }
 
         function loadSavedRecords() {
-            const transaction = db.transaction(['hike_records'], 'readonly'); const request = transaction.objectStore('hike_records').getAll();
-            request.onsuccess = function() { allRecords = request.result; if (isFirstLoad) { calculateTotalAltOnly(); playSplashIntro(); } else { renderAll(); } };
+            db.transaction(['hike_records'], 'readonly').objectStore('hike_records').getAll().onsuccess = e => {
+                allRecords = e.target.result;
+                if (isFirstLoad) {
+                    calculateTotalAltOnly();
+                    playSplashIntro();
+                } else {
+                    renderAll(); 
+                }
+            };
         }
 
         function calculateTotalAltOnly() {
             totalAltitudeData = 0; const mountainMap = {};
             allRecords.forEach(record => {
-                const rLat = parseFloat(record.lat) || 0; const rLng = parseFloat(record.lng) || 0;
-                const key = `${rLat.toFixed(4)},${rLng.toFixed(4)}`; if (!mountainMap[key]) mountainMap[key] = { count: 0, alt: 0 };
-                mountainMap[key].count += 1; const altValue = parseInt(record.alt); if (!isNaN(altValue) && altValue > 0) mountainMap[key].alt = altValue; 
+                const key = `${parseFloat(record.lat).toFixed(4)},${parseFloat(record.lng).toFixed(4)}`; 
+                if (!mountainMap[key]) mountainMap[key] = { count: 0, alt: 0 };
+                mountainMap[key].count += 1; 
+                const altValue = parseInt(record.alt); 
+                if (!isNaN(altValue) && altValue > 0) mountainMap[key].alt = altValue; 
             });
             for (let key in mountainMap) totalAltitudeData += mountainMap[key].alt * mountainMap[key].count;
         }
@@ -712,18 +597,22 @@
             splash.addEventListener('pointerdown', skipSplash);
 
             function skipSplash() {
-                if (splashSkipTriggered) return; splashSkipTriggered = true; counterObj.innerText = totalAltitudeData.toLocaleString(); counterObj.classList.add('pop-effect'); finishSplashAndStart();
+                if (splashSkipTriggered) return; splashSkipTriggered = true; 
+                counterObj.innerText = totalAltitudeData.toLocaleString(); 
+                finishSplashAndStart();
             }
 
             setTimeout(() => {
-                if (splashSkipTriggered) return; counterContainer.classList.add('show'); hintObj.style.opacity = '1'; hintObj.innerText = "터치 시 바로 시작할 수 있습니다";
+                if (splashSkipTriggered) return; 
+                counterContainer.classList.add('show'); hintObj.style.opacity = '1'; hintObj.innerText = "터치 시 바로 시작할 수 있습니다";
                 setTimeout(() => {
                     if (splashSkipTriggered) return; let startTimestamp = null; const duration = 1500; 
                     const step = (timestamp) => {
                         if (splashSkipTriggered) return; if (!startTimestamp) startTimestamp = timestamp;
                         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
                         counterObj.innerText = Math.floor((progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress)) * totalAltitudeData).toLocaleString();
-                        if (progress < 1) window.requestAnimationFrame(step); else { counterObj.classList.add('pop-effect'); hintObj.innerText = "화면을 터치하여 지도 보기 🗺️"; hintObj.style.animation = 'blinkHint 1s infinite'; }
+                        if (progress < 1) window.requestAnimationFrame(step); 
+                        else { hintObj.innerText = "화면을 터치하여 지도 보기 🗺️"; hintObj.style.animation = 'blinkHint 1s infinite'; }
                     }; window.requestAnimationFrame(step);
                 }, 300); 
             }, 600); 
@@ -731,54 +620,126 @@
 
         function finishSplashAndStart() {
             const splash = document.getElementById('splash');
-            if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; if (map) map.invalidateSize(); renderAll(); }, 500); } 
-            else { if (map) map.invalidateSize(); renderAll(); }
-        }
-
-        function createGroupMarker(group) {
-            const marker = L.marker([group.lat, group.lng], {icon: mountainIcon}).addTo(markerLayerGroup); groupedMarkers[group.key] = { marker: marker, data: group }; 
-            marker.bindTooltip((group.altNum ? `${group.name} (${group.altNum}m)` : `${group.name}`) + (group.climbs.length > 1 ? ` [${group.climbs.length}회]` : ""), { permanent: true, direction: 'top', className: 'mountain-label', offset: [0, -25] });
-            let popupContent = `<div style="text-align:center; min-width:180px;"><b>⛰️ ${group.name}</b><br><span style="color:#2E7D32; font-weight:bold;">총 ${group.climbs.length}회 등반</span><hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">`;
-            group.climbs.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(climb => {
-                popupContent += `<div style="margin-bottom: 12px;"><span style="color:#555; font-size:0.9em;">📅 ${climb.date}</span>`;
-                if (climb.photos && climb.photos.length > 0) { popupContent += `<div class="photo-gallery" style="justify-content:center;">`; climb.photos.forEach(url => { popupContent += `<img src="${url}" onclick="openPhoto('${url}', event)">`; }); popupContent += `</div>`; } popupContent += `</div>`;
-            }); popupContent += `</div>`; marker.bindPopup(popupContent);
+            isFirstLoad = false;
+            if(splash) { 
+                splash.style.opacity = '0'; 
+                setTimeout(() => { splash.style.display = 'none'; if (map) map.invalidateSize(); renderAll(); }, 500); 
+            } else { 
+                if (map) map.invalidateSize(); renderAll(); 
+            }
         }
 
         function renderAll() {
-            markerLayerGroup.clearLayers(); groupedMarkers = {}; document.getElementById('recordList').innerHTML = '';
-            let totalAltitude = 0; const groups = {};
+            markerLayerGroup.clearLayers(); groupedMarkers = {};
+            const groups = {};
             
-            // 💡 숫자형 파싱을 도입하여 에러 발생으로 인해 렌더링이 멈추고 마커가 사라지던 버그 방지
-            allRecords.forEach(record => {
-                const rLat = parseFloat(record.lat) || 0;
-                const rLng = parseFloat(record.lng) || 0;
-                const key = `${rLat.toFixed(4)},${rLng.toFixed(4)}`;
-                if(!groups[key]) groups[key] = { key: key, name: record.name, lat: rLat, lng: rLng, climbs: [], earliestDate: record.date, altNum: 0 };
-                groups[key].climbs.push(record); if(new Date(record.date) < new Date(groups[key].earliestDate)) groups[key].earliestDate = record.date;
-                const altValue = parseInt(record.alt); if (!isNaN(altValue) && altValue > 0) groups[key].altNum = altValue; 
+            allRecords.forEach(r => {
+                const lat = parseFloat(r.lat), lng = parseFloat(r.lng);
+                const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+                const altNum = parseInt(r.alt) || 0;
+                if(!groups[key]) groups[key] = { key, name: r.name, lat, lng, climbs: [], altNum: altNum };
+                groups[key].climbs.push(r);
+                if (altNum > groups[key].altNum) groups[key].altNum = altNum;
             });
-            for (let key in groups) totalAltitude += groups[key].altNum * groups[key].climbs.length; 
-            document.getElementById('totalAlt').innerText = totalAltitude.toLocaleString();
             
-            Object.values(groups).sort((a,b) => new Date(a.earliestDate) - new Date(b.earliestDate)).forEach(group => createGroupMarker(group));
+            Object.values(groups).forEach(group => {
+                const marker = L.marker([group.lat, group.lng], {icon: mountainIcon}).addTo(markerLayerGroup);
+                groupedMarkers[group.key] = { marker, data: group };
+                
+                const altText = group.altNum > 0 ? ` (${group.altNum}m)` : "";
+                marker.bindTooltip(`${group.name}${altText}`, { permanent: true, direction: 'top', className: 'mountain-label my-log-tooltip', offset: [0, -25] });
+                
+                let popupContent = `<div style="text-align:center;"><b>⛰️ ${group.name}</b><br><span style="color:#D32F2F; font-weight:bold;">고도: ${group.altNum > 0 ? group.altNum + 'm' : '정보 없음'}</span><hr style="margin:5px 0; border:0; border-top:1px solid #ddd;">`;
+                group.climbs.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(c => {
+                    popupContent += `<div style="font-size:0.9em; margin-bottom:5px; color:#555;">📅 ${c.date}</div>`;
+                });
+                popupContent += `</div>`;
+                marker.bindPopup(popupContent);
+            });
             
-            // 💡 명산 100/도전 100 모드가 아니라면 강제로 레이어 삽입하여 마커 보호
-            if(!is100MountainsMode && !isChallengeMode) {
-                if(!map.hasLayer(markerLayerGroup)) map.addLayer(markerLayerGroup);
-                document.getElementById('sidebar').classList.remove('hidden'); 
-            }
-            applyDateFilter(); isFirstLoad = false;
+            renderListOnly();
+            applyDateFilter();
+        }
 
+        function renderListOnly() {
+            document.getElementById('recordList').innerHTML = '';
             allRecords.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(data => {
-                const list = document.getElementById('recordList'); const recordCard = document.createElement('div'); recordCard.className = 'record-card';
-                recordCard.onclick = (e) => { if(e.target.tagName === 'BUTTON') return; highlightMarker(data); };
-                recordCard.innerHTML = `<div class="action-btns"><button class="edit-btn" onclick="editRecord(${data.id}, event)">수정</button><button class="delete-btn" onclick="deleteRecord(${data.id}, event)">삭제</button></div>
-                    <h4>⛰️ ${data.name} <span style="font-size:0.8em; color:#2E7D32;">${data.alt !== "정보 없음" ? '('+data.alt+'m)' : ''}</span></h4><p>📅 ${data.date}</p>`;
-                list.appendChild(recordCard); 
+                const div = document.createElement('div'); div.className = 'record-card';
+                div.onclick = () => {
+                    openTab('tabMyLog'); 
+                    map.flyTo([data.lat, data.lng], 14, {animate: true});
+                }
+                div.innerHTML = `<div class="action-btns"><button class="delete-btn" onclick="deleteRecord(${data.id}, event)">삭제</button></div>
+                    <h4>⛰️ ${data.name}</h4><p>📅 ${data.date}</p>`;
+                document.getElementById('recordList').appendChild(div);
             });
+        }
+
+        function initM100List() {
+            const list = document.getElementById('m100List');
+            m100Data.forEach(m => {
+                const li = document.createElement('li'); li.className = 'm100-item';
+                li.innerHTML = `<div class="m100-item-content"><div class="m100-name">${m.name}</div><div class="m100-desc">${m.region} | ${m.alt}m</div></div>`;
+                li.onclick = () => {
+                    map.flyTo([m.lat, m.lng], 12);
+                    currentSidebarState = 0; updateSidebarState(); 
+                };
+                list.appendChild(li);
+            });
+        }
+
+        function renderM100Map() {
+            m100LayerGroup.clearLayers();
+            m100Data.forEach(m => {
+                const marker = L.marker([m.lat, m.lng], {icon: m100Icon}).addTo(m100LayerGroup);
+                marker.bindTooltip(`${m.name}`, { permanent: false, direction: 'top', className: 'mountain-label' });
+                marker.bindPopup(`<div style="text-align:center;"><b>🇰🇷 ${m.name}</b><br><span style="color:#1565C0;">${m.alt}m | ${m.region}</span><hr style="margin:5px 0;">${m.desc}</div>`);
+            });
+            map.addLayer(m100LayerGroup);
+            map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7, { animate: true, duration: 1 });
+        }
+
+        function renderChallengeMapAndList() {
+            const list = document.getElementById('challengeList'); list.innerHTML = '';
+            challengeLayerGroup.clearLayers(); let climbedCount = 0;
+
+            m100Data.forEach(m => {
+                let matchedRecords = allRecords.filter(r => {
+                    if (r.name.indexOf(m.name) === -1 && m.name.indexOf(r.name) === -1) return false;
+                    const dist = map.distance([r.lat, r.lng], [m.lat, m.lng]);
+                    return dist < 5000; 
+                });
+                
+                let isClimbed = matchedRecords.length > 0;
+                let iconHtml = isClimbed ? challengePinSvg : m100PinSvg;
+                let icon = L.divIcon({ className: isClimbed ? 'custom-leaflet-icon challenge-climbed' : 'custom-leaflet-icon dim-marker', html: iconHtml, iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36], tooltipAnchor: [0, -36] });
+                let marker = L.marker([m.lat, m.lng], {icon, zIndexOffset: isClimbed ? 1000 : 0}).addTo(challengeLayerGroup);
+                
+                if(isClimbed) {
+                    matchedRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
+                    let latest = matchedRecords[0];
+                    
+                    marker.bindTooltip(`${m.name} 🏆`, { permanent: true, direction: 'top', className: 'mountain-label challenge-tooltip', offset: [0, -25] });
+                    marker.bindPopup(`<div style="text-align:center;"><b>🏆 ${m.name} (완등)</b><br><span style="color:#FF8F00; font-weight:bold;">최근 등반: ${latest.date}</span></div>`);
+                    climbedCount++;
+                    
+                    const li = document.createElement('li'); li.className = 'm100-item';
+                    li.innerHTML = `
+                        <div class="m100-item-content">
+                            <div class="m100-name">${m.name} <span style="font-size:0.7em; color:#FF8F00; vertical-align:middle;">🏆</span></div>
+                            <div class="m100-desc">📅 ${latest.date}</div>
+                        </div>`;
+                    li.onclick = () => { map.flyTo([m.lat, m.lng], 13); marker.openPopup(); currentSidebarState = 0; updateSidebarState(); };
+                    list.appendChild(li);
+                } else {
+                    marker.bindPopup(`<div style="text-align:center;"><b>🇰🇷 ${m.name}</b><br><span style="color:#777;">아직 등반하지 않은 명산입니다.</span></div>`);
+                }
+            });
+            document.getElementById('challengeCount').innerText = climbedCount;
+            if(climbedCount === 0) { list.innerHTML = `<div style="padding: 40px 20px; text-align:center; color:#777;">아직 완등한 명산이 없습니다.</div>`; }
             
-            if(isChallengeMode) renderChallengeMapAndList();
+            map.addLayer(challengeLayerGroup); 
+            map.flyTo([36.3, 127.8], window.innerWidth <= 768 ? 6.5 : 7, { animate: true, duration: 1 });
         }
 
         function applyDateFilter() {
@@ -786,32 +747,25 @@
             for (let key in groupedMarkers) {
                 const domElement = groupedMarkers[key].marker.getElement(); if (!domElement) continue;
                 if (!filterActive) { domElement.classList.remove('highlight-marker', 'dim-marker'); groupedMarkers[key].marker.setZIndexOffset(0); continue; }
+                
                 let isMatch = false;
                 groupedMarkers[key].data.climbs.forEach(climb => {
                     if ((selectedFilterYear === 'all' || selectedFilterYear === climb.date.split('-')[0]) && (selectedFilterMonth === 'all' || selectedFilterMonth === climb.date.split('-')[1])) isMatch = true;
                 });
-                if (isMatch) { domElement.classList.remove('dim-marker'); domElement.classList.add('highlight-marker'); groupedMarkers[key].marker.setZIndexOffset(1000); } 
-                else { domElement.classList.remove('highlight-marker'); domElement.classList.add('dim-marker'); groupedMarkers[key].marker.setZIndexOffset(0); }
+                
+                if (isMatch) { 
+                    domElement.classList.remove('dim-marker'); 
+                    domElement.classList.add('highlight-marker'); 
+                    groupedMarkers[key].marker.setZIndexOffset(99999); 
+                } else { 
+                    domElement.classList.remove('highlight-marker'); 
+                    domElement.classList.add('dim-marker'); 
+                    groupedMarkers[key].marker.setZIndexOffset(0); 
+                }
             }
         }
 
-        const sidebar = document.getElementById('sidebar'), handleDrag = document.getElementById('dragHandle'), dragText = document.querySelector('.drag-text');
-        let currentSidebarState = 0; const states = ['collapsed', 'half', 'full']; let startY = 0;
-        handleDrag.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
-        handleDrag.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false}); 
-        handleDrag.addEventListener('touchend', e => {
-            const diff = startY - e.changedTouches[0].clientY; 
-            if (Math.abs(diff) > 50) { 
-                if (diff > 0) { if (currentSidebarState < 2) currentSidebarState++; } else { if (currentSidebarState > 0) currentSidebarState--; }
-                updateSidebarState();
-            }
-        });
-        function updateSidebarState() {
-            sidebar.classList.remove('collapsed', 'half', 'full'); sidebar.classList.add(states[currentSidebarState]);
-            if (currentSidebarState === 0) dragText.innerText = '올려서 기록 보기 🔼'; else if (currentSidebarState === 1) dragText.innerText = '더 크게 / 접기 ↕️'; else dragText.innerText = '쓸어내려서 좁게 보기 🔽';
-        }
-
-        let debounceTimer;
+        let debounceTimer, tempMarker;
         function handleEnter(e) { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); searchMountain(); } }, 500); }
         window.handleSearchResults = function(data) {
             const resultsUl = document.getElementById('searchResults'); resultsUl.innerHTML = '';
@@ -822,7 +776,7 @@
                 li.onclick = () => {
                     document.getElementById('mountainInput').value = place.name; document.getElementById('lat').value = place.lat; document.getElementById('lng').value = place.lon;
                     if (tempMarker) map.removeLayer(tempMarker);
-                    tempMarker = L.marker([place.lat, place.lon], {icon: mountainIcon}).addTo(map).bindPopup("<b>이곳이 맞다면 나머지 정보를 입력 후 저장하세요.</b>").openPopup();
+                    tempMarker = L.marker([place.lat, place.lon], {icon: mountainIcon}).addTo(map).bindPopup("<b>이곳이 맞다면 위치 등록 후 저장하세요.</b>").openPopup();
                     resultsUl.style.display = 'none'; map.flyTo([place.lat, place.lon], 13);
                 }; resultsUl.appendChild(li);
             });
@@ -833,24 +787,8 @@
             const oldScript = document.getElementById('jsonpSearch'); if (oldScript) oldScript.remove();
             const script = document.createElement('script'); script.id = 'jsonpSearch';
             script.src = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=kr&accept-language=ko&limit=10&json_callback=handleSearchResults`;
-            script.onerror = () => { resultsUl.innerHTML = '<li style="color:#d32f2f;">통신 오류 발생. 다시 시도해주세요.</li>'; }; document.head.appendChild(script);
+            document.head.appendChild(script);
         }
-
-        function highlightMarker(data) {
-            closeM100Panel(true); closeChallengePanel(true); 
-            if(!map.hasLayer(markerLayerGroup)) map.addLayer(markerLayerGroup);
-            document.getElementById('sidebar').classList.remove('hidden');
-            
-            const key = `${parseFloat(data.lat).toFixed(4)},${parseFloat(data.lng).toFixed(4)}`; 
-            const item = groupedMarkers[key];
-            if(item && item.marker) {
-                if(window.innerWidth <= 768) { currentSidebarState = 0; updateSidebarState(); }
-                map.flyTo([data.lat, data.lng], 14, {animate: true, duration: 1}); item.marker.openPopup();
-            }
-        }
-
-        function openPhoto(url, event) { if(event) event.stopPropagation(); document.getElementById('expandedPhoto').src = url; document.getElementById('photoOverlay').classList.add('show'); }
-        function closePhoto(e) { if(e && e.target.id === 'expandedPhoto') return; document.getElementById('photoOverlay').classList.remove('show'); }
 
         function resizeImage(file) {
             return new Promise((resolve) => {
@@ -865,16 +803,6 @@
             });
         }
 
-        function editRecord(id, event) {
-            if(event) event.stopPropagation(); const record = allRecords.find(r => r.id === id); if(!record) return;
-            editingId = id; document.getElementById('mountainInput').value = record.name; document.getElementById('hikeDate').value = record.date;
-            document.getElementById('hikeAlt').value = record.alt !== "정보 없음" ? record.alt : ""; document.getElementById('lat').value = record.lat; document.getElementById('lng').value = record.lng;
-            
-            const saveBtn = document.getElementById('mainSaveBtn'); saveBtn.innerText = "🔄 기록 수정 완료"; saveBtn.classList.add('edit-mode');
-            if (tempMarker) map.removeLayer(tempMarker); tempMarker = L.marker([record.lat, record.lng], {icon: mountainIcon}).addTo(map); map.flyTo([record.lat, record.lng], 13);
-            if(window.innerWidth <= 768) { currentSidebarState = 2; updateSidebarState(); } document.getElementById('sidebarContent').scrollTop = 0; 
-        }
-
         async function saveRecord() {
             const name = document.getElementById('mountainInput').value || "이름 없는 산", date = document.getElementById('hikeDate').value, alt = document.getElementById('hikeAlt').value || "정보 없음", lat = document.getElementById('lat').value, lng = document.getElementById('lng').value, photoInput = document.getElementById('hikePhoto');
             if (!lat || !lng) return alert("검색을 통해 산 위치를 선택해주세요!"); if (!date) return alert("등산하신 날짜를 골라주세요.");
@@ -882,45 +810,28 @@
             const saveBtn = document.getElementById('mainSaveBtn'); saveBtn.innerText = "처리 중... ⏳"; saveBtn.disabled = true;
             let photoUrls = []; if (photoInput.files && photoInput.files.length > 0) { for(let i = 0; i < photoInput.files.length; i++) { photoUrls.push(await resizeImage(photoInput.files[i])); } }
 
-            const store = db.transaction(['hike_records'], 'readwrite').objectStore('hike_records');
-            if (editingId) {
-                store.get(editingId).onsuccess = function(e) {
-                    const record = e.target.result; record.name = name; record.date = date; record.alt = alt; record.lat = parseFloat(lat); record.lng = parseFloat(lng);
-                    if (photoUrls.length > 0) record.photos = photoUrls; store.put(record).onsuccess = resetAndReload;
-                };
-            } else { store.add({ name, date, alt, lat: parseFloat(lat), lng: parseFloat(lng), photos: photoUrls }).onsuccess = resetAndReload; }
-
-            function resetAndReload() {
-                editingId = null; saveBtn.classList.remove('edit-mode');
+            db.transaction(['hike_records'], 'readwrite').objectStore('hike_records').add({ name, date, alt, lat: parseFloat(lat), lng: parseFloat(lng), photos: photoUrls }).onsuccess = () => {
                 document.getElementById('mountainInput').value = ''; document.getElementById('hikeDate').value = ''; document.getElementById('hikeAlt').value = ''; 
                 document.getElementById('hikePhoto').value = ''; document.getElementById('lat').value = ''; document.getElementById('lng').value = '';
+                
                 if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
-                saveBtn.innerText = "지도에 내 기록 남기기"; saveBtn.disabled = false; loadSavedRecords(); 
-            }
+                saveBtn.innerText = "지도에 내 기록 남기기"; saveBtn.disabled = false; 
+                
+                loadSavedRecords(); 
+                
+                if(document.getElementById('tabMyLog').classList.contains('active')) {
+                    currentSidebarState = 0; 
+                    updateSidebarState();
+                    map.flyTo([lat, lng], 13, { animate: true, duration: 1 });
+                }
+            };
         }
 
         function deleteRecord(id, event) {
             if(event) event.stopPropagation(); if (!confirm("정말로 이 등산 기록을 삭제하시겠습니까?")) return;
-            db.transaction(['hike_records'], 'readwrite').objectStore('hike_records').delete(id).onsuccess = loadSavedRecords; 
-        }
-
-        function exportData() {
-            if (allRecords.length === 0) return alert("백업할 기록이 없습니다.");
-            const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(allRecords)], { type: "application/json" }));
-            link.download = "나의_등산기록_백업.json"; document.body.appendChild(link); link.click(); document.body.removeChild(link);
-        }
-
-        function importData(event) {
-            const file = event.target.files[0]; if (!file) return;
-            if (!confirm("기존 기록에 불러온 데이터를 추가하시겠습니까?")) { event.target.value = ''; return; }
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const importedData = JSON.parse(e.target.result); const store = db.transaction(['hike_records'], 'readwrite').objectStore('hike_records');
-                    importedData.forEach(record => { delete record.id; store.add(record); });
-                    alert("기록 복원이 완료되었습니다!"); loadSavedRecords(); 
-                } catch (err) { alert("잘못된 파일입니다. 백업했던 JSON 파일을 선택해주세요."); }
-            }; reader.readAsText(file); event.target.value = ''; 
+            db.transaction(['hike_records'], 'readwrite').objectStore('hike_records').delete(id).onsuccess = () => {
+                loadSavedRecords();
+            };
         }
     </script>
 </body>
