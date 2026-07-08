@@ -100,8 +100,8 @@
         .marker-pin-wrapper {
             position: absolute;
             bottom: 0px; 
-            left: -18px; /* 핀 가로 너비(36px)의 절반 */
-            width: 36px;
+            left: -15px; /* 핀 가로 너비(30px)의 절반으로 완벽한 중앙 정렬 */
+            width: 30px;
             height: 48px;
             cursor: pointer;
             transform-origin: bottom center;
@@ -109,7 +109,7 @@
             filter: drop-shadow(0px 6px 4px rgba(0,0,0,0.4));
         }
 
-        .dim-marker .marker-pin-wrapper { filter: grayscale(100%) opacity(0.5); }
+        .dim-marker .marker-pin-wrapper { filter: grayscale(100%) opacity(0.5) drop-shadow(0px 6px 4px rgba(0,0,0,0.4)); }
 
         @keyframes dropIn {
             0% { transform: scale(0.5) translateY(-50px); opacity: 0; }
@@ -307,7 +307,7 @@
             { name: "가리왕산", region: "강원 정선", alt: 1561, lat: 37.4616, lng: 128.5638, desc: "전국 제일의 숲과 원시림을 간직한 산" },
             { name: "가야산", region: "경남 합천", alt: 1430, lat: 35.8231, lng: 128.1175, desc: "해인사를 품은 조선 8경 중 하나 (상왕봉 기준)" },
             { name: "가지산", region: "울산 울주", alt: 1241, lat: 35.6200, lng: 129.0069, desc: "영남 알프스의 최고봉" },
-            { name: "감악산", region: "경기 파주", alt: 675, lat: 37.9133, lng: 126.9619, desc: "임꺽정봉และ 출렁다리가 유명한 경기 5악" },
+            { name: "감악산", region: "경기 파주", alt: 675, lat: 37.9133, lng: 126.9619, desc: "임꺽정봉과 출렁다리가 유명한 경기 5악" },
             { name: "강천산", region: "전북 순창", alt: 581, lat: 35.3995, lng: 127.0545, desc: "호남의 소금강이라 불리는 붉은 단풍 명소" },
             { name: "계룡산", region: "충남 공주", alt: 845, lat: 36.3562, lng: 127.2119, desc: "풍수지리적 명산, 수려한 산세 (천황봉)" },
             { name: "계방산", region: "강원 평창", alt: 1577, lat: 37.7337, lng: 128.4682, desc: "남한에서 5번째로 높은 겨울 눈꽃 명산" },
@@ -436,11 +436,15 @@
             return { bottom: 30 };
         }
 
-        function focusAndRotate(lng, lat, zoomLvl = 14) {
+        // focusAndRotate 개선: 애니메이션(zoom in)이 완료된 후 실행할 callback 추가
+        function focusAndRotate(lng, lat, zoomLvl = 14, callback = null) {
             stopRotate();
             const padding = getMapPadding();
             map.flyTo({ center: [lng, lat], zoom: zoomLvl, pitch: 65, bearing: map.getBearing(), padding: padding, duration: 2500, essential: true });
-            map.once('moveend', () => { startRotate(lng, lat); });
+            map.once('moveend', () => { 
+                startRotate(lng, lat); 
+                if (callback) callback();
+            });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -461,7 +465,6 @@
             map.addControl(new MapboxLanguage({ defaultLanguage: 'ko' }));
 
             map.on('style.load', () => {
-                // [최적화 3] DEM maxzoom을 14에서 12로 낮추어 iOS 기기 메모리 부하 방지
                 map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 12 });
                 map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.1 }); 
                 map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
@@ -490,6 +493,7 @@
             initFABs(); initDB(); initM100List();
         });
 
+        // 수직형 압정(Pushpin) 디자인으로 SVG 변경
         function createMarkerEl(type, labelHtml, isDim) {
             const el = document.createElement('div');
             el.className = 'marker-base' + (isDim ? ' dim-marker' : '');
@@ -504,14 +508,28 @@
             
             el.innerHTML = `
                 <div class="marker-pin-wrapper">
-                    <svg viewBox="0 0 40 50" width="36" height="48" xmlns="http://www.w3.org/2000/svg">
+                    <svg viewBox="0 0 40 64" width="30" height="48" xmlns="http://www.w3.org/2000/svg">
                       <defs>
-                        <radialGradient id="${svgId}" cx="30%" cy="30%" r="70%">
+                        <radialGradient id="${svgId}" cx="35%" cy="30%" r="65%">
                           ${colorStops}
                         </radialGradient>
+                        <linearGradient id="needle-${svgId}" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stop-color="#888"/>
+                          <stop offset="50%" stop-color="#eee"/>
+                          <stop offset="100%" stop-color="#555"/>
+                        </linearGradient>
+                        <linearGradient id="base-${svgId}" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stop-color="#444"/>
+                          <stop offset="50%" stop-color="#999"/>
+                          <stop offset="100%" stop-color="#222"/>
+                        </linearGradient>
                       </defs>
-                      <path d="M20 2 C9 2 2 11 2 22 C2 35 20 48 20 48 C20 48 38 35 38 22 C38 11 31 2 20 2 Z" fill="url(#${svgId})"/>
-                      <circle cx="20" cy="18" r="6" fill="#ffffff" />
+                      <ellipse cx="20" cy="62" rx="10" ry="2.5" fill="rgba(0,0,0,0.5)"/>
+                      <ellipse cx="20" cy="62" rx="4" ry="1.2" fill="rgba(0,0,0,0.8)"/>
+                      <polygon points="17,28 23,28 20.5,64 19.5,64" fill="url(#needle-${svgId})"/>
+                      <path d="M 14 26 L 26 26 L 24 30 L 16 30 Z" fill="url(#base-${svgId})"/>
+                      <circle cx="20" cy="16" r="14" fill="url(#${svgId})"/>
+                      <circle cx="14" cy="10" r="3.5" fill="#ffffff" opacity="0.85"/>
                     </svg>
                 </div>
                 ${labelHtml || ''}
@@ -672,7 +690,6 @@
                     if (c.photos && c.photos.length > 0) {
                         const carouselId = 'carousel_' + Math.random().toString(36).substr(2, 9);
                         popupContent += `<div class="carousel" id="${carouselId}"><div class="carousel-inner" id="inner_${carouselId}">`;
-                        // [최적화 1] HTML 어트리뷰트에 거대한 Base64 스트링을 주입하지 않고 기록 고유 고유 ID(c.id)만 매개변수로 전달
                         c.photos.forEach((url, idx) => { popupContent += `<div class="carousel-item"><img src="${url}" onclick="openCarousel(${c.id}, ${idx}, event)"></div>`; });
                         popupContent += `</div>`;
                         if (c.photos.length > 1) {
@@ -689,10 +706,22 @@
                 const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(popupContent);
                 const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([group.lng, group.lat]).setPopup(popup).addTo(map);
 
+                // 마커 클릭 이벤트 개선: 탭하면 툴팁을 바로 숨기고 줌인이 완료되면 사진 팝업을 띄움
                 el.addEventListener('click', (e) => { 
                     e.stopPropagation(); 
-                    focusAndRotate(group.lng, group.lat, 14.5); 
-                    if (!marker.getPopup().isOpen()) marker.togglePopup();
+                    const label = el.querySelector('.mountain-label');
+                    if(label) label.style.display = 'none'; // 산 정보 라벨 숨김
+                    
+                    focusAndRotate(group.lng, group.lat, 14.5, () => {
+                        // 줌인이 끝난 뒤 팝업(사진 관련) 오픈
+                        if (!marker.getPopup().isOpen()) marker.togglePopup();
+                    });
+                });
+
+                // 팝업이 닫히면 다시 툴팁 노출
+                popup.on('close', () => {
+                    const label = el.querySelector('.mountain-label');
+                    if(label) label.style.display = 'block';
                 });
 
                 myLogMarkers.push(marker);
@@ -714,11 +743,13 @@
                 const div = document.createElement('div'); div.className = 'record-card';
                 div.onclick = () => { 
                     openTab('tabMyLog'); 
-                    focusAndRotate(parseFloat(data.lng), parseFloat(data.lat), 14.5);
                     currentSidebarState = 0; updateSidebarState();
-
-                    const key = `${parseFloat(data.lat).toFixed(4)},${parseFloat(data.lng).toFixed(4)}`;
-                    if(groupedData[key]) { setTimeout(() => { if(!groupedData[key].marker.getPopup().isOpen()) groupedData[key].marker.togglePopup(); }, 800); }
+                    focusAndRotate(parseFloat(data.lng), parseFloat(data.lat), 14.5, () => {
+                        const key = `${parseFloat(data.lat).toFixed(4)},${parseFloat(data.lng).toFixed(4)}`;
+                        if(groupedData[key]) { 
+                            if(!groupedData[key].marker.getPopup().isOpen()) groupedData[key].marker.togglePopup(); 
+                        }
+                    });
                 };
                 div.innerHTML = `<div class="action-btns"><button class="edit-btn" onclick="editRecord(${data.id}, event)">수정</button><button class="delete-btn" onclick="deleteRecord(${data.id}, event)">삭제</button></div><h4>⛰️ ${data.name} <span style="font-size:0.8em; color:#2E7D32;">${data.alt !== "정보 없음" ? '('+data.alt+'m)' : ''}</span></h4><p>📅 ${data.date}</p>`;
                 document.getElementById('recordList').appendChild(div);
@@ -732,14 +763,14 @@
                 const li = document.createElement('li'); li.className = 'm100-item';
                 li.innerHTML = `<div class="m100-item-content"><div class="m100-name">${m.name}</div><div class="m100-desc">${m.region} | ${m.alt}m</div></div>`;
                 li.onclick = () => {
-                    focusAndRotate(m.lng, m.lat, 13.5);
                     currentSidebarState = 0; updateSidebarState(); 
-                    
-                    m100Markers.forEach(marker => {
-                        const lngLat = marker.getLngLat();
-                        if (Math.abs(lngLat.lat - m.lat) < 0.0001 && Math.abs(lngLat.lng - m.lng) < 0.0001) {
-                            setTimeout(() => { if(!marker.getPopup().isOpen()) marker.togglePopup(); }, 800);
-                        }
+                    focusAndRotate(m.lng, m.lat, 13.5, () => {
+                        m100Markers.forEach(marker => {
+                            const lngLat = marker.getLngLat();
+                            if (Math.abs(lngLat.lat - m.lat) < 0.0001 && Math.abs(lngLat.lng - m.lng) < 0.0001) {
+                                if(!marker.getPopup().isOpen()) marker.togglePopup();
+                            }
+                        });
                     });
                 };
                 list.appendChild(li);
@@ -762,8 +793,9 @@
                 const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
                 el.addEventListener('click', (e) => { 
                     e.stopPropagation(); 
-                    focusAndRotate(m.lng, m.lat, 13.5); 
-                    if (!marker.getPopup().isOpen()) marker.togglePopup();
+                    focusAndRotate(m.lng, m.lat, 13.5, () => {
+                        if (!marker.getPopup().isOpen()) marker.togglePopup();
+                    });
                 });
                 m100Markers.push(marker);
             });
@@ -800,7 +832,17 @@
                     
                     const li = document.createElement('li'); li.className = 'm100-item';
                     li.innerHTML = `<div class="m100-item-content"><div class="m100-name">${m.name} <span style="font-size:0.7em; color:#FF8F00;">🏆</span></div><div class="m100-desc">${m.region} | ${m.alt}m <br>📅 ${latest.date}</div></div>`;
-                    li.onclick = () => { focusAndRotate(m.lng, m.lat, 14); currentSidebarState = 0; updateSidebarState(); };
+                    li.onclick = () => { 
+                        currentSidebarState = 0; updateSidebarState(); 
+                        focusAndRotate(m.lng, m.lat, 14, () => {
+                            challengeMarkers.forEach(marker => {
+                                const lngLat = marker.getLngLat();
+                                if (Math.abs(lngLat.lat - m.lat) < 0.0001 && Math.abs(lngLat.lng - m.lng) < 0.0001) {
+                                    if(!marker.getPopup().isOpen()) marker.togglePopup();
+                                }
+                            });
+                        });
+                    };
                     list.appendChild(li);
                 } else {
                     popupHtml = `<div style="text-align:center; min-width:180px;">
@@ -816,14 +858,16 @@
                 const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
                 
                 if (isClimbed) {
-                    marker.togglePopup();
                     el.style.zIndex = 1000;
+                    // 기존에 있던 marker.togglePopup(); 를 제거하여 전체 화면에서 팝업창을 삭제
                 }
                 
                 el.addEventListener('click', (e) => { 
                     e.stopPropagation(); 
-                    focusAndRotate(m.lng, m.lat, 14); 
-                    if (!marker.getPopup().isOpen()) marker.togglePopup();
+                    focusAndRotate(m.lng, m.lat, 14, () => {
+                        // 탭하여 줌인 완료 후 팝업 발생
+                        if (!marker.getPopup().isOpen()) marker.togglePopup();
+                    }); 
                 });
                 
                 challengeMarkers.push(marker);
@@ -888,9 +932,10 @@
                         tempMarker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([lon, lat]).setPopup(popup).addTo(map);
                         
                         resultsUl.style.display = 'none'; 
-                        focusAndRotate(lon, lat, 14.5);
-                        setTimeout(() => tempMarker.togglePopup(), 800);
                         currentSidebarState = 0; updateSidebarState(); 
+                        focusAndRotate(lon, lat, 14.5, () => {
+                            tempMarker.togglePopup();
+                        });
                     }; resultsUl.appendChild(li);
                 });
             });
@@ -904,7 +949,6 @@
 
         /* ---------------- 전체 사진 갤러리 오버레이 스크립트 ---------------- */
         let carouselPhotosArr = []; let currentCarouselIndex = 0;
-        // [최적화 1-2] 문자열 대신 전달받은 recordId를 바탕으로 런타임 메모리(allRecords) 참조 방식 전환
         window.openCarousel = function(recordId, startIndex, event) {
             if(event) event.stopPropagation(); 
             const record = allRecords.find(r => r.id === recordId);
@@ -938,7 +982,6 @@
                 const reader = new FileReader(); reader.onload = (e) => {
                     const img = new Image(); img.onload = () => {
                         const canvas = document.createElement('canvas'); 
-                        // [최적화 2] 모바일 가독성을 저해하지 않는 선에서 최대 해상도(600px) 및 압축률(0.6) 조정으로 데이터 용량 최적화
                         const maxSize = 600; let width = img.width, height = img.height;
                         if (width > height && width > maxSize) { height *= maxSize / width; width = maxSize; } else if (height > maxSize) { width *= maxSize / height; height = maxSize; }
                         canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height); resolve(canvas.toDataURL('image/jpeg', 0.6)); 
