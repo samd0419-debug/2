@@ -301,13 +301,13 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // 100대 명산 실제 정상(Peak) 위경도 정밀 좌표 (수정 완료)
+        // 100대 명산 실제 정상 위경도 정밀 좌표
         const m100Data = [
             { name: "가리산", region: "강원 춘천", alt: 1051, lat: 37.8711, lng: 127.9544, desc: "소양호 피아골의 비경을 간직한 산" },
             { name: "가리왕산", region: "강원 정선", alt: 1561, lat: 37.4616, lng: 128.5638, desc: "전국 제일의 숲과 원시림을 간직한 산" },
             { name: "가야산", region: "경남 합천", alt: 1430, lat: 35.8231, lng: 128.1175, desc: "해인사를 품은 조선 8경 중 하나 (상왕봉 기준)" },
             { name: "가지산", region: "울산 울주", alt: 1241, lat: 35.6200, lng: 129.0069, desc: "영남 알프스의 최고봉" },
-            { name: "감악산", region: "경기 파주", alt: 675, lat: 37.9133, lng: 126.9619, desc: "임꺽정봉과 출렁다리가 유명한 경기 5악" },
+            { name: "감악산", region: "경기 파주", alt: 675, lat: 37.9133, lng: 126.9619, desc: "임꺽정봉และ 출렁다리가 유명한 경기 5악" },
             { name: "강천산", region: "전북 순창", alt: 581, lat: 35.3995, lng: 127.0545, desc: "호남의 소금강이라 불리는 붉은 단풍 명소" },
             { name: "계룡산", region: "충남 공주", alt: 845, lat: 36.3562, lng: 127.2119, desc: "풍수지리적 명산, 수려한 산세 (천황봉)" },
             { name: "계방산", region: "강원 평창", alt: 1577, lat: 37.7337, lng: 128.4682, desc: "남한에서 5번째로 높은 겨울 눈꽃 명산" },
@@ -327,7 +327,7 @@
             { name: "대암산", region: "강원 양구", alt: 1304, lat: 38.2250, lng: 128.1251, desc: "용늪을 품고 있는 생태계의 보고" },
             { name: "대야산", region: "경북 문경", alt: 931, lat: 36.6341, lng: 127.9351, desc: "용추폭포와 기암절벽이 어우러진 명산" },
             { name: "덕숭산", region: "충남 예산", alt: 495, lat: 36.6669, lng: 126.6210, desc: "수덕사를 품은 호서의 금강" },
-            { name: "덕유산", region: "전북 무주", alt: 1614, lat: 35.8601, lng: 127.7471, desc: "상고대가 아름다운 향적봉 겨울 명산 (향적봉)" },
+            { name: "덕유산", region: "전북 무주", alt: 1614, lat: 35.8601, lng: 127.7471, desc: "상고대가 아름다운 향적봉 겨울 명산" },
             { name: "덕항산", region: "강원 삼척", alt: 1071, lat: 37.3188, lng: 129.0067, desc: "환선굴을 품은 석회암 지대의 명산" },
             { name: "도락산", region: "충북 단양", alt: 964, lat: 36.8770, lng: 128.3189, desc: "우암 송시열이 이름 붙인 기암 산수" },
             { name: "도봉산", region: "서울 도봉", alt: 740, lat: 37.6970, lng: 127.0143, desc: "자운봉, 만장봉 등 화강암 암봉의 전시장 (자운봉)" },
@@ -382,7 +382,7 @@
             { name: "주왕산", region: "경북 청송", alt: 720, lat: 36.4011, lng: 129.1764, desc: "수많은 기암절벽과 폭포가 빚은 자연 예술" },
             { name: "주흘산", region: "경북 문경", alt: 1075, lat: 36.7865, lng: 128.1065, desc: "문경새재를 내려다보는 조령의 진산 (주봉)" },
             { name: "지리산", region: "경남 산청", alt: 1915, lat: 35.3369, lng: 127.7306, desc: "국립공원 1호, 남한 내륙 최고봉 (천왕봉)" },
-            { name: "지리산(통영)", region: "경남 통영", alt: 398, lat: 34.8436, lng: 128.2045, desc: "사량도에 위치해 한려수도를 조망하는 바다 산 (지리망산)" },
+            { name: "지리산(통영)", region: "경남 통영", alt: 398, lat: 34.8436, lng: 128.2045, desc: "사량도에 위치해 한려수도를 조망하는 바다 산" },
             { name: "천관산", region: "전남 장흥", alt: 723, lat: 34.5422, lng: 126.9360, desc: "호남 5대 명산, 기암과 억새의 앙상블 (연대봉)" },
             { name: "천마산", region: "경기 남양주", alt: 812, lat: 37.6789, lng: 127.2721, desc: "하늘을 만질 듯 높고 푸른 남양주의 진산" },
             { name: "천성산", region: "경남 양산", alt: 922, lat: 35.4056, lng: 129.1098, desc: "원효대사의 전설과 화엄늪이 있는 고산" },
@@ -390,7 +390,7 @@
             { name: "청량산", region: "경북 봉화", alt: 870, lat: 36.7909, lng: 128.9248, desc: "퇴계 이황이 머물던 청량사와 하늘다리 (장인봉)" },
             { name: "추월산", region: "전남 담양", alt: 731, lat: 35.4121, lng: 126.9692, desc: "담양호를 굽어보는 가을 단풍이 아름다운 바위산" },
             { name: "축령산", region: "경기 남양주", alt: 886, lat: 37.7663, lng: 127.3090, desc: "잣나무 숲과 수려한 산림욕장으로 유명한 산" },
-            { name: "치악산", region: "강원 원주", alt: 1288, lat: 37.3717, lng: 128.0506, desc: "사계절 빼어난 험준한 산세, 비로봉 미륵불탑 (비로봉)" },
+            { name: "치악산", region: "강원 원주", alt: 1288, lat: 37.3717, lng: 128.0506, desc: "사계절 빼어난 험준한 산세, 비로봉 미륵불탑" },
             { name: "칠갑산", region: "충남 청양", alt: 561, lat: 36.3888, lng: 126.8378, desc: "노래로도 유명한 충남의 알프스" },
             { name: "태백산", region: "강원 태백", alt: 1567, lat: 37.0984, lng: 128.9157, desc: "민족의 영산, 천제단과 주목 군락지 (장군봉)" },
             { name: "태화산", region: "강원 영월", alt: 1027, lat: 37.1264, lng: 128.5292, desc: "남한강을 굽어보고 고씨동굴을 품은 산" },
@@ -405,7 +405,7 @@
             { name: "희양산", region: "경북 문경", alt: 999, lat: 36.7118, lng: 127.9984, desc: "거대한 화강암 덩어리로 덮인 특이한 산세" }
         ];
 
-        /* --- 3D 완벽한 피벗 카메라 회전 제어 --- */
+        /* --- 3D 피벗 카메라 회전 제어 --- */
         let isRotating = false;
         let targetCenter = null;
         let rotateReqId = null;
@@ -461,8 +461,9 @@
             map.addControl(new MapboxLanguage({ defaultLanguage: 'ko' }));
 
             map.on('style.load', () => {
-                map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 14 });
-                map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.2 }); 
+                // [최적화 3] DEM maxzoom을 14에서 12로 낮추어 iOS 기기 메모리 부하 방지
+                map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 12 });
+                map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.1 }); 
                 map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
             });
 
@@ -489,17 +490,15 @@
             initFABs(); initDB(); initM100List();
         });
 
-        // 💡 해결의 핵심: 절대 안 밀리는 0x0 고정 앵커 마커 생성기 (SVG 결합)
         function createMarkerEl(type, labelHtml, isDim) {
             const el = document.createElement('div');
             el.className = 'marker-base' + (isDim ? ' dim-marker' : '');
             
-            // 3D 렌더링 오차를 막기 위해 SVG를 직접 삽입합니다. (그라데이션 빛 반사 처리)
             let colorStops = '';
-            if (type === 'mylog') colorStops = '<stop offset="0%" stop-color="#ff8a80"/><stop offset="50%" stop-color="#d32f2f"/><stop offset="100%" stop-color="#8e0000"/>'; // Red
-            else if (type === 'm100') colorStops = '<stop offset="0%" stop-color="#90caf9"/><stop offset="50%" stop-color="#1976d2"/><stop offset="100%" stop-color="#0d47a1"/>'; // Blue
-            else if (type === 'challenge') colorStops = '<stop offset="0%" stop-color="#ffcc80"/><stop offset="50%" stop-color="#f57c00"/><stop offset="100%" stop-color="#e65100"/>'; // Orange
-            else colorStops = '<stop offset="0%" stop-color="#ce93d8"/><stop offset="50%" stop-color="#7b1fa2"/><stop offset="100%" stop-color="#4a148c"/>'; // Purple
+            if (type === 'mylog') colorStops = '<stop offset="0%" stop-color="#ff8a80"/><stop offset="50%" stop-color="#d32f2f"/><stop offset="100%" stop-color="#8e0000"/>'; 
+            else if (type === 'm100') colorStops = '<stop offset="0%" stop-color="#90caf9"/><stop offset="50%" stop-color="#1976d2"/><stop offset="100%" stop-color="#0d47a1"/>'; 
+            else if (type === 'challenge') colorStops = '<stop offset="0%" stop-color="#ffcc80"/><stop offset="50%" stop-color="#f57c00"/><stop offset="100%" stop-color="#e65100"/>'; 
+            else colorStops = '<stop offset="0%" stop-color="#ce93d8"/><stop offset="50%" stop-color="#7b1fa2"/><stop offset="100%" stop-color="#4a148c"/>'; 
 
             const svgId = 'grad-' + Math.random().toString(36).substr(2, 9);
             
@@ -600,7 +599,6 @@
 
         function loadSavedRecords() {
             db.transaction(['hike_records'], 'readonly').objectStore('hike_records').getAll().onsuccess = e => {
-                // 등반 날짜순 내림차순(최신순) 정렬
                 allRecords = e.target.result.sort((a,b) => new Date(b.date) - new Date(a.date)); 
                 calculateTotalAltOnly();
                 document.getElementById('uiTotalAlt').innerText = totalAltitudeData.toLocaleString(); 
@@ -665,19 +663,17 @@
                 const latestDate = group.climbs[0].date;
                 const altText = group.altNum > 0 ? ` (${group.altNum}m)` : "";
                 
-                // 내기록 항시 노출 툴팁 (빨간색)
                 const labelHtml = `<div class="mountain-label label-mylog"><b>${group.name}${altText}</b><br><span style="font-size:0.85em;">${latestDate}</span></div>`;
                 const el = createMarkerEl('mylog', labelHtml);
                 
-                // 핀 탭하면 나오는 사진 갤러리 팝업!
                 let popupContent = `<div style="text-align:center;"><b>🏕️ ${group.name}</b><br><span style="color:#D32F2F; font-weight:bold;">고도: ${group.altNum > 0 ? group.altNum + 'm' : '정보 없음'}</span><hr style="margin:5px 0; border:0; border-top:1px solid #ddd;">`;
                 group.climbs.forEach(c => {
                     popupContent += `<div style="font-size:0.9em; margin-bottom:5px; color:#555;">📅 ${c.date}</div>`;
                     if (c.photos && c.photos.length > 0) {
                         const carouselId = 'carousel_' + Math.random().toString(36).substr(2, 9);
                         popupContent += `<div class="carousel" id="${carouselId}"><div class="carousel-inner" id="inner_${carouselId}">`;
-                        // 사진 썸네일을 탭하면 전체화면 오버레이를 호출합니다
-                        c.photos.forEach((url, idx) => { const encoded = encodeURIComponent(JSON.stringify(c.photos)); popupContent += `<div class="carousel-item"><img src="${url}" onclick="openCarousel('${encoded}', ${idx}, event)"></div>`; });
+                        // [최적화 1] HTML 어트리뷰트에 거대한 Base64 스트링을 주입하지 않고 기록 고유 고유 ID(c.id)만 매개변수로 전달
+                        c.photos.forEach((url, idx) => { popupContent += `<div class="carousel-item"><img src="${url}" onclick="openCarousel(${c.id}, ${idx}, event)"></div>`; });
                         popupContent += `</div>`;
                         if (c.photos.length > 1) {
                             popupContent += `<button class="carousel-control prev" onclick="moveCarousel('${carouselId}', -1, event)">&#10094;</button><button class="carousel-control next" onclick="moveCarousel('${carouselId}', 1, event)">&#10095;</button><div class="carousel-dots" id="dots_${carouselId}">`;
@@ -690,7 +686,6 @@
                 });
                 popupContent += `</div>`;
                 
-                // 0x0 앵커 마커이므로 팝업은 바로 그 위에 붙도록 offset 적용
                 const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(popupContent);
                 const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([group.lng, group.lat]).setPopup(popup).addTo(map);
 
@@ -715,7 +710,6 @@
 
         function renderRecordList() {
             document.getElementById('recordList').innerHTML = '';
-            // 날짜순 출력
             allRecords.forEach(data => {
                 const div = document.createElement('div'); div.className = 'record-card';
                 div.onclick = () => { 
@@ -756,8 +750,6 @@
             clearMarkers(m100Markers);
             m100Data.forEach(m => {
                 const el = createMarkerEl('m100');
-                
-                // 명산 100 핀을 탭하면 정보 팝업창을 띄워줍니다!
                 const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(`
                     <div style="text-align:center;">
                         <b style="font-size:1.2em; color:#1565C0;">🇰🇷 ${m.name}</b><br>
@@ -779,70 +771,68 @@
         }
 
         function renderChallengeMapAndList() {
-    const list = document.getElementById('challengeList'); list.innerHTML = '';
-    clearMarkers(challengeMarkers); let climbedCount = 0;
+            const list = document.getElementById('challengeList'); list.innerHTML = '';
+            clearMarkers(challengeMarkers); let climbedCount = 0;
 
-    m100Data.forEach(m => {
-        let matchedRecords = allRecords.filter(r => {
-            if (r.name.indexOf(m.name) === -1 && m.name.indexOf(r.name) === -1) return false;
-            return getDistance(r.lat, r.lng, m.lat, m.lng) < 5000; 
-        });
-        
-        let isClimbed = matchedRecords.length > 0;
-        let type = isClimbed ? 'challenge' : 'm100';
-        
-        // 💡 팝업 겹침 방지를 위해 툴팁 라벨은 제거
-        const el = createMarkerEl(type, null, !isClimbed);
-        
-        let popupHtml = '';
-        if(isClimbed) {
-            matchedRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
-            let latest = matchedRecords[0];
-            popupHtml = `<div style="text-align:center; min-width:180px;">
-                <b style="font-size:1.2em; color:#E65100;">🏆 ${m.name} (완등)</b><br>
-                <span style="color:#1565C0; font-size:0.95em; font-weight:bold;">${m.alt}m</span> | <span style="color:#555; font-size:0.9em;">${m.region}</span>
-                <hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">
-                <span style="color:#E65100; font-weight:bold;">최근 등반: ${latest.date}</span>
-                <div style="color:#666; font-size:0.85em; margin-top:5px;">${m.desc}</div>
-            </div>`;
-            climbedCount++;
+            m100Data.forEach(m => {
+                let matchedRecords = allRecords.filter(r => {
+                    if (r.name.indexOf(m.name) === -1 && m.name.indexOf(r.name) === -1) return false;
+                    return getDistance(r.lat, r.lng, m.lat, m.lng) < 5000; 
+                });
+                
+                let isClimbed = matchedRecords.length > 0;
+                let type = isClimbed ? 'challenge' : 'm100';
+                
+                const el = createMarkerEl(type, null, !isClimbed);
+                
+                let popupHtml = '';
+                if(isClimbed) {
+                    matchedRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
+                    let latest = matchedRecords[0];
+                    popupHtml = `<div style="text-align:center; min-width:180px;">
+                        <b style="font-size:1.2em; color:#E65100;">🏆 ${m.name} (완등)</b><br>
+                        <span style="color:#1565C0; font-size:0.95em; font-weight:bold;">${m.alt}m</span> | <span style="color:#555; font-size:0.9em;">${m.region}</span>
+                        <hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">
+                        <span style="color:#E65100; font-weight:bold;">최근 등반: ${latest.date}</span>
+                        <div style="color:#666; font-size:0.85em; margin-top:5px;">${m.desc}</div>
+                    </div>`;
+                    climbedCount++;
+                    
+                    const li = document.createElement('li'); li.className = 'm100-item';
+                    li.innerHTML = `<div class="m100-item-content"><div class="m100-name">${m.name} <span style="font-size:0.7em; color:#FF8F00;">🏆</span></div><div class="m100-desc">${m.region} | ${m.alt}m <br>📅 ${latest.date}</div></div>`;
+                    li.onclick = () => { focusAndRotate(m.lng, m.lat, 14); currentSidebarState = 0; updateSidebarState(); };
+                    list.appendChild(li);
+                } else {
+                    popupHtml = `<div style="text-align:center; min-width:180px;">
+                        <b style="font-size:1.2em; color:#1565C0;">🇰🇷 ${m.name}</b><br>
+                        <span style="font-weight:bold;">${m.alt}m</span> | <span style="color:#555; font-size:0.9em;">${m.region}</span>
+                        <hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">
+                        <div style="color:#666; font-size:0.9em; margin-bottom:5px;">${m.desc}</div>
+                        <span style="color:#d32f2f; font-size:0.85em;">아직 등반하지 않은 명산입니다.</span>
+                    </div>`;
+                }
+                
+                const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(popupHtml);
+                const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
+                
+                if (isClimbed) {
+                    marker.togglePopup();
+                    el.style.zIndex = 1000;
+                }
+                
+                el.addEventListener('click', (e) => { 
+                    e.stopPropagation(); 
+                    focusAndRotate(m.lng, m.lat, 14); 
+                    if (!marker.getPopup().isOpen()) marker.togglePopup();
+                });
+                
+                challengeMarkers.push(marker);
+            });
             
-            const li = document.createElement('li'); li.className = 'm100-item';
-            li.innerHTML = `<div class="m100-item-content"><div class="m100-name">${m.name} <span style="font-size:0.7em; color:#FF8F00;">🏆</span></div><div class="m100-desc">${m.region} | ${m.alt}m <br>📅 ${latest.date}</div></div>`;
-            li.onclick = () => { focusAndRotate(m.lng, m.lat, 14); currentSidebarState = 0; updateSidebarState(); };
-            list.appendChild(li);
-        } else {
-            popupHtml = `<div style="text-align:center; min-width:180px;">
-                <b style="font-size:1.2em; color:#1565C0;">🇰🇷 ${m.name}</b><br>
-                <span style="font-weight:bold;">${m.alt}m</span> | <span style="color:#555; font-size:0.9em;">${m.region}</span>
-                <hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">
-                <div style="color:#666; font-size:0.9em; margin-bottom:5px;">${m.desc}</div>
-                <span style="color:#d32f2f; font-size:0.85em;">아직 등반하지 않은 명산입니다.</span>
-            </div>`;
+            document.getElementById('challengeCount').innerText = climbedCount;
+            if(climbedCount === 0) { list.innerHTML = `<div style="padding: 40px 20px; text-align:center; color:#777;">아직 완등한 명산이 없습니다.</div>`; }
+            map.flyTo({ center: [127.8, 36.3], zoom: window.innerWidth <= 768 ? 6 : 6.5, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
         }
-        
-        const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(popupHtml);
-        const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
-        
-        // 💡 등반 완료된 산인 경우, 전체 지도에서 즉시 팝업이 떠 있도록 함
-        if (isClimbed) {
-            marker.togglePopup();
-            el.style.zIndex = 1000;
-        }
-        
-        el.addEventListener('click', (e) => { 
-            e.stopPropagation(); 
-            focusAndRotate(m.lng, m.lat, 14); 
-            if (!marker.getPopup().isOpen()) marker.togglePopup();
-        });
-        
-        challengeMarkers.push(marker);
-    });
-    
-    document.getElementById('challengeCount').innerText = climbedCount;
-    if(climbedCount === 0) { list.innerHTML = `<div style="padding: 40px 20px; text-align:center; color:#777;">아직 완등한 명산이 없습니다.</div>`; }
-    map.flyTo({ center: [127.8, 36.3], zoom: window.innerWidth <= 768 ? 6 : 6.5, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
-}
 
         let inlineSearchTimer;
         function handleInlineSearch(e) {
@@ -914,9 +904,13 @@
 
         /* ---------------- 전체 사진 갤러리 오버레이 스크립트 ---------------- */
         let carouselPhotosArr = []; let currentCarouselIndex = 0;
-        window.openCarousel = function(encodedPhotos, startIndex, event) {
+        // [최적화 1-2] 문자열 대신 전달받은 recordId를 바탕으로 런타임 메모리(allRecords) 참조 방식 전환
+        window.openCarousel = function(recordId, startIndex, event) {
             if(event) event.stopPropagation(); 
-            carouselPhotosArr = JSON.parse(decodeURIComponent(encodedPhotos)); 
+            const record = allRecords.find(r => r.id === recordId);
+            if(!record || !record.photos) return;
+            
+            carouselPhotosArr = record.photos; 
             currentCarouselIndex = startIndex; 
             updateCarouselPhoto(); 
             document.getElementById('photoOverlay').style.display = 'flex';
@@ -943,9 +937,11 @@
             return new Promise((resolve) => {
                 const reader = new FileReader(); reader.onload = (e) => {
                     const img = new Image(); img.onload = () => {
-                        const canvas = document.createElement('canvas'); const maxSize = 800; let width = img.width, height = img.height;
+                        const canvas = document.createElement('canvas'); 
+                        // [최적화 2] 모바일 가독성을 저해하지 않는 선에서 최대 해상도(600px) 및 압축률(0.6) 조정으로 데이터 용량 최적화
+                        const maxSize = 600; let width = img.width, height = img.height;
                         if (width > height && width > maxSize) { height *= maxSize / width; width = maxSize; } else if (height > maxSize) { width *= maxSize / height; height = maxSize; }
-                        canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height); resolve(canvas.toDataURL('image/jpeg', 0.8)); 
+                        canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height); resolve(canvas.toDataURL('image/jpeg', 0.6)); 
                     }; img.src = e.target.result;
                 }; reader.readAsDataURL(file);
             });
