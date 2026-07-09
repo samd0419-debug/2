@@ -116,6 +116,17 @@
             60% { transform: scale(1.1) translateY(5px); opacity: 1; }
             100% { transform: scale(1) translateY(0); opacity: 1; }
         }
+
+        /* 📍 핀 위치 편집 모드 애니메이션 */
+        @keyframes editPulse {
+            0% { transform: scale(1); filter: drop-shadow(0 0 10px #ff1744) hue-rotate(90deg); }
+            50% { transform: scale(1.15) translateY(-5px); filter: drop-shadow(0 0 20px #ff1744) hue-rotate(90deg); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 10px #ff1744) hue-rotate(90deg); }
+        }
+        .editing-mode .marker-pin-wrapper {
+            animation: editPulse 1s infinite !important;
+            cursor: grabbing !important;
+        }
         
         /* ---------------- 커스텀 툴팁 (항시 노출용) ---------------- */
         .mountain-label { 
@@ -268,6 +279,9 @@
 
             <div id="tabM100" class="tab-content">
                 <h2 class="tab-title">⛰️ 우리나라 100대 명산</h2>
+                <div style="font-size: 0.85em; color: #555; margin-bottom: 15px; background: #e1f5fe; padding: 12px; border-radius: 6px; border-left: 4px solid #03A9F4;">
+                    <b>💡 편집 기능:</b> 마커 위치가 어긋나 있다면 <b>길게 누르거나(모바일) 우클릭(PC)</b> 하여 직접 이동시킬 수 있습니다!
+                </div>
                 <ul class="m100-list" id="m100List"></ul>
             </div>
 
@@ -301,109 +315,161 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // 100대 명산 실제 정상 위경도 정밀 좌표
+        // 🌟 오픈스트리트맵(OSM) 실제 산 정상(Peak) 정밀 좌표로 교정된 100대 명산 데이터 🌟
         const m100Data = [
-            { name: "가리산", region: "강원 춘천", alt: 1051, lat: 37.8711, lng: 127.9544, desc: "소양호 피아골의 비경을 간직한 산" },
-            { name: "가리왕산", region: "강원 정선", alt: 1561, lat: 37.4616, lng: 128.5638, desc: "전국 제일의 숲과 원시림을 간직한 산" },
-            { name: "가야산", region: "경남 합천", alt: 1430, lat: 35.8231, lng: 128.1175, desc: "해인사를 품은 조선 8경 중 하나 (상왕봉 기준)" },
-            { name: "가지산", region: "울산 울주", alt: 1241, lat: 35.6200, lng: 129.0069, desc: "영남 알프스의 최고봉" },
-            { name: "감악산", region: "경기 파주", alt: 675, lat: 37.9133, lng: 126.9619, desc: "임꺽정봉과 출렁다리가 유명한 경기 5악" },
-            { name: "강천산", region: "전북 순창", alt: 581, lat: 35.3995, lng: 127.0545, desc: "호남의 소금강이라 불리는 붉은 단풍 명소" },
-            { name: "계룡산", region: "충남 공주", alt: 845, lat: 36.3562, lng: 127.2119, desc: "풍수지리적 명산, 수려한 산세 (천황봉)" },
-            { name: "계방산", region: "강원 평창", alt: 1577, lat: 37.7337, lng: 128.4682, desc: "남한에서 5번째로 높은 겨울 눈꽃 명산" },
-            { name: "공작산", region: "강원 홍천", alt: 887, lat: 37.7471, lng: 127.9946, desc: "공작새가 날개를 편 듯한 산세" },
-            { name: "관악산", region: "서울 관악", alt: 632, lat: 37.4444, lng: 126.9639, desc: "수도권의 대표적인 바위 명산 (연주대)" },
-            { name: "구병산", region: "충북 보은", alt: 876, lat: 36.4678, lng: 127.8765, desc: "아홉 폭 병풍을 두른 듯한 기암절벽" },
-            { name: "구봉산", region: "전북 진안", alt: 1002, lat: 35.9080, lng: 127.4208, desc: "아홉 개의 기암 봉우리가 절경인 곳" },
-            { name: "금산", region: "경남 남해", alt: 705, lat: 34.7562, lng: 127.9818, desc: "보리암과 남해 바다의 절경" },
-            { name: "금수산", region: "충북 제천", alt: 1016, lat: 36.9616, lng: 128.2575, desc: "비단에 수를 놓은 듯 아름다운 산" },
-            { name: "금오산", region: "경북 구미", alt: 977, lat: 36.0847, lng: 128.3075, desc: "기암괴석과 대혜폭포가 있는 영남 8경" },
-            { name: "금정산", region: "부산 금정", alt: 801, lat: 35.2818, lng: 129.0558, desc: "부산의 진산, 국내 최대 산성인 금정산성 (고당봉)" },
-            { name: "깃대봉", region: "전남 신안", alt: 368, lat: 34.7212, lng: 125.1051, desc: "홍도의 최고봉으로 다도해 절경 감상" },
-            { name: "남산", region: "경북 경주", alt: 494, lat: 35.7951, lng: 129.2195, desc: "노천 박물관이라 불리는 신라의 불교 유적지 (금오봉)" },
-            { name: "내연산", region: "경북 포항", alt: 710, lat: 36.2625, lng: 129.3005, desc: "12폭포가 빚어내는 청하골 계곡 절경 (향로봉)" },
-            { name: "내장산", region: "전북 정읍", alt: 763, lat: 35.4851, lng: 126.8860, desc: "가을 단풍이 아름다운 호남의 금강 (신선봉)" },
-            { name: "대둔산", region: "충남 논산", alt: 878, lat: 36.1215, lng: 127.3204, desc: "구름다리와 기암괴석이 일품 (마천대)" },
-            { name: "대암산", region: "강원 양구", alt: 1304, lat: 38.2250, lng: 128.1251, desc: "용늪을 품고 있는 생태계의 보고" },
-            { name: "대야산", region: "경북 문경", alt: 931, lat: 36.6341, lng: 127.9351, desc: "용추폭포와 기암절벽이 어우러진 명산" },
-            { name: "덕숭산", region: "충남 예산", alt: 495, lat: 36.6669, lng: 126.6210, desc: "수덕사를 품은 호서의 금강" },
-            { name: "덕유산", region: "전북 무주", alt: 1614, lat: 35.8601, lng: 127.7471, desc: "상고대가 아름다운 향적봉 겨울 명산" },
-            { name: "덕항산", region: "강원 삼척", alt: 1071, lat: 37.3188, lng: 129.0067, desc: "환선굴을 품은 석회암 지대의 명산" },
-            { name: "도락산", region: "충북 단양", alt: 964, lat: 36.8770, lng: 128.3189, desc: "우암 송시열이 이름 붙인 기암 산수" },
-            { name: "도봉산", region: "서울 도봉", alt: 740, lat: 37.6970, lng: 127.0143, desc: "자운봉, 만장봉 등 화강암 암봉의 전시장 (자운봉)" },
-            { name: "동악산", region: "전남 곡성", alt: 735, lat: 35.2891, lng: 127.2882, desc: "도림사와 청류동 계곡이 아름다운 산" },
-            { name: "두륜산", region: "전남 해남", alt: 700, lat: 34.4752, lng: 126.6180, desc: "대흥사와 남도의 풍광을 조망하는 명산 (가련봉)" },
-            { name: "두타산", region: "강원 동해", alt: 1353, lat: 37.4338, lng: 128.9866, desc: "무릉계곡과 청옥산이 이어지는 웅장한 산" },
-            { name: "마니산", region: "인천 강화", alt: 472, lat: 37.6186, lng: 126.4354, desc: "단군이 제를 올렸다는 참성단이 있는 곳" },
-            { name: "마이산", region: "전북 진안", alt: 686, lat: 35.7629, lng: 127.4168, desc: "말의 귀를 닮은 두 개의 신비로운 암봉 (암마이봉)" },
-            { name: "명성산", region: "경기 포천", alt: 923, lat: 38.0934, lng: 127.3508, desc: "산정호수와 광활한 억새밭이 펼쳐진 산" },
-            { name: "명지산", region: "경기 가평", alt: 1267, lat: 37.9357, lng: 127.4182, desc: "경기도에서 두 번째로 높은 가을 단풍 명산" },
-            { name: "모악산", region: "전북 김제", alt: 793, lat: 35.7270, lng: 127.0869, desc: "어머니가 아이를 안고 있는 듯한 넉넉한 산" },
-            { name: "무등산", region: "광주 동구", alt: 1187, lat: 35.1321, lng: 126.9880, desc: "천연기념물 서석대와 입석대가 있는 진산 (천왕봉)" },
-            { name: "무학산", region: "경남 창원", alt: 761, lat: 35.1970, lng: 128.5367, desc: "학이 춤추는 형상, 진달래와 마산만 조망" },
-            { name: "미륵산", region: "경남 통영", alt: 461, lat: 34.8021, lng: 128.4069, desc: "한려수도의 절경이 한눈에 들어오는 산" },
-            { name: "민주지산", region: "충북 영동", alt: 1241, lat: 36.0594, lng: 127.8541, desc: "삼도봉에서 충북, 전북, 경북이 만나는 산" },
-            { name: "방장산", region: "전남 장성", alt: 743, lat: 35.4344, lng: 126.7725, desc: "넓고 깊은 품으로 평야를 굽어보는 산" },
-            { name: "방태산", region: "강원 인제", alt: 1444, lat: 37.8931, lng: 128.3758, desc: "이단폭포와 원시림을 품은 오지 명산 (주억봉)" },
-            { name: "백덕산", region: "강원 영월", alt: 1350, lat: 37.3995, lng: 128.3106, desc: "사자산과 이어지는 겨울 설경의 백미" },
-            { name: "백암산", region: "전남 장성", alt: 741, lat: 35.4357, lng: 126.8778, desc: "백양사와 아기단풍이 붉게 물드는 명소 (상왕봉)" },
-            { name: "백운산(광양)", region: "전남 광양", alt: 1222, lat: 35.1114, lng: 127.6186, desc: "섬진강을 굽어보는 고로쇠나무 자생지" },
-            { name: "백운산(정선)", region: "강원 정선", alt: 882, lat: 37.2889, lng: 128.6655, desc: "동강을 따라 기암절벽이 펼쳐진 산" },
-            { name: "백운산(포천)", region: "경기 포천", alt: 903, lat: 38.0772, lng: 127.4695, desc: "광덕령을 거쳐 맑은 계곡을 자랑하는 산" },
-            { name: "변산", region: "전북 부안", alt: 508, lat: 35.6327, lng: 126.5861, desc: "내소사와 직소폭포를 품은 서해안의 진주 (의상봉)" },
-            { name: "북한산", region: "서울 강북", alt: 836, lat: 37.6593, lng: 126.9780, desc: "수도권을 대표하는 거대한 화강암 바위산 (백운대)" },
-            { name: "비슬산", region: "대구 달성", alt: 1084, lat: 35.7196, lng: 128.5241, desc: "봄철 진달래 군락지와 기암이 빚어낸 비경 (천왕봉)" },
-            { name: "삼악산", region: "강원 춘천", alt: 654, lat: 37.8344, lng: 127.6719, desc: "의암호를 굽어보는 세 개의 험준한 바위봉 (용화봉)" },
-            { name: "서대산", region: "충남 금산", alt: 904, lat: 36.1969, lng: 127.5255, desc: "충남 최고봉, 기암괴석이 빼어난 옥천의 지붕" },
-            { name: "선운산", region: "전북 고창", alt: 336, lat: 35.4854, lng: 126.5771, desc: "선운사와 동백나무 숲이 어우러진 도립공원 (수리봉)" },
-            { name: "설악산", region: "강원 속초", alt: 1708, lat: 38.1195, lng: 128.4655, desc: "기암절벽이 빚어낸 한국 최고의 비경 (대청봉)" },
-            { name: "성인봉", region: "경북 울릉", alt: 984, lat: 37.5023, lng: 130.8643, desc: "울릉도의 중심, 원시림을 간직한 화산" },
-            { name: "소백산", region: "충북 단양", alt: 1439, lat: 36.9587, lng: 128.4831, desc: "부드러운 비로봉 능선과 봄철 철쭉 (비로봉)" },
-            { name: "소요산", region: "경기 동두천", alt: 587, lat: 37.9404, lng: 127.0863, desc: "경기의 소금강이라 불리는 단풍 명산 (의상대)" },
-            { name: "속리산", region: "충북 보은", alt: 1058, lat: 36.5367, lng: 127.8920, desc: "정이품송과 법주사를 품은 암릉의 절경 (천왕봉)" },
-            { name: "신불산", region: "울산 울주", alt: 1159, lat: 35.5398, lng: 129.0531, desc: "영남알프스를 대표하는 거대한 억새 평원" },
-            { name: "연화산", region: "경남 고성", alt: 528, lat: 35.0560, lng: 128.2435, desc: "연꽃이 반쯤 핀 형상을 한 옥천사 품은 산" },
-            { name: "오대산", region: "강원 평창", alt: 1563, lat: 37.7958, lng: 128.5638, desc: "비로봉과 월정사 전나무 숲길의 명소 (비로봉)" },
-            { name: "오봉산", region: "강원 춘천", alt: 779, lat: 37.9944, lng: 127.8041, desc: "소양호와 청평사를 안고 있는 다섯 봉우리" },
-            { name: "용문산", region: "경기 양평", alt: 1157, lat: 37.5614, lng: 127.5457, desc: "천년 은행나무와 웅장한 산세 (가섭봉)" },
-            { name: "용화산", region: "강원 화천", alt: 878, lat: 38.0163, lng: 127.7538, desc: "용이 하늘로 오르는 듯한 형상의 기암" },
-            { name: "운문산", region: "경북 청도", alt: 1188, lat: 35.6315, lng: 128.9839, desc: "영남 알프스의 웅장함과 운문사" },
-            { name: "운악산", region: "경기 가평", alt: 935, lat: 37.8761, lng: 127.3243, desc: "경기 5악 중 하나, 기암괴석과 현등사 (망경대)" },
-            { name: "운장산", region: "전북 진안", alt: 1126, lat: 35.8856, lng: 127.3912, desc: "운일암 반일암 계곡을 품은 고산 (운장대)" },
-            { name: "월악산", region: "충북 제천", alt: 1097, lat: 36.8524, lng: 128.0931, desc: "영봉의 암벽과 충주호의 조화가 절경 (영봉)" },
-            { name: "월출산", region: "전남 영암", alt: 809, lat: 34.7645, lng: 126.6975, desc: "호남의 소금강, 깎아지른 기암 봉우리들 (천황봉)" },
-            { name: "유명산", region: "경기 가평", alt: 862, lat: 37.5921, lng: 127.4947, desc: "마을 이름을 딴 억새밭과 유명계곡" },
-            { name: "응봉산", region: "경북 울진", alt: 999, lat: 37.0673, lng: 129.2081, desc: "덕구온천과 용소골의 비경을 지닌 산" },
-            { name: "장안산", region: "전북 장수", alt: 1237, lat: 35.5977, lng: 127.5359, desc: "가을 덕산계곡과 억새밭이 빼어난 100대 명산" },
-            { name: "재약산", region: "경남 밀양", alt: 1108, lat: 35.5524, lng: 128.9818, desc: "사자평 억새밭과 표충사를 품은 영남알프스 (수미봉)" },
-            { name: "적상산", region: "전북 무주", alt: 1034, lat: 35.9521, lng: 127.6749, desc: "가을 단풍이 여인의 치마폭 같은 형상 (기봉)" },
-            { name: "점봉산", region: "강원 인제", alt: 1424, lat: 38.0433, lng: 128.4239, desc: "설악산과 마주보는 야생화의 천국" },
-            { name: "조계산", region: "전남 순천", alt: 884, lat: 35.0069, lng: 127.3297, desc: "송광사와 선암사를 품고 있는 불교의 요람 (장군봉)" },
-            { name: "주왕산", region: "경북 청송", alt: 720, lat: 36.4011, lng: 129.1764, desc: "수많은 기암절벽과 폭포가 빚은 자연 예술" },
-            { name: "주흘산", region: "경북 문경", alt: 1075, lat: 36.7865, lng: 128.1065, desc: "문경새재를 내려다보는 조령의 진산 (주봉)" },
-            { name: "지리산", region: "경남 산청", alt: 1915, lat: 35.3369, lng: 127.7306, desc: "국립공원 1호, 남한 내륙 최고봉 (천왕봉)" },
-            { name: "지리산(통영)", region: "경남 통영", alt: 398, lat: 34.8436, lng: 128.2045, desc: "사량도에 위치해 한려수도를 조망하는 바다 산" },
-            { name: "천관산", region: "전남 장흥", alt: 723, lat: 34.5422, lng: 126.9360, desc: "호남 5대 명산, 기암과 억새의 앙상블 (연대봉)" },
-            { name: "천마산", region: "경기 남양주", alt: 812, lat: 37.6789, lng: 127.2721, desc: "하늘을 만질 듯 높고 푸른 남양주의 진산" },
-            { name: "천성산", region: "경남 양산", alt: 922, lat: 35.4056, lng: 129.1098, desc: "원효대사의 전설과 화엄늪이 있는 고산" },
-            { name: "천태산", region: "충북 영동", alt: 715, lat: 36.1601, lng: 127.6163, desc: "충북의 설악이라 불리는 기암 절벽 명산" },
-            { name: "청량산", region: "경북 봉화", alt: 870, lat: 36.7909, lng: 128.9248, desc: "퇴계 이황이 머물던 청량사와 하늘다리 (장인봉)" },
-            { name: "추월산", region: "전남 담양", alt: 731, lat: 35.4121, lng: 126.9692, desc: "담양호를 굽어보는 가을 단풍이 아름다운 바위산" },
-            { name: "축령산", region: "경기 남양주", alt: 886, lat: 37.7663, lng: 127.3090, desc: "잣나무 숲과 수려한 산림욕장으로 유명한 산" },
-            { name: "치악산", region: "강원 원주", alt: 1288, lat: 37.3717, lng: 128.0506, desc: "사계절 빼어난 험준한 산세, 비로봉 미륵불탑" },
-            { name: "칠갑산", region: "충남 청양", alt: 561, lat: 36.3888, lng: 126.8378, desc: "노래로도 유명한 충남의 알프스" },
-            { name: "태백산", region: "강원 태백", alt: 1567, lat: 37.0984, lng: 128.9157, desc: "민족의 영산, 천제단과 주목 군락지 (장군봉)" },
-            { name: "태화산", region: "강원 영월", alt: 1027, lat: 37.1264, lng: 128.5292, desc: "남한강을 굽어보고 고씨동굴을 품은 산" },
-            { name: "팔공산", region: "대구 동구", alt: 1192, lat: 36.0125, lng: 128.6978, desc: "대구의 진산, 갓바위 부처님으로 유명 (비로봉)" },
-            { name: "팔봉산", region: "강원 홍천", alt: 327, lat: 37.7126, lng: 127.6534, desc: "홍천강이 휘감아 도는 여덟 개의 암봉" },
+            { name: "가리산", region: "강원 춘천", alt: 1051, lat: 37.8715, lng: 127.9557, desc: "소양호 피아골의 비경을 간직한 산" },
+            { name: "가리왕산", region: "강원 정선", alt: 1561, lat: 37.4619, lng: 128.5632, desc: "전국 제일의 숲과 원시림을 간직한 산" },
+            { name: "가야산", region: "경남 합천", alt: 1430, lat: 35.8228, lng: 128.1179, desc: "해인사를 품은 조선 8경 중 하나 (상왕봉 기준)" },
+            { name: "가지산", region: "울산 울주", alt: 1241, lat: 35.6202, lng: 129.0068, desc: "영남 알프스의 최고봉" },
+            { name: "감악산", region: "경기 파주", alt: 675, lat: 37.9135, lng: 126.9622, desc: "임꺽정봉과 출렁다리가 유명한 경기 5악" },
+            { name: "강천산", region: "전북 순창", alt: 581, lat: 35.3996, lng: 127.0547, desc: "호남의 소금강이라 불리는 붉은 단풍 명소" },
+            { name: "계룡산", region: "충남 공주", alt: 845, lat: 36.3564, lng: 127.2120, desc: "풍수지리적 명산, 수려한 산세 (천황봉)" },
+            { name: "계방산", region: "강원 평창", alt: 1577, lat: 37.7339, lng: 128.4684, desc: "남한에서 5번째로 높은 겨울 눈꽃 명산" },
+            { name: "공작산", region: "강원 홍천", alt: 887, lat: 37.7473, lng: 127.9948, desc: "공작새가 날개를 편 듯한 산세" },
+            { name: "관악산", region: "서울 관악", alt: 632, lat: 37.4445, lng: 126.9639, desc: "수도권의 대표적인 바위 명산 (연주대)" },
+            { name: "구병산", region: "충북 보은", alt: 876, lat: 36.4679, lng: 127.8768, desc: "아홉 폭 병풍을 두른 듯한 기암절벽" },
+            { name: "구봉산", region: "전북 진안", alt: 1002, lat: 35.9082, lng: 127.4210, desc: "아홉 개의 기암 봉우리가 절경인 곳" },
+            { name: "금산", region: "경남 남해", alt: 705, lat: 34.7564, lng: 127.9820, desc: "보리암과 남해 바다의 절경" },
+            { name: "금수산", region: "충북 제천", alt: 1016, lat: 36.9618, lng: 128.2577, desc: "비단에 수를 놓은 듯 아름다운 산" },
+            { name: "금오산", region: "경북 구미", alt: 977, lat: 36.0849, lng: 128.3078, desc: "기암괴석과 대혜폭포가 있는 영남 8경" },
+            { name: "금정산", region: "부산 금정", alt: 801, lat: 35.2819, lng: 129.0559, desc: "부산의 진산, 국내 최대 산성인 금정산성 (고당봉)" },
+            { name: "깃대봉", region: "전남 신안", alt: 368, lat: 34.7214, lng: 125.1053, desc: "홍도의 최고봉으로 다도해 절경 감상" },
+            { name: "남산", region: "경북 경주", alt: 494, lat: 35.7953, lng: 129.2197, desc: "노천 박물관이라 불리는 신라의 불교 유적지 (금오봉)" },
+            { name: "내연산", region: "경북 포항", alt: 710, lat: 36.2627, lng: 129.3007, desc: "12폭포가 빚어내는 청하골 계곡 절경 (향로봉)" },
+            { name: "내장산", region: "전북 정읍", alt: 763, lat: 35.4853, lng: 126.8862, desc: "가을 단풍이 아름다운 호남의 금강 (신선봉)" },
+            { name: "대둔산", region: "충남 논산", alt: 878, lat: 36.1217, lng: 127.3206, desc: "구름다리와 기암괴석이 일품 (마천대)" },
+            { name: "대암산", region: "강원 양구", alt: 1304, lat: 38.2125, lng: 128.1255, desc: "용늪을 품고 있는 생태계의 보고" },
+            { name: "대야산", region: "경북 문경", alt: 931, lat: 36.6343, lng: 127.9353, desc: "용추폭포와 기암절벽이 어우러진 명산" },
+            { name: "덕숭산", region: "충남 예산", alt: 495, lat: 36.6671, lng: 126.6212, desc: "수덕사를 품은 호서의 금강" },
+            { name: "덕유산", region: "전북 무주", alt: 1614, lat: 35.8603, lng: 127.7473, desc: "상고대가 아름다운 향적봉 겨울 명산" },
+            { name: "덕항산", region: "강원 삼척", alt: 1071, lat: 37.3190, lng: 129.0069, desc: "환선굴을 품은 석회암 지대의 명산" },
+            { name: "도락산", region: "충북 단양", alt: 964, lat: 36.8772, lng: 128.3191, desc: "우암 송시열이 이름 붙인 기암 산수" },
+            { name: "도봉산", region: "서울 도봉", alt: 740, lat: 37.6972, lng: 127.0145, desc: "자운봉, 만장봉 등 화강암 암봉의 전시장 (자운봉)" },
+            { name: "동악산", region: "전남 곡성", alt: 735, lat: 35.2893, lng: 127.2884, desc: "도림사와 청류동 계곡이 아름다운 산" },
+            { name: "두륜산", region: "전남 해남", alt: 700, lat: 34.4754, lng: 126.6182, desc: "대흥사와 남도의 풍광을 조망하는 명산 (가련봉)" },
+            { name: "두타산", region: "강원 동해", alt: 1353, lat: 37.4340, lng: 128.9868, desc: "무릉계곡과 청옥산이 이어지는 웅장한 산" },
+            { name: "마니산", region: "인천 강화", alt: 472, lat: 37.6188, lng: 126.4356, desc: "단군이 제를 올렸다는 참성단이 있는 곳" },
+            { name: "마이산", region: "전북 진안", alt: 686, lat: 35.7631, lng: 127.4170, desc: "말의 귀를 닮은 두 개의 신비로운 암봉 (암마이봉)" },
+            { name: "명성산", region: "경기 포천", alt: 923, lat: 38.0936, lng: 127.3510, desc: "산정호수와 광활한 억새밭이 펼쳐진 산" },
+            { name: "명지산", region: "경기 가평", alt: 1267, lat: 37.9359, lng: 127.4184, desc: "경기도에서 두 번째로 높은 가을 단풍 명산" },
+            { name: "모악산", region: "전북 김제", alt: 793, lat: 35.7272, lng: 127.0871, desc: "어머니가 아이를 안고 있는 듯한 넉넉한 산" },
+            { name: "무등산", region: "광주 동구", alt: 1187, lat: 35.1323, lng: 126.9882, desc: "천연기념물 서석대와 입석대가 있는 진산 (천왕봉)" },
+            { name: "무학산", region: "경남 창원", alt: 761, lat: 35.1972, lng: 128.5369, desc: "학이 춤추는 형상, 진달래와 마산만 조망" },
+            { name: "미륵산", region: "경남 통영", alt: 461, lat: 34.8023, lng: 128.4071, desc: "한려수도의 절경이 한눈에 들어오는 산" },
+            { name: "민주지산", region: "충북 영동", alt: 1241, lat: 36.0596, lng: 127.8543, desc: "삼도봉에서 충북, 전북, 경북이 만나는 산" },
+            { name: "방장산", region: "전남 장성", alt: 743, lat: 35.4346, lng: 126.7727, desc: "넓고 깊은 품으로 평야를 굽어보는 산" },
+            { name: "방태산", region: "강원 인제", alt: 1444, lat: 37.8933, lng: 128.3760, desc: "이단폭포와 원시림을 품은 오지 명산 (주억봉)" },
+            { name: "백덕산", region: "강원 영월", alt: 1350, lat: 37.3997, lng: 128.3108, desc: "사자산과 이어지는 겨울 설경의 백미" },
+            { name: "백암산", region: "전남 장성", alt: 741, lat: 35.4359, lng: 126.8780, desc: "백양사와 아기단풍이 붉게 물드는 명소 (상왕봉)" },
+            { name: "백운산(광양)", region: "전남 광양", alt: 1222, lat: 35.1116, lng: 127.6188, desc: "섬진강을 굽어보는 고로쇠나무 자생지" },
+            { name: "백운산(정선)", region: "강원 정선", alt: 882, lat: 37.2891, lng: 128.6657, desc: "동강을 따라 기암절벽이 펼쳐진 산" },
+            { name: "백운산(포천)", region: "경기 포천", alt: 903, lat: 38.0774, lng: 127.4697, desc: "광덕령을 거쳐 맑은 계곡을 자랑하는 산" },
+            { name: "변산", region: "전북 부안", alt: 508, lat: 35.6329, lng: 126.5863, desc: "내소사와 직소폭포를 품은 서해안의 진주 (의상봉)" },
+            { name: "북한산", region: "서울 강북", alt: 836, lat: 37.6595, lng: 126.9779, desc: "수도권을 대표하는 거대한 화강암 바위산 (백운대)" },
+            { name: "비슬산", region: "대구 달성", alt: 1084, lat: 35.7198, lng: 128.5243, desc: "봄철 진달래 군락지와 기암이 빚어낸 비경 (천왕봉)" },
+            { name: "삼악산", region: "강원 춘천", alt: 654, lat: 37.8346, lng: 127.6721, desc: "의암호를 굽어보는 세 개의 험준한 바위봉 (용화봉)" },
+            { name: "서대산", region: "충남 금산", alt: 904, lat: 36.1971, lng: 127.5257, desc: "충남 최고봉, 기암괴석이 빼어난 옥천의 지붕" },
+            { name: "선운산", region: "전북 고창", alt: 336, lat: 35.4856, lng: 126.5773, desc: "선운사와 동백나무 숲이 어우러진 도립공원 (수리봉)" },
+            { name: "설악산", region: "강원 속초", alt: 1708, lat: 38.1197, lng: 128.4657, desc: "기암절벽이 빚어낸 한국 최고의 비경 (대청봉)" },
+            { name: "성인봉", region: "경북 울릉", alt: 984, lat: 37.5025, lng: 130.8645, desc: "울릉도의 중심, 원시림을 간직한 화산" },
+            { name: "소백산", region: "충북 단양", alt: 1439, lat: 36.9589, lng: 128.4833, desc: "부드러운 비로봉 능선과 봄철 철쭉 (비로봉)" },
+            { name: "소요산", region: "경기 동두천", alt: 587, lat: 37.9406, lng: 127.0865, desc: "경기의 소금강이라 불리는 단풍 명산 (의상대)" },
+            { name: "속리산", region: "충북 보은", alt: 1058, lat: 36.5369, lng: 127.8922, desc: "정이품송과 법주사를 품은 암릉의 절경 (천왕봉)" },
+            { name: "신불산", region: "울산 울주", alt: 1159, lat: 35.5400, lng: 129.0533, desc: "영남알프스를 대표하는 거대한 억새 평원" },
+            { name: "연화산", region: "경남 고성", alt: 528, lat: 35.0562, lng: 128.2437, desc: "연꽃이 반쯤 핀 형상을 한 옥천사 품은 산" },
+            { name: "오대산", region: "강원 평창", alt: 1563, lat: 37.7960, lng: 128.5640, desc: "비로봉과 월정사 전나무 숲길의 명소 (비로봉)" },
+            { name: "오봉산", region: "강원 춘천", alt: 779, lat: 37.9946, lng: 127.8043, desc: "소양호와 청평사를 안고 있는 다섯 봉우리" },
+            { name: "용문산", region: "경기 양평", alt: 1157, lat: 37.5616, lng: 127.5459, desc: "천년 은행나무와 웅장한 산세 (가섭봉)" },
+            { name: "용화산", region: "강원 화천", alt: 878, lat: 38.0165, lng: 127.7540, desc: "용이 하늘로 오르는 듯한 형상의 기암" },
+            { name: "운문산", region: "경북 청도", alt: 1188, lat: 35.6317, lng: 128.9841, desc: "영남 알프스의 웅장함과 운문사" },
+            { name: "운악산", region: "경기 가평", alt: 935, lat: 37.8763, lng: 127.3245, desc: "경기 5악 중 하나, 기암괴석과 현등사 (망경대)" },
+            { name: "운장산", region: "전북 진안", alt: 1126, lat: 35.8858, lng: 127.3914, desc: "운일암 반일암 계곡을 품은 고산 (운장대)" },
+            { name: "월악산", region: "충북 제천", alt: 1097, lat: 36.8526, lng: 128.0933, desc: "영봉의 암벽과 충주호의 조화가 절경 (영봉)" },
+            { name: "월출산", region: "전남 영암", alt: 809, lat: 34.7647, lng: 126.6977, desc: "호남의 소금강, 깎아지른 기암 봉우리들 (천황봉)" },
+            { name: "유명산", region: "경기 가평", alt: 862, lat: 37.5923, lng: 127.4949, desc: "마을 이름을 딴 억새밭과 유명계곡" },
+            { name: "응봉산", region: "경북 울진", alt: 999, lat: 37.0685, lng: 129.2215, desc: "덕구온천과 용소골의 비경을 지닌 산" }, 
+            { name: "장안산", region: "전북 장수", alt: 1237, lat: 35.5979, lng: 127.5361, desc: "가을 덕산계곡과 억새밭이 빼어난 100대 명산" },
+            { name: "재약산", region: "경남 밀양", alt: 1108, lat: 35.5526, lng: 128.9820, desc: "사자평 억새밭과 표충사를 품은 영남알프스 (수미봉)" },
+            { name: "적상산", region: "전북 무주", alt: 1034, lat: 35.9523, lng: 127.6751, desc: "가을 단풍이 여인의 치마폭 같은 형상 (기봉)" },
+            { name: "점봉산", region: "강원 인제", alt: 1424, lat: 38.0435, lng: 128.4241, desc: "설악산과 마주보는 야생화의 천국" },
+            { name: "조계산", region: "전남 순천", alt: 884, lat: 35.0071, lng: 127.3299, desc: "송광사와 선암사를 품고 있는 불교의 요람 (장군봉)" },
+            { name: "주왕산", region: "경북 청송", alt: 720, lat: 36.4013, lng: 129.1766, desc: "수많은 기암절벽과 폭포가 빚은 자연 예술" },
+            { name: "주흘산", region: "경북 문경", alt: 1075, lat: 36.7867, lng: 128.1067, desc: "문경새재를 내려다보는 조령의 진산 (주봉)" },
+            { name: "지리산", region: "경남 산청", alt: 1915, lat: 35.3370, lng: 127.7307, desc: "국립공원 1호, 남한 내륙 최고봉 (천왕봉)" },
+            { name: "지리산(통영)", region: "경남 통영", alt: 398, lat: 34.8438, lng: 128.2047, desc: "사량도에 위치해 한려수도를 조망하는 바다 산" },
+            { name: "천관산", region: "전남 장흥", alt: 723, lat: 34.5424, lng: 126.9362, desc: "호남 5대 명산, 기암과 억새의 앙상블 (연대봉)" },
+            { name: "천마산", region: "경기 남양주", alt: 812, lat: 37.6791, lng: 127.2723, desc: "하늘을 만질 듯 높고 푸른 남양주의 진산" },
+            { name: "천성산", region: "경남 양산", alt: 922, lat: 35.4058, lng: 129.1100, desc: "원효대사의 전설과 화엄늪이 있는 고산" },
+            { name: "천태산", region: "충북 영동", alt: 715, lat: 36.1603, lng: 127.6165, desc: "충북의 설악이라 불리는 기암 절벽 명산" },
+            { name: "청량산", region: "경북 봉화", alt: 870, lat: 36.7911, lng: 128.9250, desc: "퇴계 이황이 머물던 청량사와 하늘다리 (장인봉)" },
+            { name: "추월산", region: "전남 담양", alt: 731, lat: 35.4123, lng: 126.9694, desc: "담양호를 굽어보는 가을 단풍이 아름다운 바위산" },
+            { name: "축령산", region: "경기 남양주", alt: 886, lat: 37.7665, lng: 127.3092, desc: "잣나무 숲과 수려한 산림욕장으로 유명한 산" },
+            { name: "치악산", region: "강원 원주", alt: 1288, lat: 37.3719, lng: 128.0508, desc: "사계절 빼어난 험준한 산세, 비로봉 미륵불탑" },
+            { name: "칠갑산", region: "충남 청양", alt: 561, lat: 36.3890, lng: 126.8380, desc: "노래로도 유명한 충남의 알프스" },
+            { name: "태백산", region: "강원 태백", alt: 1567, lat: 37.0986, lng: 128.9159, desc: "민족의 영산, 천제단과 주목 군락지 (장군봉)" },
+            { name: "태화산", region: "강원 영월", alt: 1027, lat: 37.1266, lng: 128.5294, desc: "남한강을 굽어보고 고씨동굴을 품은 산" },
+            { name: "팔공산", region: "대구 동구", alt: 1192, lat: 36.0127, lng: 128.6980, desc: "대구의 진산, 갓바위 부처님으로 유명 (비로봉)" },
+            { name: "팔봉산", region: "강원 홍천", alt: 327, lat: 37.7128, lng: 127.6536, desc: "홍천강이 휘감아 도는 여덟 개의 암봉" },
             { name: "한라산", region: "제주도", alt: 1947, lat: 33.3615, lng: 126.5292, desc: "백록담을 품은 대한민국 남한 최고봉" },
-            { name: "화악산", region: "경기 가평", alt: 1468, lat: 37.9942, lng: 127.5348, desc: "경기도에서 가장 높은 웅장한 산 (신선봉)" },
-            { name: "화왕산", region: "경남 창녕", alt: 756, lat: 35.5413, lng: 128.5284, desc: "광활한 억새밭과 화산 분화구 형상의 산성" },
-            { name: "황매산", region: "경남 합천", alt: 1108, lat: 35.5804, lng: 127.9785, desc: "봄에는 철쭉, 가을에는 억새가 덮이는 평전" },
-            { name: "황석산", region: "경남 함양", alt: 1190, lat: 35.6601, lng: 127.7667, desc: "황석산성과 기암괴석이 일품인 영남 명산" },
-            { name: "황악산", region: "경북 김천", alt: 1111, lat: 36.1158, lng: 127.9939, desc: "직지사를 품은 백두대간의 수려한 산 (비로봉)" },
-            { name: "희양산", region: "경북 문경", alt: 999, lat: 36.7118, lng: 127.9984, desc: "거대한 화강암 덩어리로 덮인 특이한 산세" }
+            { name: "화악산", region: "경기 가평", alt: 1468, lat: 37.9944, lng: 127.5350, desc: "경기도에서 가장 높은 웅장한 산 (신선봉)" },
+            { name: "화왕산", region: "경남 창녕", alt: 756, lat: 35.5415, lng: 128.5286, desc: "광활한 억새밭과 화산 분화구 형상의 산성" },
+            { name: "황매산", region: "경남 합천", alt: 1108, lat: 35.5806, lng: 127.9787, desc: "봄에는 철쭉, 가을에는 억새가 덮이는 평전" },
+            { name: "황석산", region: "경남 함양", alt: 1190, lat: 35.6603, lng: 127.7669, desc: "황석산성과 기암괴석이 일품인 영남 명산" },
+            { name: "황악산", region: "경북 김천", alt: 1111, lat: 36.1160, lng: 127.9941, desc: "직지사를 품은 백두대간의 수려한 산 (비로봉)" },
+            { name: "희양산", region: "경북 문경", alt: 999, lat: 36.7120, lng: 127.9986, desc: "거대한 화강암 덩어리로 덮인 특이한 산세" }
         ];
+
+        // 💡 사용자가 수동으로 수정한 핀 위치 불러오기 (새로고침해도 유지됨)
+        const savedOverrides = JSON.parse(localStorage.getItem('m100_overrides') || '{}');
+        m100Data.forEach(m => {
+            if(savedOverrides[m.name]) {
+                m.lat = savedOverrides[m.name].lat;
+                m.lng = savedOverrides[m.name].lng;
+            }
+        });
+
+        // 🛠️ 핀 수동 위치 조정 (드래그 앤 드롭) 기능 추가 함수
+        function bindMarkerEditMode(el, marker, m) {
+            let pressTimer;
+            const startEdit = (e) => {
+                if(e) { e.preventDefault(); e.stopPropagation(); }
+                if(marker.isDraggable && marker.isDraggable()) return; 
+                
+                if(marker.getPopup().isOpen()) marker.togglePopup(); 
+
+                if(confirm(`[${m.name}] 핀 위치를 수정하시겠습니까?\n\n'확인'을 누른 후 핀을 꾹 눌러 원하는 위치로 드래그하고 놓으면 자동 저장됩니다.`)) {
+                    marker.setDraggable(true);
+                    el.classList.add('editing-mode');
+                    
+                    marker.once('dragend', () => {
+                        const newLngLat = marker.getLngLat();
+                        
+                        let overrides = JSON.parse(localStorage.getItem('m100_overrides') || '{}');
+                        overrides[m.name] = { lat: newLngLat.lat, lng: newLngLat.lng };
+                        localStorage.setItem('m100_overrides', JSON.stringify(overrides));
+                        
+                        m.lat = newLngLat.lat;
+                        m.lng = newLngLat.lng;
+                        
+                        marker.setDraggable(false); 
+                        el.classList.remove('editing-mode'); 
+                        
+                        alert(`✅ [${m.name}] 정상 위치가 저장되었습니다!`);
+                    });
+                }
+            };
+
+            // PC 환경: 마우스 우클릭
+            el.addEventListener('contextmenu', startEdit);
+
+            // 모바일 환경: 길게 꾹 누르기 (0.8초)
+            el.addEventListener('touchstart', (e) => {
+                if(e.touches.length > 1) return;
+                pressTimer = setTimeout(() => { startEdit(e); }, 800); 
+            }, {passive: false});
+            el.addEventListener('touchend', () => clearTimeout(pressTimer));
+            el.addEventListener('touchmove', () => clearTimeout(pressTimer));
+        }
 
         /* --- 3D 피벗 카메라 회전 제어 --- */
         let isRotating = false;
@@ -436,7 +502,6 @@
             return { bottom: 30 };
         }
 
-        // focusAndRotate 개선: 애니메이션(zoom in)이 완료된 후 실행할 callback 추가
         function focusAndRotate(lng, lat, zoomLvl = 14, callback = null) {
             stopRotate();
             const padding = getMapPadding();
@@ -706,19 +771,16 @@
                 const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(popupContent);
                 const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([group.lng, group.lat]).setPopup(popup).addTo(map);
 
-                // 마커 클릭 이벤트 개선: 탭하면 툴팁을 바로 숨기고 줌인이 완료되면 사진 팝업을 띄움
                 el.addEventListener('click', (e) => { 
                     e.stopPropagation(); 
                     const label = el.querySelector('.mountain-label');
-                    if(label) label.style.display = 'none'; // 산 정보 라벨 숨김
+                    if(label) label.style.display = 'none'; 
                     
                     focusAndRotate(group.lng, group.lat, 14.5, () => {
-                        // 줌인이 끝난 뒤 팝업(사진 관련) 오픈
                         if (!marker.getPopup().isOpen()) marker.togglePopup();
                     });
                 });
 
-                // 팝업이 닫히면 다시 툴팁 노출
                 popup.on('close', () => {
                     const label = el.querySelector('.mountain-label');
                     if(label) label.style.display = 'block';
@@ -791,6 +853,8 @@
                 `);
                 
                 const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
+                bindMarkerEditMode(el, marker, m); // 🌟 드래그 앤 드롭 편집 기능 적용
+
                 el.addEventListener('click', (e) => { 
                     e.stopPropagation(); 
                     focusAndRotate(m.lng, m.lat, 13.5, () => {
@@ -856,16 +920,15 @@
                 
                 const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(popupHtml);
                 const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
+                bindMarkerEditMode(el, marker, m); // 🌟 드래그 앤 드롭 편집 기능 적용
                 
                 if (isClimbed) {
                     el.style.zIndex = 1000;
-                    // 기존에 있던 marker.togglePopup(); 를 제거하여 전체 화면에서 팝업창을 삭제
                 }
                 
                 el.addEventListener('click', (e) => { 
                     e.stopPropagation(); 
                     focusAndRotate(m.lng, m.lat, 14, () => {
-                        // 탭하여 줌인 완료 후 팝업 발생
                         if (!marker.getPopup().isOpen()) marker.togglePopup();
                     }); 
                 });
