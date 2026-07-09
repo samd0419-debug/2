@@ -65,6 +65,16 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* 지도 스타일 토글 버튼 (위성도/지형도 전환) */
+        #styleToggleBtn {
+            position: fixed; top: max(15px, env(safe-area-inset-top)); left: 15px; z-index: 1000;
+            background: rgba(255, 255, 255, 0.95); padding: 8px 14px;
+            border-radius: 20px; font-weight: 900; font-size: 0.85em;
+            color: #333; border: 2px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.25); 
+            cursor: pointer; transition: all 0.2s ease;
+        }
+        #styleToggleBtn:active { transform: scale(0.95); }
+
         /* 플로팅 버튼(FAB) */
         .fab-btn {
             width: 55px; height: 55px; border-radius: 50%; color: white; font-weight: 900; font-size: 0.75em; letter-spacing: -0.5px;
@@ -215,6 +225,8 @@
         </div>
     </div>
 
+    <button id="styleToggleBtn" onclick="toggleMapStyle()">🛰️ 3D 위성도</button>
+
     <div id="map"></div>
 
     <div id="searchWidget"><div id="searchFab" class="fab-btn">검색</div></div>
@@ -306,6 +318,7 @@
         let map;
         let myLogMarkers = [], m100Markers = [], challengeMarkers = [];
         let tempMarker = null;
+        let isSatelliteMode = false; // 위성도 상태 관리 변수
 
         function getDistance(lat1, lon1, lat2, lon2) {
             const R = 6371e3; 
@@ -519,6 +532,22 @@
             });
         }
 
+        // 🌟 지도 스타일(지형도/위성도) 전환 함수 🌟
+        function toggleMapStyle() {
+            const btn = document.getElementById('styleToggleBtn');
+            if (isSatelliteMode) {
+                // 현재 위성도면 -> 3D 지형도로 변경
+                map.setStyle('mapbox://styles/mapbox/outdoors-v12');
+                btn.innerHTML = '🛰️ 3D 위성도';
+                isSatelliteMode = false;
+            } else {
+                // 현재 지형도면 -> 3D 위성도로 변경
+                map.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
+                btn.innerHTML = '🗺️ 3D 지형도';
+                isSatelliteMode = true;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             mapboxgl.accessToken = 'pk.eyJ1Ijoic2FtZDIwMDAiLCJhIjoiY21yYmp1OG41MXV0bzMwczliZjk5enNjaSJ9.yb9rTbbR-mme-SZ89CTK1Q';
             
@@ -536,10 +565,16 @@
             mapboxgl.setRTLTextPlugin('https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.2.3/mapbox-gl-rtl-text.js');
             map.addControl(new MapboxLanguage({ defaultLanguage: 'ko' }));
 
+            // 스타일이 로드되거나 변경될 때마다 지형(3D)과 하늘(Sky) 레이어를 다시 추가해줍니다.
             map.on('style.load', () => {
-                map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 12 });
+                if (!map.getSource('mapbox-dem')) {
+                    map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 12 });
+                }
                 map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.1 }); 
-                map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
+                
+                if (!map.getLayer('sky')) {
+                    map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
+                }
             });
 
             map.on('mousedown', stopRotate); map.on('touchstart', stopRotate); map.on('wheel', stopRotate); map.on('dragstart', stopRotate);
