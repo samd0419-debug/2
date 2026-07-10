@@ -65,7 +65,7 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 지도 스타일 토글 버튼 (위성도/지형도 전환) */
+        /* 지도 스타일 토글 버튼 */
         #styleToggleBtn {
             position: fixed; top: max(15px, env(safe-area-inset-top)); left: 15px; z-index: 1000;
             background: rgba(255, 255, 255, 0.95); padding: 8px 14px;
@@ -81,15 +81,19 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.25); 
             backdrop-filter: blur(5px); transition: transform 0.3s, opacity 0.3s; cursor: pointer; position: relative; z-index: 20;
         }
-        #myLogWidget { position: fixed; right: 15px; bottom: 30px; z-index: 1000; touch-action: none; }
-        #challengeWidget { position: fixed; right: 15px; bottom: 95px; z-index: 1000; touch-action: none; }
-        #m100Widget { position: fixed; right: 15px; bottom: 160px; z-index: 1000; touch-action: none; }
+        
+        #trackWidget { position: fixed; right: 15px; bottom: 290px; z-index: 1000; touch-action: none; }
         #searchWidget { position: fixed; right: 15px; bottom: 225px; z-index: 1000; touch-action: none; }
+        #m100Widget { position: fixed; right: 15px; bottom: 160px; z-index: 1000; touch-action: none; }
+        #challengeWidget { position: fixed; right: 15px; bottom: 95px; z-index: 1000; touch-action: none; }
+        #myLogWidget { position: fixed; right: 15px; bottom: 30px; z-index: 1000; touch-action: none; }
 
-        #myLogFab { background: rgba(46, 125, 50, 0.9); } #myLogFab::before { content: '🏕️'; font-size: 1.6em; margin-bottom: 2px; }
-        #challengeFab { background: rgba(255, 143, 0, 0.9); } #challengeFab::before { content: '🏆'; font-size: 1.6em; margin-bottom: 2px; }
-        #m100Fab { background: rgba(21, 101, 192, 0.9); } #m100Fab::before { content: '⛰️'; font-size: 1.6em; margin-bottom: 2px; }
+        #trackFab { background: rgba(211, 47, 47, 0.9); }
+        #trackFab::before { content: '📁'; font-size: 1.6em; margin-bottom: 2px; }
         #searchFab { background: rgba(103, 58, 183, 0.9); } #searchFab::before { content: '🔎'; font-size: 1.6em; margin-bottom: 2px; }
+        #m100Fab { background: rgba(21, 101, 192, 0.9); } #m100Fab::before { content: '⛰️'; font-size: 1.6em; margin-bottom: 2px; }
+        #challengeFab { background: rgba(255, 143, 0, 0.9); } #challengeFab::before { content: '🏆'; font-size: 1.6em; margin-bottom: 2px; }
+        #myLogFab { background: rgba(46, 125, 50, 0.9); } #myLogFab::before { content: '🏕️'; font-size: 1.6em; margin-bottom: 2px; }
 
         /* 리스트 스타일 */
         .m100-list { padding: 0; margin: 0; list-style: none; }
@@ -99,68 +103,46 @@
         .m100-name { font-weight: bold; color: #333; font-size: 1.1em; }
         .m100-desc { font-size: 0.85em; color: #666; margin-top: 5px; line-height: 1.4; }
 
-        /* ---------------- 절대 밀리지 않는 완벽한 0x0 앵커 마커 ---------------- */
-        .marker-base {
-            width: 0px !important;
-            height: 0px !important;
-            position: relative;
-            z-index: 5;
-        }
-        
+        /* 완벽한 0x0 앵커 마커 */
+        .marker-base { width: 0px !important; height: 0px !important; position: relative; z-index: 5; }
         .marker-pin-wrapper {
-            position: absolute;
-            bottom: 0px; 
-            left: -15px; /* 핀 가로 너비(30px)의 절반으로 완벽한 중앙 정렬 */
-            width: 30px;
-            height: 48px;
-            cursor: pointer;
-            transform-origin: bottom center;
-            animation: dropIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: absolute; bottom: 0px; left: -15px; width: 30px; height: 48px;
+            cursor: pointer; transform-origin: bottom center;
             filter: drop-shadow(0px 6px 4px rgba(0,0,0,0.4));
         }
-
-        .dim-marker .marker-pin-wrapper { filter: grayscale(100%) opacity(0.5) drop-shadow(0px 6px 4px rgba(0,0,0,0.4)); }
-
-        @keyframes dropIn {
-            0% { transform: scale(0.5) translateY(-50px); opacity: 0; }
-            60% { transform: scale(1.1) translateY(5px); opacity: 1; }
-            100% { transform: scale(1) translateY(0); opacity: 1; }
-        }
-
-        /* 📍 핀 위치 편집 모드 애니메이션 */
-        @keyframes editPulse {
-            0% { transform: scale(1); filter: drop-shadow(0 0 10px #ff1744) hue-rotate(90deg); }
-            50% { transform: scale(1.15) translateY(-5px); filter: drop-shadow(0 0 20px #ff1744) hue-rotate(90deg); }
-            100% { transform: scale(1); filter: drop-shadow(0 0 10px #ff1744) hue-rotate(90deg); }
-        }
-        .editing-mode .marker-pin-wrapper {
-            animation: editPulse 1s infinite !important;
-            cursor: grabbing !important;
+        /* 핀의 기본 드롭 애니메이션 유지 (JS에서 순차적 딜레이를 덮어씌움) */
+        .marker-pin-wrapper:not([style*="animation"]) {
+            animation: dropIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         
-        /* ---------------- 커스텀 툴팁 (항시 노출용) ---------------- */
+        .dim-marker .marker-pin-wrapper { filter: grayscale(100%) opacity(0.5) drop-shadow(0px 6px 4px rgba(0,0,0,0.4)); }
+        @keyframes dropIn { 0% { transform: scale(0.5) translateY(-50px); opacity: 0; } 60% { transform: scale(1.1) translateY(5px); opacity: 1; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+
+        @keyframes editPulse { 0% { transform: scale(1); filter: drop-shadow(0 0 10px #ff1744) hue-rotate(90deg); } 50% { transform: scale(1.15) translateY(-5px); filter: drop-shadow(0 0 20px #ff1744) hue-rotate(90deg); } 100% { transform: scale(1); filter: drop-shadow(0 0 10px #ff1744) hue-rotate(90deg); } }
+        .editing-mode .marker-pin-wrapper { animation: editPulse 1s infinite !important; cursor: grabbing !important; }
+        
+        /* 커스텀 툴팁 (Jumping 방지 및 부드러운 애니메이션 적용) */
+        @keyframes labelFadeIn { 
+            from { opacity: 0; transform: translateX(-50%) translateY(10px); } 
+            to { opacity: 1; transform: translateX(-50%) translateY(0); } 
+        }
+        
         .mountain-label { 
-            position: absolute; 
-            bottom: 55px; /* 핀 높이 위로 띄움 */
-            left: 0px; /* 0x0 앵커의 정중앙 */
-            transform: translateX(-50%);
+            position: absolute; bottom: 55px; left: 0px; transform: translateX(-50%);
             background: rgba(255, 255, 255, 0.95); border: 2px solid #2E7D32; border-radius: 5px; 
             color: #1b5e20; font-weight: bold; font-size: 13px; box-shadow: 0 4px 10px rgba(0,0,0,0.25); 
-            padding: 6px 10px; white-space: nowrap; pointer-events: none;
-            animation: fadeIn 0.3s ease;
-            z-index: 10;
+            padding: 6px 10px; white-space: nowrap; pointer-events: none; z-index: 10;
         }
-        .mountain-label::after {
-            content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px;
-            border-width: 6px; border-style: solid; border-color: #2E7D32 transparent transparent transparent;
+        .mountain-label:not([style*="animation"]) {
+            animation: labelFadeIn 0.3s ease forwards;
         }
-        /* 각 카테고리별 툴팁 색상 (내기록, 도전100) */
+        
+        .mountain-label::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: #2E7D32 transparent transparent transparent; }
         .label-mylog { border-color: #D32F2F !important; color: #D32F2F !important; }
         .label-mylog::after { border-top-color: #D32F2F !important; }
         .label-challenge { border-color: #E65100 !important; color: #333 !important; }
         .label-challenge::after { border-top-color: #E65100 !important; }
 
-        /* Mapbox 팝업 오버라이드 (기본 팝업 디자인 다듬기) */
         .mapboxgl-popup-content { border-radius: 10px; padding: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); font-family: 'Malgun Gothic', sans-serif; min-width: 180px;}
         .mapboxgl-popup-close-button { font-size: 20px; font-weight: bold; padding: 5px 10px; color: #555; outline: none; }
 
@@ -190,25 +172,33 @@
         .btn-backup { background: #607D8B; } .btn-restore { background: #795548; }
         .total-alt-banner { background: #e8f5e9; border: 2px solid #4CAF50; border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 15px; color: #2E7D32; font-weight: bold; font-size: 1.1em; }
 
-        /* 사진 다중 슬라이더 (팝업창 내부) */
         .carousel { position: relative; width: 100%; max-width: 200px; margin: 10px auto; overflow: hidden; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .carousel-inner { display: flex; transition: transform 0.3s ease-in-out; }
         .carousel-item { min-width: 100%; box-sizing: border-box; }
         .carousel-item img { width: 100%; height: 130px; object-fit: cover; display: block; border-radius: 6px; cursor: pointer; }
         .carousel-control { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.6); color: white; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 10; font-weight:bold; }
-        .carousel-control.prev { left: 5px; }
-        .carousel-control.next { right: 5px; }
+        .carousel-control.prev { left: 5px; } .carousel-control.next { right: 5px; }
         .carousel-dots { position: absolute; bottom: 6px; left: 0; right: 0; display: flex; justify-content: center; gap: 5px; z-index: 10; }
         .carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.5); transition: background 0.2s; }
         .carousel-dot.active { background: white; transform: scale(1.2); }
         
-        /* 전체 화면 갤러리 오버레이 */
         #photoOverlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); z-index:10000; display:none; justify-content:center; align-items:center; touch-action: none; }
         #photoNavLeft, #photoNavRight { position:absolute; color:white; font-size:2.5em; z-index:10001; padding:20px; cursor:pointer; top:50%; transform:translateY(-50%); }
         #photoNavLeft { left: 10px; } #photoNavRight { right: 10px; }
         #expandedPhoto { max-width:90%; max-height:80%; object-fit:contain; border-radius:4px; transition: transform 0.3s ease; box-shadow: 0 5px 25px rgba(0,0,0,0.5); }
         #photoClose { position:absolute; top:20px; right:20px; color:white; font-size:3em; z-index:10001; padding:10px; cursor:pointer; line-height:1; }
         #photoIndicator { position:absolute; bottom:30px; color:white; font-size:1.2em; font-weight:bold; z-index:10001; background:rgba(0,0,0,0.5); padding:5px 15px; border-radius:15px; }
+
+        /* GPX 플레이어 대시보드 */
+        .dash-panel { background: #333; color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .dash-stats { display: flex; justify-content: space-around; margin-top: 15px; }
+        .dash-stat { display: flex; flex-direction: column; }
+        .dash-val { font-size: 1.8em; font-weight: 900; color: #4CAF50; }
+        .dash-label { font-size: 0.8em; color: #aaa; }
+        
+        .start-btn { width: 100%; padding: 15px; background: #1976D2; color: white; border: none; border-radius: 8px; font-size: 1.2em; font-weight: bold; cursor: pointer; transition: background 0.2s;}
+        .start-btn:active { background: #1565C0; }
+        .play-btn { width: 100%; padding: 15px; background: #D32F2F; color: white; border: none; border-radius: 8px; font-size: 1.2em; font-weight: bold; cursor: pointer; display: none; margin-top:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);}
     </style>
 </head>
 <body>
@@ -229,6 +219,7 @@
 
     <div id="map"></div>
 
+    <div id="trackWidget"><div id="trackFab" class="fab-btn">GPX</div></div>
     <div id="searchWidget"><div id="searchFab" class="fab-btn">검색</div></div>
     <div id="m100Widget"><div id="m100Fab" class="fab-btn">명산100</div></div>
     <div id="challengeWidget"><div id="challengeFab" class="fab-btn">도전100</div></div>
@@ -238,6 +229,28 @@
         <div id="dragHandle"><div class="bar"></div><div class="drag-text">스와이프 하여 닫기/열기</div></div>
         <div id="sidebarContent">
             
+            <div id="tabTracking" class="tab-content">
+                <h2 style="color: #333; margin: 10px 0 15px 0;">📁 GPX 궤적 플레이어</h2>
+                <div class="dash-panel">
+                    <div id="trackStatus" style="font-size: 1.1em; font-weight: bold;">GPX 파일을 기다리는 중...</div>
+                    <div class="dash-stats">
+                        <div class="dash-stat">
+                            <span class="dash-val" id="uiDist">0.00</span>
+                            <span class="dash-label">총 거리 (km)</span>
+                        </div>
+                        <div class="dash-stat">
+                            <span class="dash-val" id="uiAlt">0</span>
+                            <span class="dash-label">최고 고도 (m)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <label for="gpxInput" class="start-btn" style="display:block; text-align:center;">⌚ 애플워치 GPX 파일 불러오기</label>
+                <input type="file" id="gpxInput" accept=".gpx" style="display:none;" onchange="handleGPXUpload(event)">
+                
+                <button id="btnPlayTrack" class="play-btn" onclick="playCinematicRoute()">🚁 3D 궤적 다시 재생하기</button>
+            </div>
+            
             <div id="tabMyLog" class="tab-content active">
                 <h2 class="tab-title">🏕️ 나의 등산기</h2>
                 <div class="total-alt-banner">🔥 총 누적 등반 고도: <span id="uiTotalAlt" style="font-size:1.3em; color:#D32F2F;">0</span> m</div>
@@ -246,7 +259,7 @@
                 </div>
                 
                 <label>1. 등산한 산 이름 (직접 검색)</label>
-                <div style="position: relative;">
+                <div style="position: relative; padding-right: 70px;">
                     <input type="text" id="mountainInput" placeholder="예: 북한산, 설악산 입력 후 선택" autocomplete="off" onkeyup="handleInlineSearch(event)">
                     <ul id="inlineSearchResults" class="inline-search-results"></ul>
                 </div>
@@ -257,7 +270,7 @@
                         <input type="date" id="hikeDate">
                     </div>
                     <div class="input-group">
-                        <label>3. 고도 (m)</label>
+                        <label>3. 최고 고도 (m)</label>
                         <input type="number" id="hikeAlt" placeholder="예: 836">
                     </div>
                 </div>
@@ -282,7 +295,7 @@
             <div id="tabSearch" class="tab-content">
                 <h2 class="tab-title">🔎 산 검색</h2>
                 <div style="font-size: 0.85em; color: #555; margin-bottom: 15px; background: #F3E5F5; padding: 12px; border-radius: 6px; border-left: 4px solid #673AB7;">산 이름을 검색하고 지도 위에 표출된 산을 눌러보세요.</div>
-                <div style="position: relative; display: flex; gap: 6px;">
+                <div style="position: relative; display: flex; gap: 6px; padding-right: 70px;">
                     <input type="text" id="tabSearchInput" placeholder="예: 북한산, 광교산" style="flex:1;" onkeyup="handleTabSearch(event)">
                     <button type="button" class="search-btn" onclick="doTabSearch()">검색</button>
                 </div>
@@ -318,7 +331,7 @@
         let map;
         let myLogMarkers = [], m100Markers = [], challengeMarkers = [];
         let tempMarker = null;
-        let isSatelliteMode = false; // 위성도 상태 관리 변수
+        let isSatelliteMode = false;
 
         function getDistance(lat1, lon1, lat2, lon2) {
             const R = 6371e3; 
@@ -328,7 +341,6 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // 🌟 오픈스트리트맵(OSM) 실제 산 정상(Peak) 정밀 좌표로 교정된 100대 명산 데이터 🌟
         const m100Data = [
             { name: "가리산", region: "강원 춘천", alt: 1051, lat: 37.8715, lng: 127.9557, desc: "소양호 피아골의 비경을 간직한 산" },
             { name: "가리왕산", region: "강원 정선", alt: 1561, lat: 37.4619, lng: 128.5632, desc: "전국 제일의 숲과 원시림을 간직한 산" },
@@ -432,13 +444,9 @@
             { name: "희양산", region: "경북 문경", alt: 999, lat: 36.7120, lng: 127.9986, desc: "거대한 화강암 덩어리로 덮인 특이한 산세" }
         ];
 
-     // 💡 앱 자체에 영구적으로 박아넣는 기본 보정 데이터 (PC에서 추출한 값)
         const defaultOverrides = {"대암산":{"lat":38.21056003982409,"lng":128.13419133471757},"감악산":{"lat":37.941544030199495,"lng":126.97047842093485},"소요산":{"lat":37.938534193576174,"lng":127.08774350842845},"명성산":{"lat":38.1047375119397,"lng":127.33876343495211},"백운산(포천)":{"lat":38.07569960902828,"lng":127.44700700216663},"화악산":{"lat":38.00045008332276,"lng":127.54041127437574},"명지산":{"lat":37.941033116660606,"lng":127.43211624875966},"운악산":{"lat":37.87881539809095,"lng":127.32290802180421},"축령산":{"lat":37.752946308183425,"lng":127.33435171151086},"천마산":{"lat":37.680157888971024,"lng":127.27319825481652},"도봉산":{"lat":37.69785708152544,"lng":127.0129679753856},"북한산":{"lat":37.658646007865556,"lng":126.97795025715874},"마니산":{"lat":37.615578934912676,"lng":126.42977375646194},"용화산":{"lat":38.038382991267554,"lng":127.74813879195852},"오봉산":{"lat":38.00019527679194,"lng":127.80708651765622},"점봉산":{"lat":38.04910388246594,"lng":128.42513278471597},"방태산":{"lat":37.894725939919724,"lng":128.35558891694257},"오대산":{"lat":37.79316074509322,"lng":128.54228812156413},"계방산":{"lat":37.728143877496265,"lng":128.46581059552648},"공작산":{"lat":37.71585800819037,"lng":128.0109961327413},"삼악산":{"lat":37.83979619408825,"lng":127.65989848377023},"팔봉산":{"lat":37.69572021048877,"lng":127.69728356134783},"관악산":{"lat":37.44047635296059,"lng":126.96451903555896},"유명산":{"lat":37.57510415743424,"lng":127.48699748637591},"용문산":{"lat":37.56183576171853,"lng":127.54924461535933},"치악산":{"lat":37.36493232717318,"lng":128.0555401428523},"백덕산":{"lat":37.39649450097268,"lng":128.2941930825723},"덕항산":{"lat":37.308536312253096,"lng":129.01263563567903},"두타산":{"lat":37.42674899926848,"lng":129.00451313088797},"백운산(정선)":{"lat":37.28104340407059,"lng":128.59544441349243},"태화산":{"lat":37.117492813073724,"lng":128.4863262514212},"소백산":{"lat":36.95807870386054,"lng":128.484959704645},"금수산":{"lat":36.984321634714036,"lng":128.25738974977259},"도락산":{"lat":36.85628522165702,"lng":128.31119326413761},"월악산":{"lat":36.88634250390308,"lng":128.105827256138},"주흘산":{"lat":36.77822277419003,"lng":128.10627634097546},"희양산":{"lat":36.71487625878784,"lng":128.00552364161973},"대야산":{"lat":36.669184670662816,"lng":127.92940019411071},"속리산":{"lat":36.54310243320431,"lng":127.87097483151558},"구병산":{"lat":36.47018038891707,"lng":127.86211309209364},"서대산":{"lat":36.220909754154135,"lng":127.53836578612277},"천태산":{"lat":36.15960913362349,"lng":127.60041561422241},"민주지산":{"lat":36.040300234851784,"lng":127.84967053756753},"황악산":{"lat":36.118026415902946,"lng":127.96699432831878},"금오산":{"lat":36.091751145765556,"lng":128.3002661642717},"팔공산":{"lat":36.01646786565456,"lng":128.69500244290572},"남산":{"lat":35.76758277892547,"lng":129.2254589715281},"내연산":{"lat":36.278876920144924,"lng":129.29003320784074},"주왕산":{"lat":36.389512430224556,"lng":129.16153122260152},"청량산":{"lat":36.794755215192666,"lng":128.9091779332776},"응봉산":{"lat":37.076693733322,"lng":129.231031390895},"운문산":{"lat":35.6154780877643,"lng":128.9592415133136},"가지산":{"lat":35.62002059293037,"lng":129.00268677033347},"재약산":{"lat":35.54514923834019,"lng":128.98078120900317},"천성산":{"lat":35.40105810302495,"lng":129.106625407176},"비슬산":{"lat":35.71528742356821,"lng":128.52301031933905},"화왕산":{"lat":35.54757701633196,"lng":128.53196881320673},"무학산":{"lat":35.20998761070588,"lng":128.5355732552694},"연화산":{"lat":35.0709532633002,"lng":128.26506496752825},"지리산(통영)":{"lat":34.84630706719736,"lng":128.1824818394814},"금산":{"lat":34.75400662677228,"lng":127.98238700776204},"미륵산":{"lat":34.81081024386887,"lng":128.41612638142067},"가야산":{"lat":35.82287052303839,"lng":128.1228692620956},"덕유산":{"lat":35.859849935454946,"lng":127.74650618625355},"적상산":{"lat":35.94668269070583,"lng":127.69014570812652},"황석산":{"lat":35.65528032897092,"lng":127.7548912164566},"구봉산":{"lat":35.92304815162966,"lng":127.41677903480212},"운장산":{"lat":35.9110799884012,"lng":127.3576007114454},"마이산":{"lat":35.7614288002254,"lng":127.41225720303026},"모악산":{"lat":35.72846376810408,"lng":127.08573450206131},"강천산":{"lat":35.402504021420484,"lng":127.04819697474124},"추월산":{"lat":35.39981829813517,"lng":126.9759366134893},"백암산":{"lat":35.46182881445198,"lng":126.86857689168448},"내장산":{"lat":35.478104316900456,"lng":126.8890815412662},"방장산":{"lat":35.45580280758534,"lng":126.75448011489055},"무등산":{"lat":35.124291916711684,"lng":127.00891716752443},"동악산":{"lat":35.281800148632826,"lng":127.25181644415647},"황매산":{"lat":35.518399265485826,"lng":127.95978006564758},"백운산(광양)":{"lat":35.10610719702282,"lng":127.62197058325012},"조계산":{"lat":35.0011291155826,"lng":127.3136472125974},"천관산":{"lat":34.53125708957383,"lng":126.91870025238063},"월출산":{"lat":34.76695861461347,"lng":126.70445925489821},"두륜산":{"lat":34.47154762505811,"lng":126.63780324771949},"깃대봉":{"lat":34.669881087851294,"lng":125.40482001121842},"선운산":{"lat":35.49729254092992,"lng":126.56933606609334},"장안산":{"lat":35.62926719349106,"lng":127.59458765638414},"대둔산":{"lat":36.12494731210637,"lng":127.32072300055682},"덕숭산":{"lat":36.67203467376149,"lng":126.62456023197427},"칠갑산":{"lat":36.412426485441145,"lng":126.88482815914017},"계룡산":{"lat":36.351652081488936,"lng":127.20027848840846},"금정산":{"lat":35.279826549612054,"lng":129.05072215673653},"성인봉":{"lat":37.49808669143334,"lng":130.86698297626185}};
 
-        // 사용자가 스마트폰 앱에서 추가로 조정한 데이터 불러오기
         const localOverrides = JSON.parse(localStorage.getItem('m100_overrides') || '{}');
-
-        // 기본 보정값과 스마트폰 수정값을 합침 (스마트폰에서 수정한 것이 최우선 적용)
         const savedOverrides = { ...defaultOverrides, ...localOverrides };
 
         m100Data.forEach(m => {
@@ -448,41 +456,30 @@
             }
         });
 
-        // 🛠️ 핀 수동 위치 조정 (드래그 앤 드롭) 기능 추가 함수
         function bindMarkerEditMode(el, marker, m) {
             let pressTimer;
             const startEdit = (e) => {
                 if(e) { e.preventDefault(); e.stopPropagation(); }
                 if(marker.isDraggable && marker.isDraggable()) return; 
-                
                 if(marker.getPopup().isOpen()) marker.togglePopup(); 
 
                 if(confirm(`[${m.name}] 핀 위치를 수정하시겠습니까?\n\n'확인'을 누른 후 핀을 꾹 눌러 원하는 위치로 드래그하고 놓으면 자동 저장됩니다.`)) {
                     marker.setDraggable(true);
                     el.classList.add('editing-mode');
-                    
                     marker.once('dragend', () => {
                         const newLngLat = marker.getLngLat();
-                        
                         let overrides = JSON.parse(localStorage.getItem('m100_overrides') || '{}');
                         overrides[m.name] = { lat: newLngLat.lat, lng: newLngLat.lng };
                         localStorage.setItem('m100_overrides', JSON.stringify(overrides));
-                        
-                        m.lat = newLngLat.lat;
-                        m.lng = newLngLat.lng;
-                        
+                        m.lat = newLngLat.lat; m.lng = newLngLat.lng;
                         marker.setDraggable(false); 
                         el.classList.remove('editing-mode'); 
-                        
                         alert(`✅ [${m.name}] 정상 위치가 저장되었습니다!`);
                     });
                 }
             };
 
-            // PC 환경: 마우스 우클릭
             el.addEventListener('contextmenu', startEdit);
-
-            // 모바일 환경: 길게 꾹 누르기 (0.8초)
             el.addEventListener('touchstart', (e) => {
                 if(e.touches.length > 1) return;
                 pressTimer = setTimeout(() => { startEdit(e); }, 800); 
@@ -491,10 +488,7 @@
             el.addEventListener('touchmove', () => clearTimeout(pressTimer));
         }
 
-        /* --- 3D 피벗 카메라 회전 제어 --- */
-        let isRotating = false;
-        let targetCenter = null;
-        let rotateReqId = null;
+        let isRotating = false; let targetCenter = null; let rotateReqId = null;
 
         function startRotate(lng, lat) {
             targetCenter = [lng, lat];
@@ -532,16 +526,13 @@
             });
         }
 
-        // 🌟 지도 스타일(지형도/위성도) 전환 함수 🌟
         function toggleMapStyle() {
             const btn = document.getElementById('styleToggleBtn');
             if (isSatelliteMode) {
-                // 현재 위성도면 -> 3D 지형도로 변경
                 map.setStyle('mapbox://styles/mapbox/outdoors-v12');
                 btn.innerHTML = '🛰️ 3D 위성도';
                 isSatelliteMode = false;
             } else {
-                // 현재 지형도면 -> 3D 위성도로 변경
                 map.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
                 btn.innerHTML = '🗺️ 3D 지형도';
                 isSatelliteMode = true;
@@ -565,7 +556,6 @@
             mapboxgl.setRTLTextPlugin('https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.2.3/mapbox-gl-rtl-text.js');
             map.addControl(new MapboxLanguage({ defaultLanguage: 'ko' }));
 
-            // 스타일이 로드되거나 변경될 때마다 지형(3D)과 하늘(Sky) 레이어를 다시 추가해줍니다.
             map.on('style.load', () => {
                 if (!map.getSource('mapbox-dem')) {
                     map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 12 });
@@ -575,11 +565,25 @@
                 if (!map.getLayer('sky')) {
                     map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
                 }
+
+                if(!map.getSource('active-route')) {
+                    map.addSource('active-route', {
+                        'type': 'geojson',
+                        'data': { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': [] } }
+                    });
+                    map.addLayer({
+                        'id': 'active-route-line',
+                        'type': 'line',
+                        'source': 'active-route',
+                        'layout': { 'line-join': 'round', 'line-cap': 'round' },
+                        'paint': { 'line-color': '#D32F2F', 'line-width': 6, 'line-opacity': 0.8 }
+                    });
+                }
             });
 
             map.on('mousedown', stopRotate); map.on('touchstart', stopRotate); map.on('wheel', stopRotate); map.on('dragstart', stopRotate);
-
             map.on('dblclick', resetMapToDefault);
+            
             let lastTapTime = 0;
             document.getElementById('map').addEventListener('touchstart', function(e) {
                 if (e.touches.length > 1) return;
@@ -589,18 +593,18 @@
             }, {passive: false});
 
             window.addEventListener('resize', () => {
-                const widgets = ['myLogWidget', 'challengeWidget', 'm100Widget', 'searchWidget'];
+                const widgets = ['trackWidget', 'myLogWidget', 'challengeWidget', 'm100Widget', 'searchWidget'];
                 widgets.forEach(id => { const el = document.getElementById(id); if(el) { el.style.top = ''; el.style.left = ''; el.style.right = '15px'; el.style.bottom = ''; } });
-                document.getElementById('myLogWidget').style.bottom = '30px';
-                document.getElementById('challengeWidget').style.bottom = '95px';
-                document.getElementById('m100Widget').style.bottom = '160px';
+                document.getElementById('trackWidget').style.bottom = '290px';
                 document.getElementById('searchWidget').style.bottom = '225px';
+                document.getElementById('m100Widget').style.bottom = '160px';
+                document.getElementById('challengeWidget').style.bottom = '95px';
+                document.getElementById('myLogWidget').style.bottom = '30px';
             });
 
             initFABs(); initDB(); initM100List();
         });
 
-        // 수직형 압정(Pushpin) 디자인으로 SVG 변경
         function createMarkerEl(type, labelHtml, isDim) {
             const el = document.createElement('div');
             el.className = 'marker-base' + (isDim ? ' dim-marker' : '');
@@ -662,33 +666,44 @@
         const sidebar = document.getElementById('sidebar'), handleDrag = document.getElementById('dragHandle'), dragText = document.querySelector('.drag-text');
         let currentSidebarState = -1; const states = ['collapsed', 'half', 'full']; let isHandleDragging = false; let startY = 0;
 
-        handleDrag.addEventListener('pointerdown', e => { isHandleDragging = true; startY = e.clientY; handleDrag.setPointerCapture(e.pointerId); });
-        handleDrag.addEventListener('pointermove', e => { if(isHandleDragging) e.preventDefault(); }); 
-        handleDrag.addEventListener('pointerup', e => {
-            if(!isHandleDragging) return; isHandleDragging = false; handleDrag.releasePointerCapture(e.pointerId);
-            const diff = startY - e.clientY; 
-            if (Math.abs(diff) > 40) { if (diff > 0) { if (currentSidebarState < 2) currentSidebarState++; } else { if (currentSidebarState > 0) currentSidebarState--; } }
-            else { if (currentSidebarState === 0) currentSidebarState = 1; else if (currentSidebarState === 1) currentSidebarState = 2; else if (currentSidebarState === 2) currentSidebarState = 0; }
-            updateSidebarState();
-        });
-
-        handleDrag.addEventListener('wheel', e => { e.preventDefault(); if (e.deltaY > 0) { if (currentSidebarState > 0) currentSidebarState--; } else if (e.deltaY < 0) { if (currentSidebarState < 2) currentSidebarState++; } updateSidebarState(); }, {passive: false});
+        if (handleDrag) {
+            handleDrag.addEventListener('pointerdown', e => { isHandleDragging = true; startY = e.clientY; handleDrag.setPointerCapture(e.pointerId); });
+            handleDrag.addEventListener('pointermove', e => { if(isHandleDragging) e.preventDefault(); }); 
+            handleDrag.addEventListener('pointerup', e => {
+                if(!isHandleDragging) return; isHandleDragging = false; handleDrag.releasePointerCapture(e.pointerId);
+                const diff = startY - e.clientY; 
+                if (Math.abs(diff) > 40) { if (diff > 0) { if (currentSidebarState < 2) currentSidebarState++; } else { if (currentSidebarState > 0) currentSidebarState--; } }
+                else { if (currentSidebarState === 0) currentSidebarState = 1; else if (currentSidebarState === 1) currentSidebarState = 2; else if (currentSidebarState === 2) currentSidebarState = 0; }
+                updateSidebarState();
+            });
+            handleDrag.addEventListener('wheel', e => { e.preventDefault(); if (e.deltaY > 0) { if (currentSidebarState > 0) currentSidebarState--; } else if (e.deltaY < 0) { if (currentSidebarState < 2) currentSidebarState++; } updateSidebarState(); }, {passive: false});
+        }
 
         function updateSidebarState() {
             sidebar.classList.remove('hidden', 'collapsed', 'half', 'full'); 
             if (currentSidebarState === -1) { sidebar.classList.add('hidden'); } 
             else {
                 sidebar.classList.add(states[currentSidebarState]);
-                if (currentSidebarState === 0) dragText.innerText = '클릭하여 크게 보기 / 위로 끌어올리세요'; 
-                else if (currentSidebarState === 1) dragText.innerText = '클릭하여 전체 보기 / 스와이프하여 닫기'; 
-                else dragText.innerText = '클릭하여 최소화 / 쓸어내려서 좁게 보기';
+                if (dragText) {
+                    if (currentSidebarState === 0) dragText.innerText = '클릭하여 크게 보기 / 위로 끌어올리세요'; 
+                    else if (currentSidebarState === 1) dragText.innerText = '클릭하여 전체 보기 / 스와이프하여 닫기'; 
+                    else dragText.innerText = '클릭하여 최소화 / 쓸어내려서 좁게 보기';
+                }
             }
             if(isRotating && targetCenter) { map.easeTo({ center: targetCenter, padding: getMapPadding(), duration: 500 }); }
         }
 
         function openTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.getElementById(tabId).classList.add('active');
-            if (currentSidebarState === -1) currentSidebarState = 0; updateSidebarState();
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); 
+            document.getElementById(tabId).classList.add('active');
+            
+            // 검색 및 GPX 불러오기 탭은 45%(half) 높이로 열리게 설정
+            if (tabId === 'tabSearch' || tabId === 'tabTracking') {
+                currentSidebarState = 1; 
+            } else {
+                if (currentSidebarState === -1) currentSidebarState = 0; 
+            }
+            updateSidebarState();
             
             clearMarkers(myLogMarkers); clearMarkers(m100Markers); clearMarkers(challengeMarkers);
             if(tempMarker) tempMarker.remove(); stopRotate();
@@ -697,9 +712,17 @@
             else if (tabId === 'tabM100') { renderM100Map(); } 
             else if (tabId === 'tabMyLog') { renderAll(); map.flyTo({ center: [127.8, 36.3], zoom: window.innerWidth <= 768 ? 6 : 6.5, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); } 
             else if (tabId === 'tabSearch') { map.flyTo({ center: [127.8, 36.3], zoom: window.innerWidth <= 768 ? 6 : 6.5, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); }
+            else if (tabId === 'tabTracking') { 
+                if (routeCoordinates.length > 0) {
+                    playCinematicRoute();
+                } else {
+                    map.flyTo({ center: [127.8, 36.3], zoom: window.innerWidth <= 768 ? 6 : 6.5, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); 
+                }
+            }
         }
 
         function initFABs() {
+            setupDraggableFab(document.getElementById('trackFab'), document.getElementById('trackWidget'), () => openTab('tabTracking'));
             setupDraggableFab(document.getElementById('myLogFab'), document.getElementById('myLogWidget'), () => openTab('tabMyLog'));
             setupDraggableFab(document.getElementById('m100Fab'), document.getElementById('m100Widget'), () => openTab('tabM100'));
             setupDraggableFab(document.getElementById('challengeFab'), document.getElementById('challengeWidget'), () => openTab('tabChallenge'));
@@ -707,6 +730,7 @@
         }
 
         function setupDraggableFab(fab, widget, onClickCallback) {
+            if(!fab) return;
             let startX, startY, initLeft, initTop, isDragging = false, dragTimer = null;
             fab.addEventListener('pointerdown', (e) => { if(!e.isPrimary) return; startX = e.clientX; startY = e.clientY; const rect = widget.getBoundingClientRect(); initLeft = rect.left; initTop = rect.top; isDragging = false; fab.setPointerCapture(e.pointerId); dragTimer = setTimeout(() => { isDragging = true; fab.style.transform = 'scale(1.1)'; }, 300); });
             fab.addEventListener('pointermove', (e) => { if (isDragging) { e.preventDefault(); widget.style.right = 'auto'; widget.style.bottom = 'auto'; widget.style.left = (initLeft + (e.clientX - startX)) + 'px'; widget.style.top = (initTop + (e.clientY - startY)) + 'px'; } else if (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) clearTimeout(dragTimer); });
@@ -773,7 +797,6 @@
 
         function renderAll() {
             clearMarkers(myLogMarkers); groupedData = {}; const groups = {};
-            
             allRecords.forEach(r => {
                 const lat = parseFloat(r.lat), lng = parseFloat(r.lng);
                 const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
@@ -782,14 +805,28 @@
                 groups[key].climbs.push(r);
                 if (altNum > groups[key].altNum) groups[key].altNum = altNum;
             });
+
+            // 내 기록 핀 순차 애니메이션을 위한 날짜순 정렬 (과거 데이터 먼저)
+            const sortedGroups = Object.values(groups).sort((a, b) => {
+                const aOldest = new Date(Math.min(...a.climbs.map(c => new Date(c.date))));
+                const bOldest = new Date(Math.min(...b.climbs.map(c => new Date(c.date))));
+                return aOldest - bOldest;
+            });
             
-            Object.values(groups).forEach(group => {
+            sortedGroups.forEach((group, index) => {
                 group.climbs.sort((a,b) => new Date(b.date) - new Date(a.date));
                 const latestDate = group.climbs[0].date;
                 const altText = group.altNum > 0 ? ` (${group.altNum}m)` : "";
                 
                 const labelHtml = `<div class="mountain-label label-mylog"><b>${group.name}${altText}</b><br><span style="font-size:0.85em;">${latestDate}</span></div>`;
                 const el = createMarkerEl('mylog', labelHtml);
+
+                // 🌟 순차 애니메이션 지연 적용 (핀 하나당 80ms 간격으로 경쾌하게 드롭)
+                const delay = index * 80;
+                const pin = el.querySelector('.marker-pin-wrapper');
+                if (pin) pin.style.animation = `dropIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}ms both`;
+                const lbl = el.querySelector('.mountain-label');
+                if (lbl) lbl.style.animation = `labelFadeIn 0.3s ease ${delay + 200}ms both`;
                 
                 let popupContent = `<div style="text-align:center;"><b>🏕️ ${group.name}</b><br><span style="color:#D32F2F; font-weight:bold;">고도: ${group.altNum > 0 ? group.altNum + 'm' : '정보 없음'}</span><hr style="margin:5px 0; border:0; border-top:1px solid #ddd;">`;
                 group.climbs.forEach(c => {
@@ -817,7 +854,6 @@
                     e.stopPropagation(); 
                     const label = el.querySelector('.mountain-label');
                     if(label) label.style.display = 'none'; 
-                    
                     focusAndRotate(group.lng, group.lat, 14.5, () => {
                         if (!marker.getPopup().isOpen()) marker.togglePopup();
                     });
@@ -895,7 +931,7 @@
                 `);
                 
                 const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
-                bindMarkerEditMode(el, marker, m); // 🌟 드래그 앤 드롭 편집 기능 적용
+                bindMarkerEditMode(el, marker, m);
 
                 el.addEventListener('click', (e) => { 
                     e.stopPropagation(); 
@@ -962,11 +998,9 @@
                 
                 const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(popupHtml);
                 const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
-                bindMarkerEditMode(el, marker, m); // 🌟 드래그 앤 드롭 편집 기능 적용
+                bindMarkerEditMode(el, marker, m); 
                 
-                if (isClimbed) {
-                    el.style.zIndex = 1000;
-                }
+                if (isClimbed) { el.style.zIndex = 1000; }
                 
                 el.addEventListener('click', (e) => { 
                     e.stopPropagation(); 
@@ -1038,9 +1072,7 @@
                         
                         resultsUl.style.display = 'none'; 
                         currentSidebarState = 0; updateSidebarState(); 
-                        focusAndRotate(lon, lat, 14.5, () => {
-                            tempMarker.togglePopup();
-                        });
+                        focusAndRotate(lon, lat, 14.5, () => { tempMarker.togglePopup(); });
                     }; resultsUl.appendChild(li);
                 });
             });
@@ -1052,13 +1084,11 @@
             openTab('tabMyLog'); currentSidebarState = 2; updateSidebarState();
         }
 
-        /* ---------------- 전체 사진 갤러리 오버레이 스크립트 ---------------- */
         let carouselPhotosArr = []; let currentCarouselIndex = 0;
         window.openCarousel = function(recordId, startIndex, event) {
             if(event) event.stopPropagation(); 
             const record = allRecords.find(r => r.id === recordId);
             if(!record || !record.photos) return;
-            
             carouselPhotosArr = record.photos; 
             currentCarouselIndex = startIndex; 
             updateCarouselPhoto(); 
@@ -1081,7 +1111,6 @@
         photoOverlayEl.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; if (touchEndX < touchStartX - 40) window.nextPhoto(); if (touchEndX > touchStartX + 40) window.prevPhoto(); }, {passive: true});
         photoOverlayEl.addEventListener('click', e => { if(e.target === photoOverlayEl) window.closePhotoOverlay(); });
 
-        /* ---------------- 데이터 등록, 수정 ---------------- */
         function resizeImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader(); reader.onload = (e) => {
@@ -1155,6 +1184,110 @@
                     } else { alert('잘못된 백업 파일 형식입니다.'); }
                 } catch(err) { alert('파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인해주세요.'); }
             }; reader.readAsText(file); event.target.value = ''; 
+        }
+
+        // ==========================================
+        // 🚀 GPX 파일 파싱 및 3D 궤적 시네마틱 재생 로직
+        // ==========================================
+        
+        let routeCoordinates = [];
+        let totalDistance = 0;
+
+        window.handleGPXUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            document.getElementById('trackStatus').innerText = "⏳ 파일을 분석 중입니다...";
+            document.getElementById('trackStatus').style.color = "#ff9800";
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                parseGPX(text);
+            };
+            reader.readAsText(file);
+        }
+
+        function parseGPX(gpxText) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(gpxText, "text/xml");
+            const trkpts = xmlDoc.getElementsByTagName("trkpt");
+            
+            if (trkpts.length === 0) {
+                alert("유효한 GPX(GPS 위치 데이터)가 파일에 없습니다.");
+                document.getElementById('trackStatus').innerText = "❌ 데이터가 없습니다.";
+                return;
+            }
+
+            routeCoordinates = [];
+            totalDistance = 0;
+            let maxAlt = 0;
+
+            for (let i = 0; i < trkpts.length; i++) {
+                const lat = parseFloat(trkpts[i].getAttribute("lat"));
+                const lon = parseFloat(trkpts[i].getAttribute("lon"));
+                
+                let ele = 0;
+                const eleNode = trkpts[i].getElementsByTagName("ele")[0];
+                if (eleNode) {
+                    ele = parseFloat(eleNode.textContent);
+                    if (ele > maxAlt) maxAlt = ele;
+                }
+                
+                const currentPoint = [lon, lat];
+                if (i > 0) {
+                    const prevLat = parseFloat(trkpts[i-1].getAttribute("lat"));
+                    const prevLon = parseFloat(trkpts[i-1].getAttribute("lon"));
+                    totalDistance += getDistance(prevLat, prevLon, lat, lon);
+                }
+                routeCoordinates.push(currentPoint);
+            }
+
+            document.getElementById('uiDist').innerText = (totalDistance / 1000).toFixed(2);
+            document.getElementById('uiAlt').innerText = Math.round(maxAlt);
+            document.getElementById('trackStatus').innerText = "✅ GPX 로드 완료!";
+            document.getElementById('trackStatus').style.color = "#4CAF50";
+            
+            document.getElementById('btnPlayTrack').style.display = 'block';
+
+            map.getSource('active-route').setData({
+                'type': 'Feature',
+                'geometry': { 'type': 'LineString', 'coordinates': routeCoordinates }
+            });
+
+            playCinematicRoute();
+        }
+
+        function playCinematicRoute() {
+            if (routeCoordinates.length < 2) return;
+
+            // 바텀시트 최소화
+            const sidebar = document.getElementById('sidebar');
+            currentSidebarState = -1; // 완전 숨기거나 collapsed
+            sidebar.classList.remove('full', 'half');
+            sidebar.classList.add('collapsed');
+
+            let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+            routeCoordinates.forEach(coord => {
+                if(coord[0] < minLng) minLng = coord[0];
+                if(coord[0] > maxLng) maxLng = coord[0];
+                if(coord[1] < minLat) minLat = coord[1];
+                if(coord[1] > maxLat) maxLat = coord[1];
+            });
+
+            const centerLng = (minLng + maxLng) / 2;
+            const centerLat = (minLat + maxLat) / 2;
+
+            map.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
+                padding: {top: 100, bottom: 200, left: 100, right: 100},
+                pitch: 75,
+                duration: 3000,
+                essential: true
+            });
+
+            map.once('moveend', () => {
+                startRotate(centerLng, centerLat);
+            });
         }
     </script>
 </body>
