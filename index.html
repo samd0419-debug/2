@@ -26,11 +26,8 @@
         #map { height: 100vh; width: 100%; z-index: 1; }
 
         /* 스플래시 화면 */
-        #splash { position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999; background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&q=80') no-repeat center center/cover; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; cursor: pointer; }
-        #splash::before { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); }
+        #splash { position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999; background: url('1.png') no-repeat center center/cover; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; cursor: pointer; }
         .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1s cubic-bezier(0.2, 0.8, 0.2, 1); width: 100%; }
-        .splash-title { font-size: 3.8rem; margin: 0; font-weight: 800; letter-spacing: -3px; white-space: nowrap; text-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .splash-subtitle { font-size: 1.1rem; margin-top: 5px; font-weight: 300; letter-spacing: 6px; color: #e8f5e9; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         
         #splashCounterContainer { opacity: 0; transform: translateY(20px); margin-top: 40px; text-align: center; transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
         #splashCounterContainer.show { opacity: 1; transform: translateY(0); }
@@ -191,8 +188,6 @@
 
     <div id="splash">
         <div class="splash-content">
-            <h1 class="splash-title">나의 등산기</h1>
-            <p class="splash-subtitle">MY HIKING ATLAS</p>
             <div id="splashCounterContainer">
                 <div class="splash-alt-label">🔥 나의 누적 등반 고도</div>
                 <div class="splash-alt-number" id="splashCounter">0</div><span class="splash-alt-unit">m</span>
