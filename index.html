@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#2E7D32">
     <link rel="apple-touch-icon" href="icon-192.png">
@@ -19,14 +22,18 @@
         input, textarea { user-select: auto; -webkit-user-select: auto; }
         
         body { 
-            margin: 0; display: flex; height: 100vh; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; 
+            margin: 0; display: flex; 
+            /* 🟢 높이 수정: 100vh에 100dvh(동적 뷰포트) 추가 지원 */
+            height: 100vh; height: 100dvh; 
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; 
             background-color: #f4f6f8; overflow: hidden; overscroll-behavior: none; touch-action: pan-x pan-y;
         }
         
-        #map { height: 100vh; width: 100%; z-index: 1; }
+        /* 🟢 높이 수정 */
+        #map { height: 100vh; height: 100dvh; width: 100%; z-index: 1; }
 
-        /* 스플래시 화면 */
-        #splash { position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999; background: url('1.png') no-repeat center center/cover; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; cursor: pointer; }
+        /* 스플래시 화면 🟢 높이 수정 */
+        #splash { position: fixed; top:0; left:0; width:100vw; height:100vh; height:100dvh; z-index: 9999; background: url('1.png') no-repeat center center/cover; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; cursor: pointer; }
         .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1s cubic-bezier(0.2, 0.8, 0.2, 1); width: 100%; }
         
         #splashCounterContainer { opacity: 0; transform: translateY(20px); margin-top: 40px; text-align: center; transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
@@ -104,7 +111,7 @@
             cursor: pointer; transform-origin: bottom center;
             filter: drop-shadow(0px 6px 4px rgba(0,0,0,0.4));
         }
-        /* 핀의 기본 드롭 애니메이션 유지 (JS에서 순차적 딜레이를 덮어씌움) */
+        /* 핀의 기본 드롭 애니메이션 유지 */
         .marker-pin-wrapper:not([style*="animation"]) {
             animation: dropIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
@@ -115,7 +122,7 @@
         @keyframes editPulse { 0% { transform: scale(1); filter: drop-shadow(0 0 10px #ff1744) hue-rotate(90deg); } 50% { transform: scale(1.15) translateY(-5px); filter: drop-shadow(0 0 20px #ff1744) hue-rotate(90deg); } 100% { transform: scale(1); filter: drop-shadow(0 0 10px #ff1744) hue-rotate(90deg); } }
         .editing-mode .marker-pin-wrapper { animation: editPulse 1s infinite !important; cursor: grabbing !important; }
         
-        /* 커스텀 툴팁 (Jumping 방지 및 부드러운 애니메이션 적용) */
+        /* 커스텀 툴팁 */
         @keyframes labelFadeIn { 
             from { opacity: 0; transform: translateX(-50%) translateY(10px); } 
             to { opacity: 1; transform: translateX(-50%) translateY(0); } 
@@ -286,6 +293,7 @@
     </div>
 
     <script>
+        // 기존 자바스크립트 코드 수정 없이 그대로 포함 (기능에 영향을 주지 않습니다)
         let map;
         let myLogMarkers = [], m100Markers = [], challengeMarkers = [];
         let tempMarker = null;
@@ -1119,7 +1127,6 @@
                 } catch(err) { alert('파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인해주세요.'); }
             }; reader.readAsText(file); event.target.value = ''; 
         }
-
     </script>
 </body>
 </html>
