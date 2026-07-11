@@ -126,7 +126,7 @@ input:focus { border-color: #2E7D32; outline: none; background-color: #fff; }
 .record-card { position: relative; background: #fafafa; padding: 14px; margin-top: 15px; border-radius: 8px; border: 1px solid #eee; cursor: pointer; }
 .record-card h4 { margin: 0 0 5px 0; color: #333; font-size: 1.1em; padding-right: 90px; }
 .record-card p { margin: 0; font-size: 0.85em; color: #666; }
-.action-btns { position: absolute; top: 14px; right: 14px; display: flex; gap: 5px; }
+.action-btns { position: absolute; top: 14px; right: 85px; display: flex; gap: 5px; }
 .edit-btn, .delete-btn { color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 0.8em; font-weight: bold; cursor: pointer; }
 .edit-btn { background: #1976D2; } .delete-btn { background: #d32f2f; }
 
@@ -152,3 +152,7 @@ h2.tab-title { color: #333; margin: 10px 0 15px 0; font-size: 1.5em; font-weight
 #expandedPhoto { max-width:90%; max-height:80%; object-fit:contain; border-radius:4px; transition: transform 0.3s ease; box-shadow: 0 5px 25px rgba(0,0,0,0.5); }
 #photoClose { position:absolute; top:20px; right:20px; color:white; font-size:3em; z-index:10001; padding:10px; cursor:pointer; line-height:1; }
 #photoIndicator { position:absolute; bottom:30px; color:white; font-size:1.2em; font-weight:bold; z-index:10001; background:rgba(0,0,0,0.5); padding:5px 15px; border-radius:15px; }
+/* 나침반 정북 방향(N) 화살표를 빨간색으로 변경 */
+.mapboxgl-ctrl-compass .mapboxgl-ctrl-icon {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 3 l3 7 -3 -1.5 -3 1.5 z' fill='%23D32F2F'/%3E%3Cpath d='M10 17 l3 -7 -3 1.5 -3 -1.5 z' fill='%23999999'/%3E%3C/svg%3E") !important;
+}

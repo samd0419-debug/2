@@ -521,39 +521,36 @@ function renderAll() {
     renderRecordList();
 }
 
-window.moveCarousel = function(id, dir, event) {
-    if(event) event.stopPropagation(); const state = window[`state_${id}`]; if(!state) return;
-    state.current += dir; if(state.current < 0) state.current = state.total - 1; if(state.current >= state.total) state.current = 0;
-    const inner = document.getElementById(`inner_${id}`); if(inner) inner.style.transform = `translateX(-${state.current * 100}%)`;
-    const dots = document.getElementById(`dots_${id}`); if(dots) { Array.from(dots.children).forEach((dot, idx) => { dot.className = `carousel-dot ${idx === state.current ? 'active' : ''}`; }); }
-};
-
 function renderRecordList() {
-    document.getElementById('recordList').innerHTML = '';
+    const recordListEl = document.getElementById('recordList');
+    recordListEl.innerHTML = '';
+    
     allRecords.forEach(data => {
-        const div = document.createElement('div'); div.className = 'record-card';
+        const div = document.createElement('div');
+        div.className = 'record-card';
+        
         div.onclick = () => { 
             openTab('tabMyLog'); 
             currentSidebarState = 0; updateSidebarState();
             focusAndRotate(parseFloat(data.lng), parseFloat(data.lat), 14.5, () => {
                 const key = `${parseFloat(data.lat).toFixed(4)},${parseFloat(data.lng).toFixed(4)}`;
                 if(groupedData[key]) { 
-                    if(groupedData[key].marker.getPopup().isOpen()) {
-                        groupedData[key].marker.togglePopup(); 
+                    const marker = groupedData[key].marker;
+                    // 팝업이 닫혀있을 때만 열도록 수정
+                    if(!marker.getPopup().isOpen()) {
+                        marker.togglePopup(); 
                     }
-                }
-                
-                if (data.photos && data.photos.length > 0) {
-                    openCarousel(data.id, 0, null);
-                } else {
-                    alert('이 등산 기록에는 등록된 사진이 없습니다.');
                 }
             });
         };
+
         div.innerHTML = `<div class="action-btns"><button class="edit-btn" onclick="editRecord(${data.id}, event)">수정</button><button class="delete-btn" onclick="deleteRecord(${data.id}, event)">삭제</button></div><h4>⛰️ ${data.name} <span style="font-size:0.8em; color:#2E7D32;">${data.alt !== "정보 없음" ? '('+data.alt+'m)' : ''}</span></h4><p>📅 ${data.date}</p>`;
-        document.getElementById('recordList').appendChild(div);
+        recordListEl.appendChild(div);
     });
-    if(allRecords.length === 0) { document.getElementById('recordList').innerHTML = `<div style="text-align:center; padding:20px; color:#777;">등산 기록이 없습니다.</div>`; }
+    
+    if(allRecords.length === 0) { 
+        recordListEl.innerHTML = `<div style="text-align:center; padding:20px; color:#777;">등산 기록이 없습니다.</div>`; 
+    }
 }
 
 function initM100List() {
