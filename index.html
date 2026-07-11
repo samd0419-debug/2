@@ -21,25 +21,11 @@
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
         input, textarea { user-select: auto; -webkit-user-select: auto; }
         
-        /* 🟢 html, body의 높이를 100%로 설정하여 모바일 뷰포트 계산 오류 방지 */
-        html, body {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
-
-        body { 
-            display: flex; 
-            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; 
-            background-color: #000; /* 🟢 하단 시스템 여백 발생 시 흰 띠가 보이지 않도록 검은색으로 처리 */
-            overflow: hidden; overscroll-behavior: none; touch-action: pan-x pan-y;
-        }
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
+        body { display: flex; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background-color: #000; overflow: hidden; overscroll-behavior: none; touch-action: pan-x pan-y; }
         
-        /* 🟢 지도 영역도 100% 꽉 채우기 */
         #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%; z-index: 1; }
 
-        /* 스플래시 화면 🟢 상하좌우(top, bottom, left, right)를 0으로 주어 화면 끝까지 강제로 꽉 채움 */
         #splash { position: fixed; top:0; left:0; right:0; bottom:0; z-index: 9999; background: url('1.png') no-repeat center center/cover; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; cursor: pointer; }
         .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1s cubic-bezier(0.2, 0.8, 0.2, 1); width: 100%; }
         
@@ -53,7 +39,6 @@
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.9) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
         @keyframes blinkHint { 0%, 100% { transform: scale(0.95); opacity: 0.6; } 50% { transform: scale(1.05); opacity: 1; } }
         
-        /* 통합 하단 바텀시트 */
         #sidebar { 
             position: fixed; bottom: 0; left: 0; width: 100%; height: 85vh; 
             background: #fff; border-radius: 20px 20px 0 0;
@@ -76,7 +61,6 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 지도 스타일 토글 버튼 */
         #styleToggleBtn {
             position: fixed; top: max(15px, env(safe-area-inset-top)); left: 15px; z-index: 1000;
             background: rgba(255, 255, 255, 0.95); padding: 8px 14px;
@@ -86,7 +70,6 @@
         }
         #styleToggleBtn:active { transform: scale(0.95); }
 
-        /* 플로팅 버튼(FAB) */
         .fab-btn {
             width: 55px; height: 55px; border-radius: 50%; color: white; font-weight: 900; font-size: 0.75em; letter-spacing: -0.5px;
             display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.25); 
@@ -103,7 +86,6 @@
         #challengeFab { background: rgba(255, 143, 0, 0.9); } #challengeFab::before { content: '🏆'; font-size: 1.6em; margin-bottom: 2px; }
         #myLogFab { background: rgba(46, 125, 50, 0.9); } #myLogFab::before { content: '🏕️'; font-size: 1.6em; margin-bottom: 2px; }
 
-        /* 리스트 스타일 */
         .m100-list { padding: 0; margin: 0; list-style: none; }
         .m100-item { padding: 15px 10px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; transition: background 0.2s; }
         .m100-item:hover { background: #f9f9f9; }
@@ -111,14 +93,12 @@
         .m100-name { font-weight: bold; color: #333; font-size: 1.1em; }
         .m100-desc { font-size: 0.85em; color: #666; margin-top: 5px; line-height: 1.4; }
 
-        /* 완벽한 0x0 앵커 마커 */
         .marker-base { width: 0px !important; height: 0px !important; position: relative; z-index: 5; }
         .marker-pin-wrapper {
             position: absolute; bottom: 0px; left: -15px; width: 30px; height: 48px;
             cursor: pointer; transform-origin: bottom center;
             filter: drop-shadow(0px 6px 4px rgba(0,0,0,0.4));
         }
-        /* 핀의 기본 드롭 애니메이션 유지 */
         .marker-pin-wrapper:not([style*="animation"]) {
             animation: dropIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
@@ -129,7 +109,6 @@
         @keyframes editPulse { 0% { transform: scale(1); filter: drop-shadow(0 0 10px #ff1744) hue-rotate(90deg); } 50% { transform: scale(1.15) translateY(-5px); filter: drop-shadow(0 0 20px #ff1744) hue-rotate(90deg); } 100% { transform: scale(1); filter: drop-shadow(0 0 10px #ff1744) hue-rotate(90deg); } }
         .editing-mode .marker-pin-wrapper { animation: editPulse 1s infinite !important; cursor: grabbing !important; }
         
-        /* 커스텀 툴팁 */
         @keyframes labelFadeIn { 
             from { opacity: 0; transform: translateX(-50%) translateY(10px); } 
             to { opacity: 1; transform: translateX(-50%) translateY(0); } 
@@ -141,9 +120,7 @@
             color: #1b5e20; font-weight: bold; font-size: 13px; box-shadow: 0 4px 10px rgba(0,0,0,0.25); 
             padding: 6px 10px; white-space: nowrap; pointer-events: none; z-index: 10;
         }
-        .mountain-label:not([style*="animation"]) {
-            animation: labelFadeIn 0.3s ease forwards;
-        }
+        .mountain-label:not([style*="animation"]) { animation: labelFadeIn 0.3s ease forwards; }
         
         .mountain-label::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: #2E7D32 transparent transparent transparent; }
         .label-mylog { border-color: #D32F2F !important; color: #D32F2F !important; }
@@ -151,10 +128,9 @@
         .label-challenge { border-color: #E65100 !important; color: #333 !important; }
         .label-challenge::after { border-top-color: #E65100 !important; }
 
-        .mapboxgl-popup-content { border-radius: 10px; padding: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); font-family: 'Malgun Gothic', sans-serif; min-width: 180px;}
-        .mapboxgl-popup-close-button { font-size: 20px; font-weight: bold; padding: 5px 10px; color: #555; outline: none; }
+        .mapboxgl-popup-content { border-radius: 12px; padding: 18px; box-shadow: 0 6px 25px rgba(0,0,0,0.3); font-family: 'Malgun Gothic', sans-serif; min-width: 220px;}
+        .mapboxgl-popup-close-button { font-size: 22px; font-weight: bold; padding: 5px 10px; color: #555; outline: none; }
 
-        /* 입력 폼 UI */
         .input-row { display: flex; gap: 10px; width: 100%; align-items: center; }
         .input-group { flex: 1; display: flex; flex-direction: column; min-width: 0; }
         label { font-size: 0.9em; font-weight: bold; color: #333; margin-top: 14px; margin-bottom: 5px; display: block;}
@@ -227,7 +203,7 @@
                 <h2 class="tab-title">🏕️ 나의 등산기</h2>
                 <div class="total-alt-banner">🔥 총 누적 등반 고도: <span id="uiTotalAlt" style="font-size:1.3em; color:#D32F2F;">0</span> m</div>
                 <div style="font-size: 0.85em; color: #555; margin-bottom: 15px; background: #e8f5e9; padding: 12px; border-radius: 6px; border-left: 4px solid #4CAF50;">
-                    <b>💡 꿀팁:</b> 지도를 **더블 탭**하면 초기 화면(정북 방향)으로 돌아옵니다!
+                    <b>💡 꿀팁:</b> 지도를 **세 번 탭**하면 초기 화면(정북 방향)으로 돌아옵니다!
                 </div>
                 
                 <label>1. 등산한 산 이름 (직접 검색)</label>
@@ -300,11 +276,53 @@
     </div>
 
     <script>
-        // 기존 자바스크립트 코드 수정 없이 그대로 포함 (기능에 영향을 주지 않습니다)
         let map;
         let myLogMarkers = [], m100Markers = [], challengeMarkers = [];
         let tempMarker = null;
         let isSatelliteMode = false;
+
+        async function fetchWeather(lat, lng, containerId) {
+            try {
+                // 타임존을 auto로 설정하여 정확한 날씨 데이터 호출
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto`;
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                const temp = data.current.temperature_2m;
+                const humidity = data.current.relative_humidity_2m;
+                const wCode = data.current.weather_code;
+                
+                const maxTemp = data.daily.temperature_2m_max[0];
+                const minTemp = data.daily.temperature_2m_min[0];
+                const rainProb = data.daily.precipitation_probability_max[0] || 0;
+                
+                let wIcon = '☀️';
+                if (wCode >= 1 && wCode <= 3) wIcon = '⛅';
+                else if (wCode >= 45 && wCode <= 48) wIcon = '🌫️';
+                else if (wCode >= 51 && wCode <= 67) wIcon = '🌧️';
+                else if (wCode >= 71 && wCode <= 77) wIcon = '❄️';
+                else if (wCode >= 80 && wCode <= 82) wIcon = '🌦️';
+                else if (wCode >= 95 && wCode <= 99) wIcon = '⛈️';
+
+                // 클릭 이벤트 및 호버 효과, 상세보기 텍스트 제거
+                const html = `
+                    <div style="background:#e3f2fd; padding:12px; border-radius:8px; margin-top:12px; font-size:0.95em; color:#0d47a1; text-align:left; border: 1px solid #bbdefb; line-height:1.6;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; border-bottom: 1px solid rgba(13,71,161,0.2); padding-bottom:5px;">
+                            <b>실시간 날씨 예보</b> <span style="font-size:1.4em;">${wIcon}</span>
+                        </div>
+                        🌡️ 현재 기온: <b style="color:#333;">${temp}°C</b><br>
+                        📈 최고/최저: <b style="color:#d32f2f;">${maxTemp}°C</b> / <b style="color:#1976d2;">${minTemp}°C</b><br>
+                        💧 현재 습도: <b style="color:#333;">${humidity}%</b><br>
+                        ☔ 오늘 최고 강수 확률: <b style="color:#e65100;">${rainProb}%</b>
+                    </div>
+                `;
+                const el = document.getElementById(containerId);
+                if(el) el.innerHTML = html;
+            } catch(e) {
+                const el = document.getElementById(containerId);
+                if(el) el.innerHTML = `<div style="font-size:0.85em; color:#d32f2f; margin-top:10px;">날씨 정보를 불러오지 못했습니다.</div>`;
+            }
+        }
 
         function getDistance(lat1, lon1, lat2, lon2) {
             const R = 6371e3; 
@@ -541,14 +559,35 @@
             });
 
             map.on('mousedown', stopRotate); map.on('touchstart', stopRotate); map.on('wheel', stopRotate); map.on('dragstart', stopRotate);
-            map.on('dblclick', resetMapToDefault);
             
-            let lastTapTime = 0;
+            let clickCount = 0;
+            let clickTimer = null;
+            map.on('click', function(e) {
+                clickCount++;
+                if (clickCount === 3) {
+                    resetMapToDefault();
+                    clickCount = 0;
+                    clearTimeout(clickTimer);
+                } else {
+                    clearTimeout(clickTimer);
+                    clickTimer = setTimeout(() => { clickCount = 0; }, 500);
+                }
+            });
+
+            let touchTapCount = 0;
+            let touchTapTimer = null;
             document.getElementById('map').addEventListener('touchstart', function(e) {
                 if (e.touches.length > 1) return;
-                const currentTime = new Date().getTime();
-                if (currentTime - lastTapTime < 350 && currentTime - lastTapTime > 0) { resetMapToDefault(); e.preventDefault(); }
-                lastTapTime = currentTime;
+                touchTapCount++;
+                if (touchTapCount === 3) {
+                    resetMapToDefault();
+                    e.preventDefault();
+                    touchTapCount = 0;
+                    clearTimeout(touchTapTimer);
+                } else {
+                    clearTimeout(touchTapTimer);
+                    touchTapTimer = setTimeout(() => { touchTapCount = 0; }, 500);
+                }
             }, {passive: false});
 
             window.addEventListener('resize', () => {
@@ -755,7 +794,6 @@
                 if (altNum > groups[key].altNum) groups[key].altNum = altNum;
             });
 
-            // 내 기록 핀 순차 애니메이션을 위한 날짜순 정렬 (과거 데이터 먼저)
             const sortedGroups = Object.values(groups).sort((a, b) => {
                 const aOldest = new Date(Math.min(...a.climbs.map(c => new Date(c.date))));
                 const bOldest = new Date(Math.min(...b.climbs.map(c => new Date(c.date))));
@@ -770,7 +808,6 @@
                 const labelHtml = `<div class="mountain-label label-mylog"><b>${group.name}${altText}</b><br><span style="font-size:0.85em;">${latestDate}</span></div>`;
                 const el = createMarkerEl('mylog', labelHtml);
 
-                // 🌟 순차 애니메이션 지연 적용 (핀 하나당 80ms 간격으로 경쾌하게 드롭)
                 const delay = index * 80;
                 const pin = el.querySelector('.marker-pin-wrapper');
                 if (pin) pin.style.animation = `dropIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}ms both`;
@@ -836,7 +873,15 @@
                     focusAndRotate(parseFloat(data.lng), parseFloat(data.lat), 14.5, () => {
                         const key = `${parseFloat(data.lat).toFixed(4)},${parseFloat(data.lng).toFixed(4)}`;
                         if(groupedData[key]) { 
-                            if(!groupedData[key].marker.getPopup().isOpen()) groupedData[key].marker.togglePopup(); 
+                            if(groupedData[key].marker.getPopup().isOpen()) {
+                                groupedData[key].marker.togglePopup(); 
+                            }
+                        }
+                        
+                        if (data.photos && data.photos.length > 0) {
+                            openCarousel(data.id, 0, null);
+                        } else {
+                            alert('이 등산 기록에는 등록된 사진이 없습니다.');
                         }
                     });
                 };
@@ -870,15 +915,20 @@
             clearMarkers(m100Markers);
             m100Data.forEach(m => {
                 const el = createMarkerEl('m100');
+                const weatherId = 'weather-m100-' + Math.random().toString(36).substr(2, 9);
+                
                 const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(`
                     <div style="text-align:center;">
-                        <b style="font-size:1.2em; color:#1565C0;">🇰🇷 ${m.name}</b><br>
+                        <b style="font-size:1.3em; color:#1565C0;">🇰🇷 ${m.name}</b><br>
                         <span style="font-weight:bold;">${m.alt}m</span> | ${m.region}<br>
-                        <hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">
+                        <div id="${weatherId}" style="min-height:50px; margin-top:8px;"><span style="font-size:0.8em; color:#777;">⏳ 날씨 정보 불러오는 중...</span></div>
+                        <hr style="margin:10px 0; border:0; border-top:1px solid #ddd;">
                         <span style="color:#555; font-size:0.95em;">${m.desc}</span>
                     </div>
                 `);
                 
+                popup.on('open', () => fetchWeather(m.lat, m.lng, weatherId));
+
                 const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
                 bindMarkerEditMode(el, marker, m);
 
@@ -907,15 +957,17 @@
                 let type = isClimbed ? 'challenge' : 'm100';
                 
                 const el = createMarkerEl(type, null, !isClimbed);
+                const weatherId = 'weather-ch-' + Math.random().toString(36).substr(2, 9);
                 
                 let popupHtml = '';
                 if(isClimbed) {
                     matchedRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
                     let latest = matchedRecords[0];
                     popupHtml = `<div style="text-align:center; min-width:180px;">
-                        <b style="font-size:1.2em; color:#E65100;">🏆 ${m.name} (완등)</b><br>
+                        <b style="font-size:1.3em; color:#E65100;">🏆 ${m.name} (완등)</b><br>
                         <span style="color:#1565C0; font-size:0.95em; font-weight:bold;">${m.alt}m</span> | <span style="color:#555; font-size:0.9em;">${m.region}</span>
-                        <hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">
+                        <div id="${weatherId}" style="min-height:50px; margin-top:8px;"><span style="font-size:0.8em; color:#777;">⏳ 날씨 정보 불러오는 중...</span></div>
+                        <hr style="margin:10px 0; border:0; border-top:1px solid #ddd;">
                         <span style="color:#E65100; font-weight:bold;">최근 등반: ${latest.date}</span>
                         <div style="color:#666; font-size:0.85em; margin-top:5px;">${m.desc}</div>
                     </div>`;
@@ -937,15 +989,18 @@
                     list.appendChild(li);
                 } else {
                     popupHtml = `<div style="text-align:center; min-width:180px;">
-                        <b style="font-size:1.2em; color:#1565C0;">🇰🇷 ${m.name}</b><br>
+                        <b style="font-size:1.3em; color:#1565C0;">🇰🇷 ${m.name}</b><br>
                         <span style="font-weight:bold;">${m.alt}m</span> | <span style="color:#555; font-size:0.9em;">${m.region}</span>
-                        <hr style="margin:8px 0; border:0; border-top:1px solid #ddd;">
+                        <div id="${weatherId}" style="min-height:50px; margin-top:8px;"><span style="font-size:0.8em; color:#777;">⏳ 날씨 정보 불러오는 중...</span></div>
+                        <hr style="margin:10px 0; border:0; border-top:1px solid #ddd;">
                         <div style="color:#666; font-size:0.9em; margin-bottom:5px;">${m.desc}</div>
                         <span style="color:#d32f2f; font-size:0.85em;">아직 등반하지 않은 명산입니다.</span>
                     </div>`;
                 }
                 
                 const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(popupHtml);
+                popup.on('open', () => fetchWeather(m.lat, m.lng, weatherId));
+
                 const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
                 bindMarkerEditMode(el, marker, m); 
                 
@@ -1015,8 +1070,20 @@
                         let mMatch = m100Data.find(m => place.name.includes(m.name));
                         let infoHtml = mMatch ? `<br><span style="color:#1565C0;">${mMatch.alt}m | ${mMatch.region}</span><hr style="margin:5px 0;">${mMatch.desc}` : `<br><span style="color:#777; font-size:0.85em;">${shortAddress}</span>`;
                         
+                        const weatherId = 'weather-sch-' + Math.random().toString(36).substr(2, 9);
+
                         const el = createMarkerEl('search');
-                        const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(`<div style="text-align:center;"><b>⛰️ ${place.name}</b>${infoHtml}<br><br><button onclick="window.prepareSave('${place.name}', ${lat}, ${lon})" style="background:#4CAF50; color:white; border:none; padding:8px 12px; border-radius:5px; font-weight:bold; cursor:pointer;">내 기록에 추가하기</button></div>`);
+                        const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(`
+                            <div style="text-align:center;">
+                                <b style="font-size:1.2em;">⛰️ ${place.name}</b>
+                                ${infoHtml}
+                                <div id="${weatherId}" style="min-height:50px; margin-top:8px;"><span style="font-size:0.8em; color:#777;">⏳ 날씨 정보 불러오는 중...</span></div>
+                                <br><button onclick="window.prepareSave('${place.name}', ${lat}, ${lon})" style="background:#4CAF50; color:white; border:none; padding:8px 12px; border-radius:5px; font-weight:bold; cursor:pointer;">내 기록에 추가하기</button>
+                            </div>
+                        `);
+                        
+                        popup.on('open', () => fetchWeather(lat, lon, weatherId));
+
                         tempMarker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([lon, lat]).setPopup(popup).addTo(map);
                         
                         resultsUl.style.display = 'none'; 
