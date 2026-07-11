@@ -232,24 +232,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
         trackUserLocation: true, 
-        showUserHeading: false // 팝업 방지를 위해 꺼둠
+        showUserHeading: true, // 💡 방향 화살표 기능 다시 켜기! (true로 변경)
+        fitBoundsOptions: {
+            maxZoom: 15,
+            padding: { top: 200, bottom: 100 } // 💡 화면 상하단의 팝업/버튼들을 피해 내 위치가 화면 '시각적 중앙'에 완벽히 오도록 기본 여백 설정
+        }
     });
     map.addControl(geolocate, 'top-right');
     
     geolocate.on('trackuserlocationstart', stopRotate);
-
-    // 💡 [추가] GPS 위치 갱신 시, 하단 사이드바를 피해서 화면 '진짜' 중앙에 배치
-    geolocate.on('geolocate', (e) => {
-        const lon = e.coords.longitude;
-        const lat = e.coords.latitude;
-        map.easeTo({
-            center: [lon, lat],
-            zoom: 16, // GPS 탭 시 확대 수준 (필요에 따라 숫자 조절 가능)
-            padding: getMapPadding(), // 사이드바 위쪽으로 중앙 정렬
-            duration: 1000
-        });
-    });// =========================================================
-
+    
+    // (이전에 추가했던 geolocate.on('geolocate') 블록은 충돌을 일으키므로 완전히 삭제되었습니다!)
    
  
     map.on('mousedown', stopRotate); map.on('touchstart', stopRotate); map.on('wheel', stopRotate); map.on('dragstart', stopRotate);
