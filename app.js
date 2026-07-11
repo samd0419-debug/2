@@ -474,7 +474,7 @@ function renderAll() {
         });
         popupContent += `</div>`;
         
-        const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(popupContent);
+        const popup = new mapboxgl.Popup({ offset: [0, -48], anchor: 'bottom', autoPan: false }).setHTML(popupHtml);
         const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([group.lng, group.lat]).setPopup(popup).addTo(map);
 
         el.addEventListener('click', (e) => { 
