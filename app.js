@@ -299,35 +299,31 @@ document.addEventListener('DOMContentLoaded', () => {
             shield.className = 'compass-touch-shield';
             compassBtn.appendChild(shield);
 
-            // 초기 모드 세팅: 지도는 45도지만, 기능적으로는 2D 대기 상태로 시작
+            // 초기 2D 세팅
             window.is3DModeActive = false; 
             text3D.style.display = 'none';
-
-            // 💡 [수정됨] 45도는 기본 화면이므로, 50도가 넘어야만 '3D 마크'가 뜨도록 기준 변경!
-            const update3DText = () => { text3D.style.display = map.getPitch() > 50 ? 'block' : 'none'; };
+            const update3DText = () => { text3D.style.display = map.getPitch() > 40 ? 'block' : 'none'; };
             map.on('pitch', update3DText);
 
             const toggle3DMode = (e) => {
                 e.preventDefault(); e.stopPropagation();
-                
-                // 💡 [수정됨] 탭할 때의 기준도 50도로 변경!
-                if (map.getPitch() > 50) {
-                    // 현재 65도 (본격 3D 내비게이션 모드) -> 탭하면 완전한 2D 평면(0도)으로 펴기
+                if (map.getPitch() > 40) {
+                    // 현재 3D -> 탭하면 [2D 모드]로 변환 (자동 회전 엔진 OFF, 정북 방향 고정)
                     isAutoRotating = false; 
                     window.is3DModeActive = false;
                     map.easeTo({ pitch: 0, bearing: 0, duration: 800 });
                 } else {
-                    // 현재 완전 평면(0도)이거나 초기 화면(45도) -> 탭하면 본격 3D(65도)로 눕히기
+                    // 현재 2D -> 탭하면 [3D 모드]로 변환 (65도로 눕힘)
                     window.is3DModeActive = true;
                     map.easeTo({ pitch: 65, duration: 800 });
                     
+                    // 만약 GPS(파란점)가 켜져 있는 상태라면, 자동 회전 엔진 다시 ON!
                     const gpsBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
                     if (gpsBtn && gpsBtn.classList.contains('mapboxgl-ctrl-geolocate-active')) {
                         isAutoRotating = true;
                     }
                 }
             };
-            
             shield.addEventListener('touchstart', toggle3DMode, { passive: false });
             shield.addEventListener('click', toggle3DMode);
         }
