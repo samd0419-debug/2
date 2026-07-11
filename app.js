@@ -115,11 +115,15 @@ function stopRotate() {
 
 function getMapPadding() {
     const sidebarEl = document.getElementById('sidebar');
-    if (!sidebarEl || sidebarEl.classList.contains('hidden')) return { bottom: 30 };
-    if (currentSidebarState === 0) return { bottom: 150 };
-    if (currentSidebarState === 1) return { bottom: window.innerHeight * 0.55 };
-    if (currentSidebarState === 2) return { bottom: window.innerHeight * 0.8 };
-    return { bottom: 30 };
+    let padBottom = 30;
+    if (!sidebarEl || sidebarEl.classList.contains('hidden')) padBottom = 30;
+    else if (currentSidebarState === 0) padBottom = 150;
+    else if (currentSidebarState === 1) padBottom = window.innerHeight * 0.55;
+    else if (currentSidebarState === 2) padBottom = window.innerHeight * 0.8;
+    
+    // 💡 팝업이 위로 잘리지 않도록 지도 중심을 아래로 내리기 위한 top 여백(250px) 추가!
+    const padTop = window.innerHeight < 700 ? 180 : 250; 
+    return { top: padTop, bottom: padBottom };
 }
 
 function focusAndRotate(lng, lat, zoomLvl = 14, callback = null) {
@@ -197,7 +201,27 @@ document.addEventListener('DOMContentLoaded', () => {
             map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
         }
     });
+// 1. 나침반 컨트롤 추가 (지도를 회전시키면 나침반 바늘이 돌아가며, 클릭 시 정북방향으로 초기화됨)
+    const nav = new mapboxgl.NavigationControl({ 
+        showZoom: false, // 줌 버튼은 모바일에서 방해되므로 숨김
+        showCompass: true 
+    });
+    map.addControl(nav, 'top-right');
 
+    // 2. 현위치(GPS) 및 방향 화살표 컨트롤 추가
+    const geolocate = new mapboxgl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: true, // 사용자가 이동하면 맵이 따라감
+        showUserHeading: true // 💡 스마트폰이 바라보는 방향을 화살표로 렌더링!
+    });
+    map.addControl(geolocate, 'top-right');
+    
+    // GPS 버튼을 눌러 내 위치로 갈 때, 기존에 핀 주변을 빙글빙글 돌던 애니메이션을 강제 종료
+    geolocate.on('trackuserlocationstart', stopRotate);
+// =========================================================
+
+   
+ 
     map.on('mousedown', stopRotate); map.on('touchstart', stopRotate); map.on('wheel', stopRotate); map.on('dragstart', stopRotate);
     
     let clickCount = 0;
