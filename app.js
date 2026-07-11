@@ -201,48 +201,54 @@ document.addEventListener('DOMContentLoaded', () => {
             map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
         }
     });
-// 1. 나침반 컨트롤 추가
-    const nav = new mapboxgl.NavigationControl({ 
-        showZoom: false,
-        showCompass: true 
-    });
+// // 1. 나침반 컨트롤
+    const nav = new mapboxgl.NavigationControl({ showZoom: false, showCompass: true });
     map.addControl(nav, 'top-right');
 
-    // 💡 [추가] 나침반 토글 기능 (기존 시점 기억하기)
-    let savedCamera = null;
-    setTimeout(() => {
-        const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
-        if (compassBtn) {
-            compassBtn.addEventListener('click', () => {
-                // 현재 정북방향(bearing 0, pitch 0)이고, 저장된 시점이 있다면 복귀
-                if (map.getBearing() === 0 && map.getPitch() === 0 && savedCamera) {
-                    setTimeout(() => {
-                        map.easeTo({ bearing: savedCamera.bearing, pitch: savedCamera.pitch, duration: 1000 });
-                        savedCamera = null; // 복귀 후 기록 삭제
-                    }, 50);
-                } else {
-                    // 정북방향이 아니라면 현재 시점을 저장 (Mapbox가 알아서 정북방향으로 리셋함)
-                    savedCamera = { bearing: map.getBearing(), pitch: map.getPitch() };
-                }
-            });
-        }
-    }, 500);
-
-    // 2. 현위치(GPS) 컨트롤 추가
+    // 2. 현위치(GPS) 컨트롤 (💡 방향 화살표 기능 true로 켜짐!)
     const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
         trackUserLocation: true, 
-        showUserHeading: true, // 💡 방향 화살표 기능 다시 켜기! (true로 변경)
-        fitBoundsOptions: {
-            maxZoom: 15,
-            padding: { top: 200, bottom: 100 } // 💡 화면 상하단의 팝업/버튼들을 피해 내 위치가 화면 '시각적 중앙'에 완벽히 오도록 기본 여백 설정
-        }
+        showUserHeading: true
     });
     map.addControl(geolocate, 'top-right');
-    
     geolocate.on('trackuserlocationstart', stopRotate);
-    
-    // (이전에 추가했던 geolocate.on('geolocate') 블록은 충돌을 일으키므로 완전히 삭제되었습니다!)
+
+    // 3. 💡 [핵심] 나침반 탭 동작 가로채기 & 3D 토글 로직
+    setTimeout(() => {
+        const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
+        if (compassBtn) {
+            // '3D' 글씨 엘리먼트 디자인 및 추가
+            const text3D = document.createElement('div');
+            text3D.innerHTML = '3D';
+            text3D.style.cssText = 'position:absolute; right:35px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:900; color:#D32F2F; background:rgba(255,255,255,0.8); padding:2px 5px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.3); display:none; pointer-events:none;';
+            compassBtn.parentElement.appendChild(text3D);
+
+            let is3DMode = false; // 현재 상태 기억
+
+            // Mapbox의 기본 클릭(무조건 평면 리셋)을 가로채서 우리가 원하는 대로 조종합니다.
+            compassBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                e.preventDefault();
+
+                if (!is3DMode) {
+                    // 첫 번째 탭: 정북 방향 & 평면(2D)으로 보기
+                    map.easeTo({ pitch: 0, bearing: 0, duration: 800 });
+                    text3D.style.display = 'none';
+                    is3DMode = true;
+                } else {
+                    // 두 번째 탭: 3D 모드로 기울이기 & 3D 글씨 표시
+                    map.easeTo({ pitch: 65, duration: 800 });
+                    text3D.style.display = 'block';
+                    is3DMode = false;
+                    
+                    // GPS 버튼을 프로그램으로 자동 클릭하여 내 위치와 내 방향(Heading)을 지도에 즉시 동기화
+                    const gpsBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
+                    if(gpsBtn) gpsBtn.click(); 
+                }
+            }, true); 
+        }
+    }, 1000);
    
  
     map.on('mousedown', stopRotate); map.on('touchstart', stopRotate); map.on('wheel', stopRotate); map.on('dragstart', stopRotate);
