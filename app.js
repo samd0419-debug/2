@@ -201,55 +201,67 @@ document.addEventListener('DOMContentLoaded', () => {
             map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
         }
     });
-// // 1. 나침반 컨트롤
+// 1. 나침반 컨트롤
     const nav = new mapboxgl.NavigationControl({ showZoom: false, showCompass: true });
     map.addControl(nav, 'top-right');
 
-    // 2. 현위치(GPS) 컨트롤 (💡 방향 화살표 기능 true로 켜짐!)
+    // 2. 현위치(GPS) 컨트롤 (방향 화살표 기능 true)
     const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
         trackUserLocation: true, 
-        showUserHeading: true
+        showUserHeading: true,
+        fitBoundsOptions: { maxZoom: 15 } // 초기 GPS 잡을 때 너무 확대되지 않게 방지
     });
     map.addControl(geolocate, 'top-right');
     geolocate.on('trackuserlocationstart', stopRotate);
 
-    // 3. 💡 [핵심] 나침반 탭 동작 가로채기 & 3D 토글 로직
+    // 💡 [버그 해결 2] 내 위치 허용 후 Mapbox가 강제로 지도를 평면으로 펴버리는 현상 방어
+    geolocate.on('geolocate', () => {
+        // 위치를 찾은 직후, 3D 모드가 켜져 있는데도 지도가 50도 이하(평면)로 누워있다면 다시 65도로 꺾어버립니다.
+        if (window.is3DModeActive && map.getPitch() < 50) {
+            setTimeout(() => { map.easeTo({ pitch: 65, duration: 800 }); }, 50);
+        }
+    });
+
+    // 3. 나침반 탭 동작 완벽 제어 & 3D 토글 로직
     setTimeout(() => {
         const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
         if (compassBtn) {
-            // '3D' 글씨 엘리먼트 디자인 및 추가
             const text3D = document.createElement('div');
             text3D.innerHTML = '3D';
             text3D.style.cssText = 'position:absolute; right:35px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:900; color:#D32F2F; background:rgba(255,255,255,0.8); padding:2px 5px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.3); display:none; pointer-events:none;';
             compassBtn.parentElement.appendChild(text3D);
 
-            let is3DMode = false; // 현재 상태 기억
+            window.is3DModeActive = false; 
 
-            // Mapbox의 기본 클릭(무조건 평면 리셋)을 가로채서 우리가 원하는 대로 조종합니다.
+            // Mapbox의 기본 클릭 이벤트를 강제로 제압하기 위한 캡처링 이벤트
             compassBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); 
-                e.preventDefault();
-
-                if (!is3DMode) {
-                    // 첫 번째 탭: 정북 방향 & 평면(2D)으로 보기
-                    map.easeTo({ pitch: 0, bearing: 0, duration: 800 });
-                    text3D.style.display = 'none';
-                    is3DMode = true;
-                } else {
-                    // 두 번째 탭: 3D 모드로 기울이기 & 3D 글씨 표시
-                    map.easeTo({ pitch: 65, duration: 800 });
-                    text3D.style.display = 'block';
-                    is3DMode = false;
-                    
-                    // GPS 버튼을 프로그램으로 자동 클릭하여 내 위치와 내 방향(Heading)을 지도에 즉시 동기화
-                    const gpsBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
-                    if(gpsBtn) gpsBtn.click(); 
-                }
+                // 💡 [버그 해결 1] Mapbox의 0도 초기화 로직이 실행되도록 살짝(10ms) 양보한 뒤, 우리의 65도 로직으로 덮어씌움!
+                setTimeout(() => {
+                    if (!window.is3DModeActive) {
+                        // [3D 모드로 켜기]
+                        window.is3DModeActive = true;
+                        text3D.style.display = 'block';
+                        map.easeTo({ pitch: 65, duration: 800 });
+                        
+                        // 스마트 GPS 동기화: 이미 켜져있거나(active), 대기중이거나(waiting), 백그라운드(background) 상태가 '아닐 때만' 클릭
+                        const gpsBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
+                        if (gpsBtn) {
+                            const isGpsOn = gpsBtn.classList.contains('mapboxgl-ctrl-geolocate-active') || 
+                                            gpsBtn.classList.contains('mapboxgl-ctrl-geolocate-waiting') || 
+                                            gpsBtn.classList.contains('mapboxgl-ctrl-geolocate-background');
+                            if (!isGpsOn) gpsBtn.click();
+                        }
+                    } else {
+                        // [2D 모드(정북방향)로 끄기]
+                        window.is3DModeActive = false;
+                        text3D.style.display = 'none';
+                        map.easeTo({ pitch: 0, bearing: 0, duration: 800 });
+                    }
+                }, 10);
             }, true); 
         }
     }, 1000);
-   
  
     map.on('mousedown', stopRotate); map.on('touchstart', stopRotate); map.on('wheel', stopRotate); map.on('dragstart', stopRotate);
     
