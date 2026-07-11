@@ -176,8 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
     map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/outdoors-v12',
-        center: [127.8, 36.3], 
-        zoom: window.innerWidth <= 768 ? 6 : 6.5,
+       center: [128.0, 36.0], 
+        zoom: window.innerWidth <= 768 ? 5.3 : 5.8,
         pitch: 45,
         bearing: 0, 
         projection: 'mercator', 
@@ -293,7 +293,7 @@ function clearMarkers(groupArray) {
 
 function resetMapToDefault() {
     stopRotate();
-    map.flyTo({ center: [127.8, 36.3], zoom: window.innerWidth <= 768 ? 6 : 6.5, pitch: 45, bearing: 0, padding: {bottom: 0}, duration: 1500 });
+    map.flyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: {bottom: 0}, duration: 1500 });
     currentSidebarState = -1; updateSidebarState();
     clearMarkers(myLogMarkers); clearMarkers(m100Markers); clearMarkers(challengeMarkers);
     if(tempMarker) tempMarker.remove();
@@ -346,8 +346,8 @@ function openTab(tabId) {
     
     if(tabId === 'tabChallenge') { renderChallengeMapAndList(); } 
     else if (tabId === 'tabM100') { renderM100Map(); } 
-    else if (tabId === 'tabMyLog') { renderAll(); map.flyTo({ center: [127.8, 36.3], zoom: window.innerWidth <= 768 ? 6 : 6.5, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); } 
-    else if (tabId === 'tabSearch') { map.flyTo({ center: [127.8, 36.3], zoom: window.innerWidth <= 768 ? 6 : 6.5, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); }
+    else if (tabId === 'tabMyLog') { renderAll(); map.flyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); } 
+    else if (tabId === 'tabSearch') { map.flyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); }
 }
 
 function initFABs() {
@@ -581,7 +581,7 @@ function renderM100Map() {
         });
         m100Markers.push(marker);
     });
-    map.flyTo({ center: [127.8, 36.3], zoom: window.innerWidth <= 768 ? 6 : 6.5, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
+    map.flyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
 }
 
 function renderChallengeMapAndList() {
@@ -659,7 +659,7 @@ function renderChallengeMapAndList() {
     
     document.getElementById('challengeCount').innerText = climbedCount;
     if(climbedCount === 0) { list.innerHTML = `<div style="padding: 40px 20px; text-align:center; color:#777;">아직 완등한 명산이 없습니다.</div>`; }
-    map.flyTo({ center: [127.8, 36.3], zoom: window.innerWidth <= 768 ? 6 : 6.5, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
+    map.flyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
 }
 
 let inlineSearchTimer;
