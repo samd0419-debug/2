@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nav = new mapboxgl.NavigationControl({ showZoom: false, showCompass: true });
     map.addControl(nav, 'top-right');
 
-    // 2. 현위치(GPS) 컨트롤 (방향 화살표 및 지도 회전 기능 활성화)
+    // 2. 현위치(GPS) 컨트롤 (💡 Mapbox 순수 센서 기능만 작동하도록 코드 간섭 제거!)
     const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
         trackUserLocation: true, 
@@ -213,37 +213,36 @@ document.addEventListener('DOMContentLoaded', () => {
         fitBoundsOptions: { maxZoom: 15 } 
     });
     map.addControl(geolocate, 'top-right');
-    
-    // 💡 [핵심 추가] 내 위치 추적을 시작(1번 탭)하면, 무조건 3D 모드로 자동 전환!
-    geolocate.on('trackuserlocationstart', () => {
-        stopRotate();
-        window.is3DModeActive = true;
-        const text3D = document.querySelector('.compass-3d-text');
-        if (text3D) text3D.style.display = 'block';
-    });
+    geolocate.on('trackuserlocationstart', stopRotate); // GPS 켤 때 기존 애니메이션 정지
 
-    // 💡 위치를 찾은 후 지도가 평면으로 펴지는 현상 방어 (3D 상태 유지)
-    geolocate.on('geolocate', () => {
-        if (window.is3DModeActive && map.getPitch() < 50) {
-            setTimeout(() => { map.easeTo({ pitch: 65, duration: 800 }); }, 50);
-        }
-    });
-
-    // 버튼 간격 띄우기 CSS
+    // 💡 [디자인 대폭 수정] 버튼 상단 정렬 및 간격 조절
     const style = document.createElement('style');
     style.innerHTML = `
-        .mapboxgl-ctrl-top-right .mapboxgl-ctrl { margin-bottom: 25px !important; }
+        /* 1. 상단 라인 맞추기: 왼쪽의 '3D 위성도' 버튼과 완벽하게 동일한 높이로 끌어올림 */
+        .mapboxgl-ctrl-top-right { top: max(15px, env(safe-area-inset-top)) !important; right: 15px !important; }
+        
+        /* 버튼 둥글기 및 그림자 강조 */
+        .mapboxgl-ctrl-group { border-radius: 12px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.25) !important; overflow: visible !important; }
+        
+        /* 터치가 쉽도록 버튼 크기를 48x48px로 시원하게 유지 */
+        .mapboxgl-ctrl-group > button { width: 48px !important; height: 48px !important; }
+        .mapboxgl-ctrl-icon { transform: scale(1.4); } 
+        
+        /* 2. 나침반과 GPS 버튼 사이 간격 좁히기 (25px -> 12px로 축소) */
+        .mapboxgl-ctrl-top-right .mapboxgl-ctrl { margin-bottom: 12px !important; }
+        
+        /* 3D 텍스트 디자인 */
         .compass-3d-text {
-            position: absolute; right: 35px; top: 50%; transform: translateY(-50%);
-            font-size: 12px; font-weight: 900; color: #D32F2F; 
-            background: rgba(255,255,255,0.8); padding: 2px 5px; 
-            border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); 
-            display: none; pointer-events: none;
+            position: absolute; right: 60px; top: 50%; transform: translateY(-50%);
+            font-size: 15px; font-weight: 900; color: #D32F2F; 
+            background: rgba(255,255,255,0.95); padding: 5px 10px; 
+            border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); 
+            display: none; pointer-events: none; white-space: nowrap;
         }
     `;
     document.head.appendChild(style);
 
-    // 3. 나침반 탭 동작 (수동 2D/3D 전환)
+    // 3. 나침반 탭 동작 (오직 수동으로 2D/3D 전환만 수행)
     setTimeout(() => {
         const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
         if (compassBtn) {
@@ -252,20 +251,21 @@ document.addEventListener('DOMContentLoaded', () => {
             text3D.innerHTML = '3D';
             compassBtn.parentElement.appendChild(text3D);
 
-            if (typeof window.is3DModeActive === 'undefined') window.is3DModeActive = false; 
+            window.is3DModeActive = false; 
 
             compassBtn.addEventListener('click', (e) => {
                 setTimeout(() => {
                     if (!window.is3DModeActive) {
-                        // [3D 모드 켜기]
+                        // [3D 모드 켜기] 지도를 65도로 눕힘
                         window.is3DModeActive = true;
                         text3D.style.display = 'block';
                         map.easeTo({ pitch: 65, duration: 800 });
                     } else {
-                        // [2D 모드 끄기]
+                        // [2D 모드 끄기] 지도를 다시 0도 평면으로
                         window.is3DModeActive = false;
                         text3D.style.display = 'none';
-                        map.easeTo({ pitch: 0, bearing: 0, duration: 800 });
+                        map.easeTo({ pitch: 0, duration: 800 }); 
+                        // Mapbox 기본 나침반이 클릭 시 알아서 정북(bearing:0)으로 돌려주므로 pitch만 0으로 맞춥니다.
                     }
                 }, 10);
             }, true); 
