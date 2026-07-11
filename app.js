@@ -201,24 +201,54 @@ document.addEventListener('DOMContentLoaded', () => {
             map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
         }
     });
-// 1. 나침반 컨트롤 추가 (지도를 회전시키면 나침반 바늘이 돌아가며, 클릭 시 정북방향으로 초기화됨)
+// 1. 나침반 컨트롤 추가
     const nav = new mapboxgl.NavigationControl({ 
-        showZoom: false, // 줌 버튼은 모바일에서 방해되므로 숨김
+        showZoom: false,
         showCompass: true 
     });
     map.addControl(nav, 'top-right');
 
-    // 2. 현위치(GPS) 및 방향 화살표 컨트롤 추가
+    // 💡 [추가] 나침반 토글 기능 (기존 시점 기억하기)
+    let savedCamera = null;
+    setTimeout(() => {
+        const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
+        if (compassBtn) {
+            compassBtn.addEventListener('click', () => {
+                // 현재 정북방향(bearing 0, pitch 0)이고, 저장된 시점이 있다면 복귀
+                if (map.getBearing() === 0 && map.getPitch() === 0 && savedCamera) {
+                    setTimeout(() => {
+                        map.easeTo({ bearing: savedCamera.bearing, pitch: savedCamera.pitch, duration: 1000 });
+                        savedCamera = null; // 복귀 후 기록 삭제
+                    }, 50);
+                } else {
+                    // 정북방향이 아니라면 현재 시점을 저장 (Mapbox가 알아서 정북방향으로 리셋함)
+                    savedCamera = { bearing: map.getBearing(), pitch: map.getPitch() };
+                }
+            });
+        }
+    }, 500);
+
+    // 2. 현위치(GPS) 컨트롤 추가
     const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: true, // 사용자가 이동하면 맵이 따라감
-        showUserHeading: true // 💡 스마트폰이 바라보는 방향을 화살표로 렌더링!
+        trackUserLocation: true, 
+        showUserHeading: false // 팝업 방지를 위해 꺼둠
     });
     map.addControl(geolocate, 'top-right');
     
-    // GPS 버튼을 눌러 내 위치로 갈 때, 기존에 핀 주변을 빙글빙글 돌던 애니메이션을 강제 종료
     geolocate.on('trackuserlocationstart', stopRotate);
-// =========================================================
+
+    // 💡 [추가] GPS 위치 갱신 시, 하단 사이드바를 피해서 화면 '진짜' 중앙에 배치
+    geolocate.on('geolocate', (e) => {
+        const lon = e.coords.longitude;
+        const lat = e.coords.latitude;
+        map.easeTo({
+            center: [lon, lat],
+            zoom: 16, // GPS 탭 시 확대 수준 (필요에 따라 숫자 조절 가능)
+            padding: getMapPadding(), // 사이드바 위쪽으로 중앙 정렬
+            duration: 1000
+        });
+    });// =========================================================
 
    
  
@@ -536,13 +566,17 @@ function renderRecordList() {
                 const key = `${parseFloat(data.lat).toFixed(4)},${parseFloat(data.lng).toFixed(4)}`;
                 if(groupedData[key]) { 
                     const marker = groupedData[key].marker;
-                    // 팝업이 닫혀있을 때만 열도록 수정
                     if(!marker.getPopup().isOpen()) {
+                        // 💡 팝업을 열기 전에 기존의 빨간색 산 이름 라벨을 숨김
+                        const label = marker.getElement().querySelector('.mountain-label');
+                        if (label) label.style.display = 'none';
+
                         marker.togglePopup(); 
                     }
                 }
             });
         };
+
 
         div.innerHTML = `<div class="action-btns"><button class="edit-btn" onclick="editRecord(${data.id}, event)">수정</button><button class="delete-btn" onclick="deleteRecord(${data.id}, event)">삭제</button></div><h4>⛰️ ${data.name} <span style="font-size:0.8em; color:#2E7D32;">${data.alt !== "정보 없음" ? '('+data.alt+'m)' : ''}</span></h4><p>📅 ${data.date}</p>`;
         recordListEl.appendChild(div);
