@@ -474,7 +474,7 @@ function renderAll() {
         });
         popupContent += `</div>`;
         
-        const popup = new mapboxgl.Popup({ offset: [0, -48], anchor: 'bottom', autoPan: false }).setHTML(popupHtml);
+        const popup = new mapboxgl.Popup({ offset: [0, -48], anchor: 'bottom', autoPan: false }).setHTML(popupContent);
         const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([group.lng, group.lat]).setPopup(popup).addTo(map);
 
         el.addEventListener('click', (e) => { 
@@ -558,7 +558,7 @@ function renderM100Map() {
         const el = createMarkerEl('m100');
         const weatherId = 'weather-m100-' + Math.random().toString(36).substr(2, 9);
         
-        const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(`
+        const popup = new mapboxgl.Popup({ offset: [0, -48], anchor: 'bottom', autoPan: false }).setHTML(`
             <div style="text-align:center;">
                 <b style="font-size:1.3em; color:#1565C0;">🇰🇷 ${m.name}</b><br>
                 <span style="font-weight:bold;">${m.alt}m</span> | ${m.region}<br>
@@ -639,7 +639,7 @@ function renderChallengeMapAndList() {
             </div>`;
         }
         
-        const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(popupHtml);
+        const popup = new mapboxgl.Popup({ offset: [0, -48], anchor: 'bottom', autoPan: false }).setHTML(popupHtml);
         popup.on('open', () => fetchWeather(m.lat, m.lng, weatherId));
 
         const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
@@ -740,7 +740,7 @@ window.doTabSearch = function() {
 
                 const el = createMarkerEl('search');
                 // 팝업 안의 정보는 우리가 통제하는 데이터이므로 innerHTML 유지
-                const popup = new mapboxgl.Popup({ offset: [0, -48], autoPan: false }).setHTML(`
+                const popup = new mapboxgl.Popup({ offset: [0, -48], anchor: 'bottom', autoPan: false }).setHTML(`
                     <div style="text-align:center;">
                         <b style="font-size:1.2em;">⛰️ ${place.name}</b>
                         ${infoHtml}
