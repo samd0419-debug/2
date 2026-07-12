@@ -226,19 +226,40 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(style);
 
-    // 3. 🚀 회전 엔진 (기본: 정북 고정)
+ // 3. 🚀 회전 엔진 (최종 완성판: Mapbox 내부 충돌 완벽 방어)
     window.isAutoRotating = false; 
     let isSensorGranted = false;
+    let isMapTouched = false; // Mapbox의 터치 인식 버그를 무시하기 위한 강제 터치 감지
+
+    // 화면을 건드리는 동안에는 회전을 잠시 멈춰서 조작 충돌을 방지합니다.
+    document.getElementById('map').addEventListener('touchstart', () => { isMapTouched = true; }, {passive: true});
+    document.getElementById('map').addEventListener('touchend', () => { setTimeout(() => { isMapTouched = false; }, 1000); }, {passive: true});
+    document.getElementById('map').addEventListener('mousedown', () => { isMapTouched = true; });
+    document.getElementById('map').addEventListener('mouseup', () => { setTimeout(() => { isMapTouched = false; }, 1000); });
 
     function handleOrientation(e) {
         if (!window.isAutoRotating) return; 
         
         let heading = null;
-        if (e.webkitCompassHeading !== undefined) heading = e.webkitCompassHeading;
-        else if (e.alpha !== null) heading = 360 - e.alpha;
+        if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {
+            heading = e.webkitCompassHeading;
+        } else if (e.alpha !== null) {
+            heading = 360 - e.alpha;
+        }
         
-        if (heading !== null && !map.isZooming() && !map.isDragging()) {
-            map.setBearing(heading); 
+        if (heading !== null) {
+            // 💡 나침반 옆 알림창에 현재 돌아가고 있는 각도를 실시간 숫자로 보여줍니다!
+            const indicator = document.querySelector('.compass-mode-indicator');
+            if (indicator && window.isAutoRotating) {
+                indicator.innerHTML = `지도 회전 중 (${Math.round(heading)}°)`;
+                indicator.style.display = 'block';
+                indicator.style.color = '#1976D2';
+            }
+
+            // 지도를 만지고 있지 않을 때만, Mapbox의 방해를 뚫고 강제로 방향을 꽂아넣습니다!
+            if (!isMapTouched) {
+                map.jumpTo({ bearing: heading }); // setBearing보다 강제력이 높은 jumpTo 사용
+            }
         }
     }
 
@@ -258,17 +279,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 indicator.innerHTML = text;
                 indicator.style.color = color;
                 indicator.style.display = 'block';
-                setTimeout(() => { indicator.style.display = 'none'; }, 2000);
+                if (!window.isAutoRotating) {
+                    setTimeout(() => { indicator.style.display = 'none'; }, 2000); // 회전 꺼질 때만 2초 뒤 숨김
+                }
             };
 
             const toggleCompassMode = async (e) => {
-                // 💡 애플 권한 창 씹힘 방지: preventDefault 삭제!
-                
+                // 💡 Mapbox가 기본적으로 지도를 정북으로 펴버리려는 고집을 완벽하게 차단!
+                e.stopPropagation(); 
+                e.preventDefault();
+
                 if (window.isAutoRotating) {
+                    // 모드 1 -> 모드 2 (회전 끄기)
                     window.isAutoRotating = false;
                     map.easeTo({ bearing: 0, duration: 800 });
                     showIndicator('정북 고정 (모드 2)', '#D32F2F');
                 } else {
+                    // 모드 2 -> 모드 1 (회전 켜기)
                     if (!isSensorGranted) {
                         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                             try {
@@ -277,12 +304,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                     isSensorGranted = true;
                                     window.addEventListener('deviceorientation', handleOrientation, true);
                                 } else {
-                                    alert("❌ 센서 권한이 거부되었습니다. (아이폰 설정 > Safari > 동작 및 방향 접근이 켜져 있는지 확인!)");
+                                    alert("❌ 센서 권한이 거부되었습니다.");
                                     return; 
                                 }
                             } catch (err) {
-                                // 💡 이제 가짜 메시지가 아닌 '진짜 애플의 에러 원인'을 화면에 출력합니다.
-                                alert("❌ 애플 센서 차단됨!\n에러 내용: " + err.message + "\n\n1. 홈 화면 앱 말고 '일반 Safari 브라우저'에서 열어주세요.\n2. 사파리가 과거 코드를 기억(캐시)하고 있을 수 있습니다.");
+                                alert("❌ 센서 차단됨: " + err.message);
                                 return; 
                             }
                         } else {
@@ -292,11 +318,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     window.isAutoRotating = true;
-                    showIndicator('지도 회전 (모드 1)', '#1976D2');
+                    showIndicator('지도 회전 대기 중...', '#1976D2');
                 }
             };
 
-            // 💡 iOS의 엄격한 보안을 통과하기 위해, 오직 순수 'click' 이벤트로만 권한을 요청합니다. (touchstart 삭제)
             shield.addEventListener('click', toggleCompassMode);
         }
     }, 1000);
@@ -309,14 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else { clearTimeout(clickTimer); clickTimer = setTimeout(() => { clickCount = 0; }, 500); }
     });
 
-    let touchTapCount = 0; let touchTapTimer = null;
-    document.getElementById('map').addEventListener('touchstart', (e) => {
-        if (e.touches.length > 1) return;
-        touchTapCount++;
-        if (touchTapCount === 3) { resetMapToDefault(); e.preventDefault(); touchTapCount = 0; clearTimeout(touchTapTimer); } 
-        else { clearTimeout(touchTapTimer); touchTapTimer = setTimeout(() => { touchTapCount = 0; }, 500); }
-    }, {passive: false});
-
+    // 화면 리사이즈 및 레이아웃 정리
     window.addEventListener('resize', () => {
         const widgets = ['myLogWidget', 'challengeWidget', 'm100Widget', 'searchWidget'];
         widgets.forEach(id => { const el = document.getElementById(id); if(el) { el.style.top = ''; el.style.left = ''; el.style.right = '15px'; el.style.bottom = ''; } });
