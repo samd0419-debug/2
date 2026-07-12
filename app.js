@@ -1,4 +1,3 @@
-// 💡 [핵심 기술] 애니메이션 보호막: 이동 중일 때 센서가 개입하여 버벅이는 것을 막아줍니다.
 window.isFlying = false;
 let flyTimeout = null;
 
@@ -122,7 +121,6 @@ function startRotate(lng, lat) {
 function rotateCamera() {
     if (!isRotating || !targetCenter) return;
     const currentBearing = map.getBearing();
-    // 💡 비행(이동) 중이 아닐 때만 카메라를 빙글빙글 돌립니다
     if (!window.isFlying) {
         map.jumpTo({ bearing: currentBearing + 0.15, center: targetCenter, padding: getMapPadding() });
     }
@@ -152,7 +150,6 @@ function focusAndRotate(lng, lat, zoomLvl = 14, callback = null) {
     safeFlyTo({ center: [lng, lat], zoom: zoomLvl, pitch: 65, bearing: map.getBearing(), padding: padding, duration: 2500, essential: true });
     
     map.once('moveend', () => { 
-        // 💡 만약 사용자가 '나침반 회전 모드'를 켜두었다면, 목적지 주변을 뱅글뱅글 도는 애니메이션을 생략하여 시야 어지러움을 막습니다.
         if (!window.isAutoRotating) {
             startRotate(lng, lat); 
         }
@@ -212,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     map.addControl(geolocate, 'top-right');
 
-    // 💡 [UI 완벽 개선] 요청하신 강렬한 빨간색 순환 2화살표 디자인 적용
+    // 💡 [UI 완벽 개선] 요청하신 강렬한 빨간색 순환 2화살표 및 X버튼 하단 중앙 정렬
     const style = document.createElement('style');
     style.innerHTML = `
         .mapboxgl-ctrl-top-right { top: max(15px, env(safe-area-inset-top)) !important; right: 15px !important; display: flex !important; flex-direction: column !important; gap: 12px !important; }
@@ -222,24 +219,27 @@ document.addEventListener('DOMContentLoaded', () => {
         .mapboxgl-ctrl-icon { transform: scale(1.4); } 
         .compass-touch-shield { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 9999; cursor: pointer; }
         
-        /* 🚨 완벽한 빨간색 두 개의 순환 화살표 아이콘 */
+        /* 🚨 업로드 이미지 그대로! 굵고 강렬한 빨간색(나침반 바늘색) 두 개의 순환 화살표 */
         .compass-rotate-badge {
-            position: absolute; top: -4px; left: -4px; right: -4px; bottom: -4px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='red' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8'/%3E%3Cpath d='M21 3v5h-5'/%3E%3Cpath d='M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16'/%3E%3Cpath d='M3 21v-5h5'/%3E%3C/svg%3E");
+            position: absolute; top: -6px; left: -6px; right: -6px; bottom: -6px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e00000'%3E%3Cpath d='M12 2.75a9.25 9.25 0 0 0-6.84 2.5l-2.2-2.2A.75.75 0 0 0 1.7 3.6v5.6c0 .41.34.75.75.75h5.6a.75.75 0 0 0 .53-1.28l-2.02-2.02a7.75 7.75 0 0 1 10.7 11.1l1.06 1.06A9.25 9.25 0 0 0 12 2.75zM21.55 14.05h-5.6a.75.75 0 0 0-.53 1.28l2.02 2.02a7.75 7.75 0 0 1-10.7-11.1l-1.06-1.06a9.25 9.25 0 0 0 6.16 16.06 9.25 9.25 0 0 0 6.84-2.5l2.2 2.2a.75.75 0 0 0 1.22-.53v-5.6a.75.75 0 0 0-.75-.75z'/%3E%3C/svg%3E");
             background-size: cover; opacity: 0; transition: opacity 0.3s; pointer-events: none;
         }
         .mapboxgl-ctrl-compass.is-rotating .compass-rotate-badge { opacity: 1; }
         
+        /* 🚨 사진 닫기(X) 버튼을 화면 맨 아래 가운데로 크게 이동 (아이폰 UI 스타일) */
         #photoOverlay span[onclick*="close"], #photoOverlay .close, .close-photo {
             position: absolute !important;
-            top: max(45px, calc(env(safe-area-inset-top) + 20px)) !important;
-            right: 15px !important;
+            top: auto !important; /* 상단 위치 해제 */
+            bottom: max(40px, calc(env(safe-area-inset-bottom) + 30px)) !important; /* 하단으로 내림 */
+            left: 50% !important; /* 중앙 정렬 */
+            transform: translateX(-50%) !important; /* 완벽한 중앙 교정 */
             font-size: 32px !important; 
-            width: 55px !important; height: 55px !important; 
-            background: rgba(0,0,0,0.75) !important; color: #fff !important;
+            width: 65px !important; height: 65px !important; 
+            background: rgba(0,0,0,0.85) !important; color: #fff !important;
             border-radius: 50% !important; z-index: 999999 !important;
             display: flex !important; justify-content: center !important; align-items: center !important;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important; line-height: 1 !important; cursor: pointer !important; text-shadow: none !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important; line-height: 1 !important; cursor: pointer !important; text-shadow: none !important;
         }
         #expandedPhoto { will-change: transform; transform-origin: center center; }
     `;
@@ -256,7 +256,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('map').addEventListener('mouseup', () => { setTimeout(() => { isMapTouched = false; }, 1000); });
 
     function smoothRotateLoop() {
-        // 💡 안전장치 추가: isFlying 상태일 때는 회전 엔진을 멈춰서 카메라 이동을 방해하지 않게 합니다.
         if (window.isAutoRotating && !isMapTouched && !window.isFlying && targetHeading !== null) {
             let diff = targetHeading - currentHeading;
             while (diff < -180) diff += 360;
@@ -317,13 +316,12 @@ document.addEventListener('DOMContentLoaded', () => {
             shield.addEventListener('click', toggleCompassMode);
         }
 
-        // 💡 GPS 버튼 원터치 보호: 누르면 회전 엔진이 잠깐 멈추면서 현재 위치로 예쁘게 날아갑니다.
         const gpsBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
         if (gpsBtn) {
             gpsBtn.addEventListener('click', () => {
                 window.isFlying = true;
                 clearTimeout(flyTimeout);
-                flyTimeout = setTimeout(() => { window.isFlying = false; }, 1600); // 1.5초 애니메이션 보장
+                flyTimeout = setTimeout(() => { window.isFlying = false; }, 1600); 
             });
         }
     }, 1000);
@@ -404,16 +402,12 @@ function clearMarkers(groupArray) {
     groupArray.length = 0;
 }
 
-// 💡 3번 탭하면 나침반, GPS, 화면까지 모든 것을 최초의 상태로 완벽히 리셋!
 function resetMapToDefault() {
     stopRotate();
-    
-    // 1. 나침반 회전 모드 강제 종료
     window.isAutoRotating = false;
     const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
     if (compassBtn) compassBtn.classList.remove('is-rotating');
     
-    // 2. GPS 기능 끄기 (이미 켜져있다면 네이티브 클릭으로 정상 종료)
     const gpsBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
     if (gpsBtn && (gpsBtn.classList.contains('mapboxgl-ctrl-geolocate-active') || gpsBtn.classList.contains('mapboxgl-ctrl-geolocate-background'))) {
         gpsBtn.click(); 
