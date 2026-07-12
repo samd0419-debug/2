@@ -182,8 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
         style: 'mapbox://styles/mapbox/outdoors-v12',
         center: [128.0, 36.0], 
         zoom: window.innerWidth <= 768 ? 5.3 : 5.8,
-        pitch: 45,
-        bearing: 0, 
+        pitch: 45, // 기본 입체 화면 대기
+        bearing: 0, // 정북 방향 고정
         projection: 'mercator', 
         doubleClickZoom: false
     });
@@ -201,6 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 1. 나침반 & GPS 
     const nav = new mapboxgl.NavigationControl({ showZoom: false, showCompass: true });
     map.addControl(nav, 'top-right');
 
@@ -212,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     map.addControl(geolocate, 'top-right');
 
+    // 2. 디자인 및 투명 방패
     const style = document.createElement('style');
     style.innerHTML = `
         .mapboxgl-ctrl-top-right { top: max(15px, env(safe-area-inset-top)) !important; right: 15px !important; display: flex !important; flex-direction: column !important; gap: 12px !important; }
@@ -224,36 +226,23 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(style);
 
-    // 🚨 정밀 진단용 콘솔 패널 (화면 좌측 상단)
-    const debugPanel = document.createElement('div');
-    debugPanel.style.cssText = 'position:fixed; top:80px; left:15px; background:rgba(0,0,0,0.8); color:#0f0; padding:10px; border-radius:8px; z-index:99999; font-size:14px; font-weight:bold; pointer-events:none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);';
-    debugPanel.innerHTML = '센서 대기중...';
-    document.body.appendChild(debugPanel);
-
+    // 3. 🚀 회전 엔진 (기본: 정북 고정)
     window.isAutoRotating = false; 
+    let isSensorGranted = false;
 
     function handleOrientation(e) {
-        if (!window.isAutoRotating) {
-            debugPanel.innerHTML = '모드 2 (정북 고정됨)';
-            return;
-        }
+        if (!window.isAutoRotating) return; 
         
         let heading = null;
-        if (e.webkitCompassHeading !== undefined) {
-            heading = e.webkitCompassHeading;
-            debugPanel.innerHTML = `🟢 iOS 센서 수신중!<br>방향: ${Math.round(heading)}°`;
-        } else if (e.alpha !== null) {
-            heading = 360 - e.alpha;
-            debugPanel.innerHTML = `🟢 안드로이드 수신중!<br>방향: ${Math.round(heading)}°`;
-        } else {
-            debugPanel.innerHTML = '🔴 센서 연결됨, 하지만 값 없음!<br>(HTTPS 보안 문제 확률 높음)';
-        }
+        if (e.webkitCompassHeading !== undefined) heading = e.webkitCompassHeading;
+        else if (e.alpha !== null) heading = 360 - e.alpha;
         
-        if (heading !== null) {
+        if (heading !== null && !map.isZooming() && !map.isDragging()) {
             map.setBearing(heading); 
         }
     }
 
+    // 나침반 버튼 로직 (진단 패널 제거 및 깔끔한 알림 적용)
     setTimeout(() => {
         const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
         if (compassBtn) {
@@ -272,34 +261,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => { indicator.style.display = 'none'; }, 2000);
             };
 
-            const toggleCompassMode = (e) => {
+            const toggleCompassMode = async (e) => {
                 e.preventDefault(); e.stopPropagation();
 
                 if (window.isAutoRotating) {
+                    // 모드 1 -> 모드 2 (회전 끄기)
                     window.isAutoRotating = false;
                     map.easeTo({ bearing: 0, duration: 800 });
                     showIndicator('정북 고정 (모드 2)', '#D32F2F');
                 } else {
+                    // 모드 2 -> 모드 1 (회전 켜기)
+                    if (!isSensorGranted) {
+                        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                            try {
+                                const permission = await DeviceOrientationEvent.requestPermission();
+                                if (permission === 'granted') {
+                                    isSensorGranted = true;
+                                    window.addEventListener('deviceorientation', handleOrientation, true);
+                                } else {
+                                    alert("방향 센서 접근이 거부되었습니다.\n아이폰 [설정] - [Safari] - [동작 및 방향 접근]을 켜주세요.");
+                                    return; 
+                                }
+                            } catch (err) {
+                                // 💡 로컬 테스트 환경(http)에서 알림
+                                alert("현재 임시 테스트 환경(http)이라 애플 보안 정책상 나침반이 작동하지 않습니다.\n\n정식 호스팅(https) 서버에 올리시면 지도가 정상적으로 회전합니다!");
+                                return; 
+                            }
+                        } else {
+                            isSensorGranted = true;
+                            window.addEventListener('deviceorientation', handleOrientation, true);
+                        }
+                    }
+
                     window.isAutoRotating = true;
                     showIndicator('지도 회전 (모드 1)', '#1976D2');
-                    
-                    // 💡 애플 권한 요청 및 진단
-                    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                        DeviceOrientationEvent.requestPermission()
-                        .then(response => {
-                            if (response == 'granted') {
-                                debugPanel.innerHTML = '🟡 권한 허용됨. 값 대기중...';
-                                window.addEventListener('deviceorientation', handleOrientation, true);
-                            } else {
-                                debugPanel.innerHTML = `🔴 권한 거부됨 (${response})`;
-                            }
-                        })
-                        .catch(err => {
-                            debugPanel.innerHTML = `🔴 권한 에러!<br>HTTPS 환경이 아니거나<br>설정에서 막힘.`;
-                        });
-                    } else {
-                        window.addEventListener('deviceorientation', handleOrientation, true);
-                    }
                 }
             };
 
@@ -308,13 +303,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 1000);
     
-    // (이하 리사이즈 및 초기화 코드는 동일)
+    // 조작 제어 공통
     let clickCount = 0; let clickTimer = null;
     map.on('click', (e) => {
         clickCount++;
         if (clickCount === 3) { resetMapToDefault(); clickCount = 0; clearTimeout(clickTimer); } 
         else { clearTimeout(clickTimer); clickTimer = setTimeout(() => { clickCount = 0; }, 500); }
     });
+
+    let touchTapCount = 0; let touchTapTimer = null;
+    document.getElementById('map').addEventListener('touchstart', (e) => {
+        if (e.touches.length > 1) return;
+        touchTapCount++;
+        if (touchTapCount === 3) { resetMapToDefault(); e.preventDefault(); touchTapCount = 0; clearTimeout(touchTapTimer); } 
+        else { clearTimeout(touchTapTimer); touchTapTimer = setTimeout(() => { touchTapCount = 0; }, 500); }
+    }, {passive: false});
 
     window.addEventListener('resize', () => {
         const widgets = ['myLogWidget', 'challengeWidget', 'm100Widget', 'searchWidget'];
