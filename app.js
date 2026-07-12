@@ -182,8 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
         style: 'mapbox://styles/mapbox/outdoors-v12',
         center: [128.0, 36.0], 
         zoom: window.innerWidth <= 768 ? 5.3 : 5.8,
-        pitch: 45, // 💡 기존의 예쁜 3D 입체 각도 시작 상태 유지
-        bearing: 0, 
+        pitch: 45, // 기본 입체 화면 대기
+        bearing: 0, // 정북 방향 고정
         projection: 'mercator', 
         doubleClickZoom: false
     });
@@ -201,11 +201,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 1. 나침반 컨트롤
+    // 1. 나침반 & GPS 
     const nav = new mapboxgl.NavigationControl({ showZoom: false, showCompass: true });
     map.addControl(nav, 'top-right');
 
-    // 2. 현위치(GPS) 컨트롤 (💡 기본적으로 사용자가 누르기 전까진 OFF 상태로 대기)
     const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
         trackUserLocation: true, 
@@ -214,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     map.addControl(geolocate, 'top-right');
 
-    // 3. 디자인 설정 (상단 정렬 및 투명 방패)
+    // 2. 디자인 및 투명 방패
     const style = document.createElement('style');
     style.innerHTML = `
         .mapboxgl-ctrl-top-right { top: max(15px, env(safe-area-inset-top)) !important; right: 15px !important; display: flex !important; flex-direction: column !important; gap: 12px !important; }
@@ -223,15 +222,13 @@ document.addEventListener('DOMContentLoaded', () => {
         .mapboxgl-ctrl-group > button { width: 48px !important; height: 48px !important; display: flex !important; justify-content: center !important; align-items: center !important; position: relative; }
         .mapboxgl-ctrl-icon { transform: scale(1.4); } 
         .compass-touch-shield { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 9999; cursor: pointer; }
-        
-        /* 현재 모드를 알려주는 팝업 텍스트 */
         .compass-mode-indicator { position: absolute; right: 60px; top: 50%; transform: translateY(-50%); font-size: 13px; font-weight: 900; background: rgba(255,255,255,0.95); padding: 5px 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); pointer-events: none; white-space: nowrap; display: none; }
     `;
     document.head.appendChild(style);
 
-    // 4. 🚀 지도 회전 엔진 초기 상태 설정 (요청사항 반영)
-    window.isAutoRotating = false; // 💡 시작 시 나침반 모드 2 (정북 고정) 상태로 출발!
-    let isEngineRunning = false;
+    // 3. 🚀 회전 엔진 & 권한 진단기
+    window.isAutoRotating = false; // 기본 정북 고정
+    let isSensorGranted = false;
 
     function handleOrientation(e) {
         if (!window.isAutoRotating) return; 
@@ -245,23 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 센서 가동 함수
-    function startOrientationSensor() {
-        if (isEngineRunning) return;
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission().then(permissionState => {
-                if (permissionState === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientation, true);
-                    isEngineRunning = true;
-                }
-            }).catch(console.error);
-        } else {
-            window.addEventListener('deviceorientation', handleOrientation, true);
-            isEngineRunning = true;
-        }
-    }
-
-    // 5. 나침반 버튼 탭 로직 (모드 1 ↔ 모드 2 전환)
+    // 나침반 버튼 로직
     setTimeout(() => {
         const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
         if (compassBtn) {
@@ -280,56 +261,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => { indicator.style.display = 'none'; }, 2000);
             };
 
-            const toggleCompassMode = (e) => {
+            const toggleCompassMode = async (e) => {
                 e.preventDefault(); e.stopPropagation();
 
                 if (window.isAutoRotating) {
-                    // 현재 [모드 1] -> 탭하면 [모드 2 (정북 고정)]
+                    // 모드 1 -> 모드 2 (회전 끄기)
                     window.isAutoRotating = false;
                     map.easeTo({ bearing: 0, duration: 800 });
-                    showIndicator('정북 고정 (모드 2)', '#D32F2F'); // 빨간색 알림
+                    showIndicator('정북 고정 (모드 2)', '#D32F2F');
                 } else {
-                    // 현재 [모드 2] -> 탭하면 [모드 1 (지도 회전)]
+                    // 모드 2 -> 모드 1 (회전 켜기 + 권한 진단)
+                    if (!isSensorGranted) {
+                        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                            try {
+                                const permission = await DeviceOrientationEvent.requestPermission();
+                                if (permission === 'granted') {
+                                    isSensorGranted = true;
+                                    window.addEventListener('deviceorientation', handleOrientation, true);
+                                } else {
+                                    alert("❌ 방향 센서 접근이 거부되었습니다.\n아이폰 [설정] - [Safari] - [동작 및 방향 접근]이 켜져 있는지 확인해주세요.");
+                                    return; // 회전 모드 진입 취소
+                                }
+                            } catch (err) {
+                                alert("❌ 센서 접근 실패!\n(원인: 현재 연결이 https 보안 연결이 아니거나, 기기에서 지원하지 않습니다.)");
+                                return; // 회전 모드 진입 취소
+                            }
+                        } else {
+                            // 안드로이드 등 구형 기기
+                            isSensorGranted = true;
+                            window.addEventListener('deviceorientation', handleOrientation, true);
+                        }
+                    }
+
+                    // 권한 획득 성공 시 회전 시작
                     window.isAutoRotating = true;
-                    startOrientationSensor(); // 💡 회전 모드를 켤 때 스마트폰 센서 요청을 구동시킵니다.
-                    showIndicator('지도 회전 (모드 1)', '#1976D2'); // 파란색 알림
+                    showIndicator('지도 회전 (모드 1)', '#1976D2');
                 }
             };
 
-            shield.addEventListener('touchstart', toggleCompassMode, { passive: false });
             shield.addEventListener('click', toggleCompassMode);
+            shield.addEventListener('touchstart', toggleCompassMode, { passive: false });
         }
     }, 1000);
     
-    // 트리플 탭 리셋 기능 (유지)
-    let clickCount = 0;
-    let clickTimer = null;
-    map.on('click', function(e) {
+    // 조작 제어 공통
+    let clickCount = 0; let clickTimer = null;
+    map.on('click', (e) => {
         clickCount++;
-        if (clickCount === 3) {
-            resetMapToDefault();
-            clickCount = 0;
-            clearTimeout(clickTimer);
-        } else {
-            clearTimeout(clickTimer);
-            clickTimer = setTimeout(() => { clickCount = 0; }, 500);
-        }
+        if (clickCount === 3) { resetMapToDefault(); clickCount = 0; clearTimeout(clickTimer); } 
+        else { clearTimeout(clickTimer); clickTimer = setTimeout(() => { clickCount = 0; }, 500); }
     });
 
-    let touchTapCount = 0;
-    let touchTapTimer = null;
-    document.getElementById('map').addEventListener('touchstart', function(e) {
+    let touchTapCount = 0; let touchTapTimer = null;
+    document.getElementById('map').addEventListener('touchstart', (e) => {
         if (e.touches.length > 1) return;
         touchTapCount++;
-        if (touchTapCount === 3) {
-            resetMapToDefault();
-            e.preventDefault();
-            touchTapCount = 0;
-            clearTimeout(touchTapTimer);
-        } else {
-            clearTimeout(touchTapTimer);
-            touchTapTimer = setTimeout(() => { touchTapCount = 0; }, 500);
-        }
+        if (touchTapCount === 3) { resetMapToDefault(); e.preventDefault(); touchTapCount = 0; clearTimeout(touchTapTimer); } 
+        else { clearTimeout(touchTapTimer); touchTapTimer = setTimeout(() => { touchTapCount = 0; }, 500); }
     }, {passive: false});
 
     window.addEventListener('resize', () => {
