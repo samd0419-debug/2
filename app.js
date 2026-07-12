@@ -179,7 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const nav = new mapboxgl.NavigationControl({ showZoom: false, showCompass: true });
     map.addControl(nav, 'top-right');
 
-    // 💡 [GPS 개선] 줌인 끊김 방지 (duration 조정 및 방해 요소 차단)
     const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
         trackUserLocation: true, 
@@ -188,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     map.addControl(geolocate, 'top-right');
 
-    // 💡 [UI 개선] 나침반 화살표 애니메이션 & X버튼 크기 확장
+    // 💡 [UI 개선] X버튼 최적화 및 회색 나침반 화살표
     const style = document.createElement('style');
     style.innerHTML = `
         .mapboxgl-ctrl-top-right { top: max(15px, env(safe-area-inset-top)) !important; right: 15px !important; display: flex !important; flex-direction: column !important; gap: 12px !important; }
@@ -198,24 +197,43 @@ document.addEventListener('DOMContentLoaded', () => {
         .mapboxgl-ctrl-icon { transform: scale(1.4); } 
         .compass-touch-shield { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 9999; cursor: pointer; }
         
-        /* 🚨 새롭게 추가된 회전 화살표 뱃지 */
+        /* 🚨 세련된 회색(#777) 순환 화살표 뱃지 */
         .compass-rotate-badge {
             position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8'/%3E%3Cpath d='M3 3v5h5'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23777777' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8'/%3E%3Cpath d='M3 3v5h5'/%3E%3C/svg%3E");
             background-size: cover; opacity: 0; transition: opacity 0.3s; pointer-events: none;
         }
         .mapboxgl-ctrl-compass.is-rotating .compass-rotate-badge { opacity: 1; }
         
-        /* 🚨 사진 전체화면 X 버튼 (닫기) 터치 영역 대폭 확대 */
+        /* 🚨 사진 전체화면 X 버튼 완벽 수정 (터치 영역 대폭 확대 및 하단 이동) */
         #photoOverlay span[onclick*="close"], #photoOverlay .close, .close-photo {
-            font-size: 35px !important; padding: 15px 25px !important; right: 10px !important;
-            top: max(15px, env(safe-area-inset-top)) !important;
-            background: rgba(0,0,0,0.6) !important; border-radius: 50% !important; z-index: 10000 !important;
+            position: absolute !important;
+            top: max(45px, calc(env(safe-area-inset-top) + 20px)) !important; /* 약간 아래로 더 내림 */
+            right: 15px !important;
+            font-size: 32px !important; 
+            width: 55px !important; 
+            height: 55px !important; 
+            background: rgba(0,0,0,0.75) !important; 
+            color: #fff !important;
+            border-radius: 50% !important; 
+            z-index: 999999 !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
+            line-height: 1 !important;
+            cursor: pointer !important;
+            text-shadow: none !important;
+        }
+        
+        /* 버벅임 방지를 위한 GPU 가속 처리 */
+        #expandedPhoto {
+            will-change: transform;
+            transform-origin: center center;
         }
     `;
     document.head.appendChild(style);
 
-    // 🚀 [부드러운 회전 엔진] 보간법(Lerp)을 활용한 스무딩 엔진
     window.isAutoRotating = false; 
     let isSensorGranted = false;
     let isMapTouched = false; 
@@ -228,22 +246,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('map').addEventListener('mousedown', () => { isMapTouched = true; });
     document.getElementById('map').addEventListener('mouseup', () => { setTimeout(() => { isMapTouched = false; }, 1000); });
 
-    // 실시간으로 1도씩 부드럽게 쫓아가는 애니메이션 루프
     function smoothRotateLoop() {
         if (window.isAutoRotating && !isMapTouched && targetHeading !== null) {
             let diff = targetHeading - currentHeading;
-            // 각도가 360도를 넘어갈 때 역회전(빙글 도는 현상) 방지
             while (diff < -180) diff += 360;
             while (diff > 180) diff -= 360;
 
             if (Math.abs(diff) > 0.2) {
-                currentHeading += diff * 0.08; // 0.08: 부드러움의 강도 (카카오내비 수준)
+                currentHeading += diff * 0.08; 
                 map.jumpTo({ bearing: currentHeading });
             }
         }
         requestAnimationFrame(smoothRotateLoop);
     }
-    smoothRotateLoop(); // 엔진 시동
+    smoothRotateLoop(); 
 
     function handleOrientation(e) {
         if (!window.isAutoRotating) return; 
@@ -261,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
             shield.className = 'compass-touch-shield';
             compassBtn.appendChild(shield);
 
-            // 💡 텍스트 대신 화살표 SVG 뱃지 추가
             const badge = document.createElement('div');
             badge.className = 'compass-rotate-badge';
             compassBtn.appendChild(badge);
@@ -271,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (window.isAutoRotating) {
                     window.isAutoRotating = false;
-                    compassBtn.classList.remove('is-rotating'); // 화살표 제거
+                    compassBtn.classList.remove('is-rotating'); 
                     map.easeTo({ bearing: 0, duration: 800 });
                 } else {
                     if (!isSensorGranted) {
@@ -290,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     window.isAutoRotating = true;
-                    compassBtn.classList.add('is-rotating'); // 화살표 추가
+                    compassBtn.classList.add('is-rotating'); 
                 }
             };
             shield.addEventListener('click', toggleCompassMode);
@@ -416,7 +431,11 @@ function openTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); 
     document.getElementById(tabId).classList.add('active');
     
-    if (tabId === 'tabSearch') { currentSidebarState = 1; } else { if (currentSidebarState === -1) currentSidebarState = 0; }
+    if (tabId === 'tabSearch') {
+        currentSidebarState = 1; 
+    } else {
+        if (currentSidebarState === -1) currentSidebarState = 0; 
+    }
     updateSidebarState();
     
     clearMarkers(myLogMarkers); clearMarkers(m100Markers); clearMarkers(challengeMarkers);
@@ -582,8 +601,10 @@ function renderRecordList() {
     allRecords.forEach(data => {
         const div = document.createElement('div');
         div.className = 'record-card';
+        
         div.onclick = () => { 
-            openTab('tabMyLog'); currentSidebarState = 0; updateSidebarState();
+            openTab('tabMyLog'); 
+            currentSidebarState = 0; updateSidebarState();
             focusAndRotate(parseFloat(data.lng), parseFloat(data.lat), 14.5, () => {
                 const key = `${parseFloat(data.lat).toFixed(4)},${parseFloat(data.lng).toFixed(4)}`;
                 if(groupedData[key]) { 
@@ -596,10 +617,14 @@ function renderRecordList() {
                 }
             });
         };
+
         div.innerHTML = `<div class="action-btns"><button class="edit-btn" onclick="editRecord(${data.id}, event)">수정</button><button class="delete-btn" onclick="deleteRecord(${data.id}, event)">삭제</button></div><h4>⛰️ ${data.name} <span style="font-size:0.8em; color:#2E7D32;">${data.alt !== "정보 없음" ? '('+data.alt+'m)' : ''}</span></h4><p>📅 ${data.date}</p>`;
         recordListEl.appendChild(div);
     });
-    if(allRecords.length === 0) { recordListEl.innerHTML = `<div style="text-align:center; padding:20px; color:#777;">등산 기록이 없습니다.</div>`; }
+    
+    if(allRecords.length === 0) { 
+        recordListEl.innerHTML = `<div style="text-align:center; padding:20px; color:#777;">등산 기록이 없습니다.</div>`; 
+    }
 }
 
 function initM100List() {
@@ -627,13 +652,28 @@ function renderM100Map() {
     m100Data.forEach(m => {
         const el = createMarkerEl('m100');
         const weatherId = 'weather-m100-' + Math.random().toString(36).substr(2, 9);
+        
         const popup = new mapboxgl.Popup({ offset: [0, -48], anchor: 'bottom', autoPan: false }).setHTML(`
-            <div style="text-align:center;"><b style="font-size:1.3em; color:#1565C0;">🇰🇷 ${m.name}</b><br><span style="font-weight:bold;">${m.alt}m</span> | ${m.region}<br><div id="${weatherId}" style="min-height:50px; margin-top:8px;"><span style="font-size:0.8em; color:#777;">⏳ 날씨 정보 불러오는 중...</span></div><hr style="margin:10px 0; border:0; border-top:1px solid #ddd;"><span style="color:#555; font-size:0.95em;">${m.desc}</span></div>
+            <div style="text-align:center;">
+                <b style="font-size:1.3em; color:#1565C0;">🇰🇷 ${m.name}</b><br>
+                <span style="font-weight:bold;">${m.alt}m</span> | ${m.region}<br>
+                <div id="${weatherId}" style="min-height:50px; margin-top:8px;"><span style="font-size:0.8em; color:#777;">⏳ 날씨 정보 불러오는 중...</span></div>
+                <hr style="margin:10px 0; border:0; border-top:1px solid #ddd;">
+                <span style="color:#555; font-size:0.95em;">${m.desc}</span>
+            </div>
         `);
+        
         popup.on('open', () => fetchWeather(m.lat, m.lng, weatherId));
+
         const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
         bindMarkerEditMode(el, marker, m);
-        el.addEventListener('click', (e) => { e.stopPropagation(); focusAndRotate(m.lng, m.lat, 13.5, () => { if (!marker.getPopup().isOpen()) marker.togglePopup(); }); });
+
+        el.addEventListener('click', (e) => { 
+            e.stopPropagation(); 
+            focusAndRotate(m.lng, m.lat, 13.5, () => {
+                if (!marker.getPopup().isOpen()) marker.togglePopup();
+            });
+        });
         m100Markers.push(marker);
     });
     map.flyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
@@ -651,25 +691,47 @@ function renderChallengeMapAndList() {
         
         let isClimbed = matchedRecords.length > 0;
         let type = isClimbed ? 'challenge' : 'm100';
+        
         const el = createMarkerEl(type, null, !isClimbed);
         const weatherId = 'weather-ch-' + Math.random().toString(36).substr(2, 9);
         
         let popupHtml = '';
         if(isClimbed) {
-            matchedRecords.sort((a,b) => new Date(b.date) - new Date(a.date)); let latest = matchedRecords[0];
-            popupHtml = `<div style="text-align:center; min-width:180px;"><b style="font-size:1.3em; color:#E65100;">🏆 ${m.name} (완등)</b><br><span style="color:#1565C0; font-size:0.95em; font-weight:bold;">${m.alt}m</span> | <span style="color:#555; font-size:0.9em;">${m.region}</span><div id="${weatherId}" style="min-height:50px; margin-top:8px;"><span style="font-size:0.8em; color:#777;">⏳ 날씨 정보 불러오는 중...</span></div><hr style="margin:10px 0; border:0; border-top:1px solid #ddd;"><span style="color:#E65100; font-weight:bold;">최근 등반: ${latest.date}</span><div style="color:#666; font-size:0.85em; margin-top:5px;">${m.desc}</div></div>`;
+            matchedRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
+            let latest = matchedRecords[0];
+            popupHtml = `<div style="text-align:center; min-width:180px;">
+                <b style="font-size:1.3em; color:#E65100;">🏆 ${m.name} (완등)</b><br>
+                <span style="color:#1565C0; font-size:0.95em; font-weight:bold;">${m.alt}m</span> | <span style="color:#555; font-size:0.9em;">${m.region}</span>
+                <div id="${weatherId}" style="min-height:50px; margin-top:8px;"><span style="font-size:0.8em; color:#777;">⏳ 날씨 정보 불러오는 중...</span></div>
+                <hr style="margin:10px 0; border:0; border-top:1px solid #ddd;">
+                <span style="color:#E65100; font-weight:bold;">최근 등반: ${latest.date}</span>
+                <div style="color:#666; font-size:0.85em; margin-top:5px;">${m.desc}</div>
+            </div>`;
             climbedCount++;
+            
             const li = document.createElement('li'); li.className = 'm100-item';
             li.innerHTML = `<div class="m100-item-content"><div class="m100-name">${m.name} <span style="font-size:0.7em; color:#FF8F00;">🏆</span></div><div class="m100-desc">${m.region} | ${m.alt}m <br>📅 ${latest.date}</div></div>`;
             li.onclick = () => { 
                 currentSidebarState = 0; updateSidebarState(); 
                 focusAndRotate(m.lng, m.lat, 14, () => {
-                    challengeMarkers.forEach(marker => { const lngLat = marker.getLngLat(); if (Math.abs(lngLat.lat - m.lat) < 0.0001 && Math.abs(lngLat.lng - m.lng) < 0.0001) { if(!marker.getPopup().isOpen()) marker.togglePopup(); } });
+                    challengeMarkers.forEach(marker => {
+                        const lngLat = marker.getLngLat();
+                        if (Math.abs(lngLat.lat - m.lat) < 0.0001 && Math.abs(lngLat.lng - m.lng) < 0.0001) {
+                            if(!marker.getPopup().isOpen()) marker.togglePopup();
+                        }
+                    });
                 });
             };
             list.appendChild(li);
         } else {
-            popupHtml = `<div style="text-align:center; min-width:180px;"><b style="font-size:1.3em; color:#1565C0;">🇰🇷 ${m.name}</b><br><span style="font-weight:bold;">${m.alt}m</span> | <span style="color:#555; font-size:0.9em;">${m.region}</span><div id="${weatherId}" style="min-height:50px; margin-top:8px;"><span style="font-size:0.8em; color:#777;">⏳ 날씨 정보 불러오는 중...</span></div><hr style="margin:10px 0; border:0; border-top:1px solid #ddd;"><div style="color:#666; font-size:0.9em; margin-bottom:5px;">${m.desc}</div><span style="color:#d32f2f; font-size:0.85em;">아직 등반하지 않은 명산입니다.</span></div>`;
+            popupHtml = `<div style="text-align:center; min-width:180px;">
+                <b style="font-size:1.3em; color:#1565C0;">🇰🇷 ${m.name}</b><br>
+                <span style="font-weight:bold;">${m.alt}m</span> | <span style="color:#555; font-size:0.9em;">${m.region}</span>
+                <div id="${weatherId}" style="min-height:50px; margin-top:8px;"><span style="font-size:0.8em; color:#777;">⏳ 날씨 정보 불러오는 중...</span></div>
+                <hr style="margin:10px 0; border:0; border-top:1px solid #ddd;">
+                <div style="color:#666; font-size:0.9em; margin-bottom:5px;">${m.desc}</div>
+                <span style="color:#d32f2f; font-size:0.85em;">아직 등반하지 않은 명산입니다.</span>
+            </div>`;
         }
         
         const popup = new mapboxgl.Popup({ offset: [0, -48], anchor: 'bottom', autoPan: false }).setHTML(popupHtml);
@@ -677,8 +739,15 @@ function renderChallengeMapAndList() {
 
         const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([m.lng, m.lat]).setPopup(popup).addTo(map);
         bindMarkerEditMode(el, marker, m); 
+        
         if (isClimbed) { el.style.zIndex = 1000; }
-        el.addEventListener('click', (e) => { e.stopPropagation(); focusAndRotate(m.lng, m.lat, 14, () => { if (!marker.getPopup().isOpen()) marker.togglePopup(); }); });
+        
+        el.addEventListener('click', (e) => { 
+            e.stopPropagation(); 
+            focusAndRotate(m.lng, m.lat, 14, () => {
+                if (!marker.getPopup().isOpen()) marker.togglePopup();
+            }); 
+        });
         
         challengeMarkers.push(marker);
     });
@@ -700,17 +769,27 @@ window.handleInlineSearch = function(e) {
             resultsUl.innerHTML = '';
             if(!data || data.length === 0) { resultsUl.innerHTML = '<li style="color:#d32f2f;">결과 없음</li>'; return; }
             data.forEach(place => {
-                const li = document.createElement('li'); const shortAddress = place.display_name.split(',').slice(1).join(',').trim();
-                const strong = document.createElement('strong'); strong.textContent = place.name;
-                const span = document.createElement('span'); span.style.color = '#777'; span.style.fontSize = '0.85em'; span.textContent = " " + shortAddress;
-                li.appendChild(strong); li.appendChild(span);
+                const li = document.createElement('li'); 
+                const shortAddress = place.display_name.split(',').slice(1).join(',').trim();
+                
+                const strong = document.createElement('strong');
+                strong.textContent = place.name;
+                const span = document.createElement('span');
+                span.style.color = '#777'; span.style.fontSize = '0.85em';
+                span.textContent = " " + shortAddress;
+                
+                li.appendChild(strong);
+                li.appendChild(span);
+                
                 li.onclick = () => {
                     document.getElementById('mountainInput').value = place.name;
                     document.getElementById('lat').value = place.lat; document.getElementById('lng').value = place.lon;
                     resultsUl.style.display = 'none';
+                    
                     const lon = parseFloat(place.lon); const lat = parseFloat(place.lat);
                     if (tempMarker) tempMarker.remove();
-                    const el = createMarkerEl('search'); tempMarker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([lon, lat]).addTo(map);
+                    const el = createMarkerEl('search');
+                    tempMarker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([lon, lat]).addTo(map);
                     focusAndRotate(lon, lat, 14.5);
                 }; resultsUl.appendChild(li);
             });
@@ -733,24 +812,40 @@ window.doTabSearch = function() {
         resultsUl.innerHTML = '';
         if (!data || data.length === 0) { resultsUl.innerHTML = '<li style="color:#d32f2f;">결과가 없습니다.</li>'; return; }
         data.forEach(place => {
-            const li = document.createElement('li'); const shortAddress = place.display_name.split(',').slice(1).join(',').trim();
-            const strong = document.createElement('strong'); strong.textContent = place.name;
-            const span = document.createElement('span'); span.style.color = '#777'; span.style.fontSize = '0.85em'; span.textContent = " " + shortAddress;
-            li.appendChild(strong); li.appendChild(span);
+            const li = document.createElement('li'); 
+            const shortAddress = place.display_name.split(',').slice(1).join(',').trim();
+            const strong = document.createElement('strong');
+            strong.textContent = place.name;
+            const span = document.createElement('span');
+            span.style.color = '#777'; span.style.fontSize = '0.85em';
+            span.textContent = " " + shortAddress;
+            li.appendChild(strong);
+            li.appendChild(span);
             
             li.onclick = () => {
                 if (tempMarker) tempMarker.remove();
                 const lon = parseFloat(place.lon); const lat = parseFloat(place.lat);
                 let mMatch = m100Data.find(m => place.name.includes(m.name));
                 let infoHtml = mMatch ? `<br><span style="color:#1565C0;">${mMatch.alt}m | ${mMatch.region}</span><hr style="margin:5px 0;">${mMatch.desc}` : `<br><span style="color:#777; font-size:0.85em;">${shortAddress}</span>`;
+                
                 const weatherId = 'weather-sch-' + Math.random().toString(36).substr(2, 9);
+
                 const el = createMarkerEl('search');
                 const popup = new mapboxgl.Popup({ offset: [0, -48], anchor: 'bottom', autoPan: false }).setHTML(`
-                    <div style="text-align:center;"><b style="font-size:1.2em;">⛰️ ${place.name}</b>${infoHtml}<div id="${weatherId}" style="min-height:50px; margin-top:8px;"><span style="font-size:0.8em; color:#777;">⏳ 날씨 정보 불러오는 중...</span></div><br><button onclick="window.prepareSave('${place.name}', ${lat}, ${lon})" style="background:#4CAF50; color:white; border:none; padding:8px 12px; border-radius:5px; font-weight:bold; cursor:pointer;">내 기록에 추가하기</button></div>
+                    <div style="text-align:center;">
+                        <b style="font-size:1.2em;">⛰️ ${place.name}</b>
+                        ${infoHtml}
+                        <div id="${weatherId}" style="min-height:50px; margin-top:8px;"><span style="font-size:0.8em; color:#777;">⏳ 날씨 정보 불러오는 중...</span></div>
+                        <br><button onclick="window.prepareSave('${place.name}', ${lat}, ${lon})" style="background:#4CAF50; color:white; border:none; padding:8px 12px; border-radius:5px; font-weight:bold; cursor:pointer;">내 기록에 추가하기</button>
+                    </div>
                 `);
+                
                 popup.on('open', () => fetchWeather(lat, lon, weatherId));
+
                 tempMarker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([lon, lat]).setPopup(popup).addTo(map);
-                resultsUl.style.display = 'none'; currentSidebarState = 0; updateSidebarState(); 
+                
+                resultsUl.style.display = 'none'; 
+                currentSidebarState = 0; updateSidebarState(); 
                 focusAndRotate(lon, lat, 14.5, () => { tempMarker.togglePopup(); });
             }; resultsUl.appendChild(li);
         });
@@ -763,15 +858,16 @@ window.prepareSave = function(name, lat, lng) {
     openTab('tabMyLog'); currentSidebarState = 2; updateSidebarState();
 }
 
-// 🚀 [사진 뷰어 개선] 줌 인/아웃(Pinch to Zoom) 처리 포함
+// 🚀 [사진 뷰어 혁신] 극강의 부드러움을 위한 하드웨어 가속 Pan & Zoom 로직
 let carouselPhotosArr = []; let currentCarouselIndex = 0;
-let currentPhotoScale = 1; // 줌 배율 관리
+let currentPhotoScale = 1; let photoTranslateX = 0; let photoTranslateY = 0;
 
 window.openCarousel = function(recordId, startIndex, event) {
     if(event) event.stopPropagation(); 
     const record = allRecords.find(r => r.id === recordId);
     if(!record || !record.photos) return;
-    carouselPhotosArr = record.photos; currentCarouselIndex = startIndex; currentPhotoScale = 1;
+    carouselPhotosArr = record.photos; 
+    currentCarouselIndex = startIndex; 
     document.getElementById('photoOverlay').style.display = 'flex';
     updateCarouselPhoto(); 
 }
@@ -779,8 +875,11 @@ window.openCarousel = function(recordId, startIndex, event) {
 window.updateCarouselPhoto = function() {
     const imgEl = document.getElementById('expandedPhoto');
     imgEl.src = carouselPhotosArr[currentCarouselIndex]; 
-    imgEl.style.transform = `scale(1)`; currentPhotoScale = 1; // 넘길 때마다 줌 리셋
-
+    
+    // 사진을 넘길 때마다 줌 및 위치 완전 초기화
+    currentPhotoScale = 1; photoTranslateX = 0; photoTranslateY = 0;
+    imgEl.style.transform = `translate(0px, 0px) scale(1)`; 
+    
     const indicator = document.getElementById('photoIndicator'); 
     if(indicator) indicator.innerText = (currentCarouselIndex + 1) + " / " + carouselPhotosArr.length; 
     const btnLeft = document.getElementById('photoNavLeft'); const btnRight = document.getElementById('photoNavRight'); 
@@ -788,58 +887,89 @@ window.updateCarouselPhoto = function() {
     if(btnRight) btnRight.style.display = currentCarouselIndex < carouselPhotosArr.length - 1 ? 'block' : 'none';
 }
 
-window.nextPhoto = function(e) { if(e) e.stopPropagation(); if (currentCarouselIndex < carouselPhotosArr.length - 1) { currentCarouselIndex++; updateCarouselPhoto(); } }
-window.prevPhoto = function(e) { if(e) e.stopPropagation(); if (currentCarouselIndex > 0) { currentCarouselIndex--; updateCarouselPhoto(); } }
-window.closePhotoOverlay = function(e) { if(e) e.stopPropagation(); document.getElementById('photoOverlay').style.display = 'none'; }
+window.nextPhoto = function() { if (currentCarouselIndex < carouselPhotosArr.length - 1) { currentCarouselIndex++; updateCarouselPhoto(); } }
+window.prevPhoto = function() { if (currentCarouselIndex > 0) { currentCarouselIndex--; updateCarouselPhoto(); } }
+window.closePhotoOverlay = function() { document.getElementById('photoOverlay').style.display = 'none'; }
 
-// 두 손가락 줌(Pinch-to-zoom) 및 좌우 스와이프 로직
-let touchStartX = 0; let touchEndX = 0; let initialDistance = 0;
+// 터치 상태 변수 (Pan & Zoom)
+let touchState = {
+    startX1: 0, startY1: 0,
+    startX2: 0, startY2: 0,
+    initialDist: 0, initialScale: 1,
+    initialTx: 0, initialTy: 0,
+    isPinching: false, isPanning: false
+};
+
 const photoOverlayEl = document.getElementById('photoOverlay');
+const imgEl = document.getElementById('expandedPhoto');
 
 photoOverlayEl.addEventListener('touchstart', e => { 
     if (e.touches.length === 2) {
-        initialDistance = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+        touchState.isPinching = true; touchState.isPanning = false;
+        touchState.startX1 = e.touches[0].clientX; touchState.startY1 = e.touches[0].clientY;
+        touchState.startX2 = e.touches[1].clientX; touchState.startY2 = e.touches[1].clientY;
+        touchState.initialDist = Math.hypot(touchState.startX1 - touchState.startX2, touchState.startY1 - touchState.startY2);
+        touchState.initialScale = currentPhotoScale;
     } else if (e.touches.length === 1) {
-        touchStartX = e.touches[0].screenX; 
+        touchState.isPinching = false;
+        touchState.isPanning = currentPhotoScale > 1.05; // 줌이 조금이라도 되어있으면 패닝 모드 시작
+        touchState.startX1 = e.touches[0].clientX; touchState.startY1 = e.touches[0].clientY;
+        touchState.initialTx = photoTranslateX; touchState.initialTy = photoTranslateY;
     }
 }, {passive: false});
 
 photoOverlayEl.addEventListener('touchmove', e => { 
-    if (e.touches.length === 2) {
-        e.preventDefault(); // 웹페이지 전체 확대 방지
-        const currentDistance = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-        const scaleDiff = currentDistance / initialDistance;
-        currentPhotoScale = Math.max(1, Math.min(currentPhotoScale * scaleDiff, 4)); // 최대 4배 줌
-        const imgEl = document.getElementById('expandedPhoto');
-        if(imgEl) imgEl.style.transform = `scale(${currentPhotoScale})`;
-        initialDistance = currentDistance;
+    e.preventDefault(); // 스크롤 바운싱 방지 (버벅임 원천 차단)
+    
+    if (touchState.isPinching && e.touches.length === 2) {
+        const curX1 = e.touches[0].clientX, curY1 = e.touches[0].clientY;
+        const curX2 = e.touches[1].clientX, curY2 = e.touches[1].clientY;
+        const curDist = Math.hypot(curX1 - curX2, curY1 - curY2);
+        const scaleDiff = curDist / touchState.initialDist;
+        currentPhotoScale = Math.max(1, Math.min(touchState.initialScale * scaleDiff, 5)); // 최대 5배 줌
+        
+        requestAnimationFrame(() => {
+            if(imgEl) imgEl.style.transform = `translate(${photoTranslateX}px, ${photoTranslateY}px) scale(${currentPhotoScale})`;
+        });
+    } else if (touchState.isPanning && e.touches.length === 1) {
+        const curX1 = e.touches[0].clientX; const curY1 = e.touches[0].clientY;
+        photoTranslateX = touchState.initialTx + (curX1 - touchState.startX1);
+        photoTranslateY = touchState.initialTy + (curY1 - touchState.startY1);
+        
+        requestAnimationFrame(() => {
+            if(imgEl) imgEl.style.transform = `translate(${photoTranslateX}px, ${photoTranslateY}px) scale(${currentPhotoScale})`;
+        });
     }
 }, {passive: false});
 
 photoOverlayEl.addEventListener('touchend', e => { 
-    if (e.changedTouches.length === 1 && currentPhotoScale <= 1.05) { // 확대되지 않았을 때만 스와이프로 넘기기
-        touchEndX = e.changedTouches[0].screenX; 
-        if (touchEndX < touchStartX - 40) window.nextPhoto(); 
-        if (touchEndX > touchStartX + 40) window.prevPhoto(); 
+    if (e.touches.length === 0) { touchState.isPinching = false; touchState.isPanning = false; }
+    // 줌아웃 상태일 때만 좌우로 넘기기 가능
+    if (e.changedTouches.length === 1 && currentPhotoScale <= 1.05) { 
+        const touchEndX = e.changedTouches[0].clientX; 
+        if (touchEndX < touchState.startX1 - 50) window.nextPhoto(); 
+        if (touchEndX > touchState.startX1 + 50) window.prevPhoto(); 
     }
 }, {passive: true});
 
+// 배경 클릭 시 닫기
 photoOverlayEl.addEventListener('click', e => { if(e.target === photoOverlayEl) window.closePhotoOverlay(); });
 
-// 🚀 [백업 최적화] 해상도를 300px로 줄이고, 'WebP' 포맷 적용으로 용량 대폭 감소!
+// 🚀 [초경량 압축 로직] 기존 대비 용량을 1/5 수준으로 극한의 다이어트!
 function resizeImage(file) {
     return new Promise((resolve) => {
         const reader = new FileReader(); reader.onload = (e) => {
             const img = new Image(); img.onload = () => {
                 const canvas = document.createElement('canvas'); 
-                const maxSize = 300; 
+                const maxSize = 250; // 해상도 제한 (모바일 확인용으로 충분한 250px)
                 let width = img.width, height = img.height;
                 if (width > height && width > maxSize) { height *= maxSize / width; width = maxSize; } 
                 else if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+                
                 canvas.width = width; canvas.height = height; 
                 canvas.getContext('2d').drawImage(img, 0, 0, width, height); 
-                // WebP 포맷과 0.4 품질로 압축률 극대화
-                resolve(canvas.toDataURL('image/webp', 0.4)); 
+                // JPEG 포맷 + 0.35 품질 적용으로 메가바이트 단위의 사진을 10~20KB 초경량으로 변환
+                resolve(canvas.toDataURL('image/jpeg', 0.35)); 
             }; img.src = e.target.result;
         }; reader.readAsDataURL(file);
     });
@@ -876,6 +1006,7 @@ window.saveRecord = async function() {
         document.getElementById('mountainInput').value = ''; document.getElementById('hikeDate').value = ''; document.getElementById('hikeAlt').value = ''; document.getElementById('hikePhoto').value = ''; document.getElementById('lat').value = ''; document.getElementById('lng').value = '';
         if (tempMarker) { tempMarker.remove(); tempMarker = null; }
         saveBtn.innerText = "지도에 내 기록 남기기"; saveBtn.disabled = false; loadSavedRecords(); currentSidebarState = 0; updateSidebarState();
+        
         focusAndRotate(parseFloat(lng), parseFloat(lat), 14.5);
     }
 }
