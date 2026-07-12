@@ -242,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 나침반 버튼 로직 (진단 패널 제거 및 깔끔한 알림 적용)
+    // 나침반 버튼 로직
     setTimeout(() => {
         const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
         if (compassBtn) {
@@ -262,15 +262,13 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             const toggleCompassMode = async (e) => {
-                e.preventDefault(); e.stopPropagation();
-
+                // 💡 애플 권한 창 씹힘 방지: preventDefault 삭제!
+                
                 if (window.isAutoRotating) {
-                    // 모드 1 -> 모드 2 (회전 끄기)
                     window.isAutoRotating = false;
                     map.easeTo({ bearing: 0, duration: 800 });
                     showIndicator('정북 고정 (모드 2)', '#D32F2F');
                 } else {
-                    // 모드 2 -> 모드 1 (회전 켜기)
                     if (!isSensorGranted) {
                         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                             try {
@@ -279,12 +277,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                     isSensorGranted = true;
                                     window.addEventListener('deviceorientation', handleOrientation, true);
                                 } else {
-                                    alert("방향 센서 접근이 거부되었습니다.\n아이폰 [설정] - [Safari] - [동작 및 방향 접근]을 켜주세요.");
+                                    alert("❌ 센서 권한이 거부되었습니다. (아이폰 설정 > Safari > 동작 및 방향 접근이 켜져 있는지 확인!)");
                                     return; 
                                 }
                             } catch (err) {
-                                // 💡 로컬 테스트 환경(http)에서 알림
-                                alert("현재 임시 테스트 환경(http)이라 애플 보안 정책상 나침반이 작동하지 않습니다.\n\n정식 호스팅(https) 서버에 올리시면 지도가 정상적으로 회전합니다!");
+                                // 💡 이제 가짜 메시지가 아닌 '진짜 애플의 에러 원인'을 화면에 출력합니다.
+                                alert("❌ 애플 센서 차단됨!\n에러 내용: " + err.message + "\n\n1. 홈 화면 앱 말고 '일반 Safari 브라우저'에서 열어주세요.\n2. 사파리가 과거 코드를 기억(캐시)하고 있을 수 있습니다.");
                                 return; 
                             }
                         } else {
@@ -298,8 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
+            // 💡 iOS의 엄격한 보안을 통과하기 위해, 오직 순수 'click' 이벤트로만 권한을 요청합니다. (touchstart 삭제)
             shield.addEventListener('click', toggleCompassMode);
-            shield.addEventListener('touchstart', toggleCompassMode, { passive: false });
         }
     }, 1000);
     
