@@ -180,9 +180,9 @@ document.addEventListener('DOMContentLoaded', () => {
     map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/outdoors-v12',
-       center: [128.0, 36.0], 
+        center: [128.0, 36.0], 
         zoom: window.innerWidth <= 768 ? 5.3 : 5.8,
-        pitch: 45,
+        pitch: 45, // 💡 기존의 예쁜 3D 입체 각도 시작 상태 유지
         bearing: 0, 
         projection: 'mercator', 
         doubleClickZoom: false
@@ -193,118 +193,115 @@ document.addEventListener('DOMContentLoaded', () => {
 
     map.on('style.load', () => {
         if (!map.getSource('mapbox-dem')) {
-            map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 12 });
+            map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 14 });
         }
         map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.1 }); 
-        
         if (!map.getLayer('sky')) {
             map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
         }
     });
-// 1. 나침반 컨트롤
+
+    // 1. 나침반 컨트롤
     const nav = new mapboxgl.NavigationControl({ showZoom: false, showCompass: true });
     map.addControl(nav, 'top-right');
 
-    // 2. 현위치(GPS) 컨트롤 (방해 코드 전면 삭제! Mapbox 순수 방향 센서만 100% 작동)
-const geolocate = new mapboxgl.GeolocateControl({
-    positionOptions: { enableHighAccuracy: true },
-    trackUserLocation: true, 
-    showUserHeading: true,
-    fitBoundsOptions: { maxZoom: 15 } 
-});
-map.addControl(geolocate, 'top-right');
-geolocate.on('trackuserlocationstart', stopRotate);
+    // 2. 현위치(GPS) 컨트롤 (💡 기본적으로 사용자가 누르기 전까진 OFF 상태로 대기)
+    const geolocate = new mapboxgl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: true, 
+        showUserHeading: true,
+        fitBoundsOptions: { maxZoom: 15 } 
+    });
+    map.addControl(geolocate, 'top-right');
 
-// 💡 [디자인 유지] 버튼 위치 상단 정렬 및 간격 조절
-const style = document.createElement('style');
-style.innerHTML = `
-    .mapboxgl-ctrl-top-right { 
-        top: max(15px, env(safe-area-inset-top)) !important; 
-        right: 15px !important; 
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 12px !important; 
+    // 3. 디자인 설정 (상단 정렬 및 투명 방패)
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .mapboxgl-ctrl-top-right { top: max(15px, env(safe-area-inset-top)) !important; right: 15px !important; display: flex !important; flex-direction: column !important; gap: 12px !important; }
+        .mapboxgl-ctrl-top-right .mapboxgl-ctrl { margin: 0 !important; } 
+        .mapboxgl-ctrl-group { border-radius: 12px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important; overflow: visible !important; background: white !important; }
+        .mapboxgl-ctrl-group > button { width: 48px !important; height: 48px !important; display: flex !important; justify-content: center !important; align-items: center !important; position: relative; }
+        .mapboxgl-ctrl-icon { transform: scale(1.4); } 
+        .compass-touch-shield { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 9999; cursor: pointer; }
+        
+        /* 현재 모드를 알려주는 팝업 텍스트 */
+        .compass-mode-indicator { position: absolute; right: 60px; top: 50%; transform: translateY(-50%); font-size: 13px; font-weight: 900; background: rgba(255,255,255,0.95); padding: 5px 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); pointer-events: none; white-space: nowrap; display: none; }
+    `;
+    document.head.appendChild(style);
+
+    // 4. 🚀 지도 회전 엔진 초기 상태 설정 (요청사항 반영)
+    window.isAutoRotating = false; // 💡 시작 시 나침반 모드 2 (정북 고정) 상태로 출발!
+    let isEngineRunning = false;
+
+    function handleOrientation(e) {
+        if (!window.isAutoRotating) return; 
+        
+        let heading = null;
+        if (e.webkitCompassHeading) heading = e.webkitCompassHeading;
+        else if (e.absolute && e.alpha !== null) heading = 360 - e.alpha;
+        
+        if (heading !== null && !map.isZooming() && !map.isDragging()) {
+            map.setBearing(heading); 
+        }
     }
-    .mapboxgl-ctrl-top-right .mapboxgl-ctrl { margin: 0 !important; } 
+
+    // 센서 가동 함수
+    function startOrientationSensor() {
+        if (isEngineRunning) return;
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission().then(permissionState => {
+                if (permissionState === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation, true);
+                    isEngineRunning = true;
+                }
+            }).catch(console.error);
+        } else {
+            window.addEventListener('deviceorientation', handleOrientation, true);
+            isEngineRunning = true;
+        }
+    }
+
+    // 5. 나침반 버튼 탭 로직 (모드 1 ↔ 모드 2 전환)
+    setTimeout(() => {
+        const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
+        if (compassBtn) {
+            const shield = document.createElement('div');
+            shield.className = 'compass-touch-shield';
+            compassBtn.appendChild(shield);
+
+            const indicator = document.createElement('div');
+            indicator.className = 'compass-mode-indicator';
+            compassBtn.parentElement.appendChild(indicator);
+
+            const showIndicator = (text, color) => {
+                indicator.innerHTML = text;
+                indicator.style.color = color;
+                indicator.style.display = 'block';
+                setTimeout(() => { indicator.style.display = 'none'; }, 2000);
+            };
+
+            const toggleCompassMode = (e) => {
+                e.preventDefault(); e.stopPropagation();
+
+                if (window.isAutoRotating) {
+                    // 현재 [모드 1] -> 탭하면 [모드 2 (정북 고정)]
+                    window.isAutoRotating = false;
+                    map.easeTo({ bearing: 0, duration: 800 });
+                    showIndicator('정북 고정 (모드 2)', '#D32F2F'); // 빨간색 알림
+                } else {
+                    // 현재 [모드 2] -> 탭하면 [모드 1 (지도 회전)]
+                    window.isAutoRotating = true;
+                    startOrientationSensor(); // 💡 회전 모드를 켤 때 스마트폰 센서 요청을 구동시킵니다.
+                    showIndicator('지도 회전 (모드 1)', '#1976D2'); // 파란색 알림
+                }
+            };
+
+            shield.addEventListener('touchstart', toggleCompassMode, { passive: false });
+            shield.addEventListener('click', toggleCompassMode);
+        }
+    }, 1000);
     
-    .mapboxgl-ctrl-group { 
-        border-radius: 12px !important; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important; 
-        overflow: visible !important; 
-        background: white !important;
-    }
-    
-    /* 터치 영역 48x48 보장 */
-    .mapboxgl-ctrl-group > button { 
-        width: 48px !important; 
-        height: 48px !important; 
-        display: flex !important; 
-        justify-content: center !important; 
-        align-items: center !important; 
-        position: relative; /* 투명 덮개를 위해 추가 */
-    }
-    .mapboxgl-ctrl-icon { transform: scale(1.4); } 
-    
-    .compass-3d-text {
-        position: absolute; right: 55px; top: 50%; transform: translateY(-50%);
-        font-size: 15px; font-weight: 900; color: #D32F2F; 
-        background: rgba(255,255,255,0.95); padding: 5px 10px; 
-        border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); 
-        pointer-events: none; white-space: nowrap;
-    }
-
-    /* 🚨 터치 불량 완벽 해결: 나침반 버튼 위에 씌우는 100% 인식 투명 방패 */
-    .compass-touch-shield {
-        position: absolute; inset: 0; width: 100%; height: 100%;
-        z-index: 9999; cursor: pointer;
-    }
-`;
-document.head.appendChild(style);
-
-// 3. 나침반 탭 동작 (투명 방패를 통해 터치 씹힘 원천 차단)
-setTimeout(() => {
-    const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
-    if (compassBtn) {
-        // 3D 글씨 엘리먼트
-        const text3D = document.createElement('div');
-        text3D.className = 'compass-3d-text';
-        text3D.innerHTML = '3D';
-        compassBtn.parentElement.appendChild(text3D);
-
-        // 🚨 투명 방패 추가 (Mapbox의 방해 이벤트를 차단하고 우리 명령만 받음)
-        const shield = document.createElement('div');
-        shield.className = 'compass-touch-shield';
-        compassBtn.appendChild(shield);
-
-        // 지도가 돌아가거나 누울 때마다 3D 글씨를 자동으로 켜고 끔
-        const update3DText = () => {
-            text3D.style.display = map.getPitch() > 40 ? 'block' : 'none';
-        };
-        map.on('pitch', update3DText);
-        update3DText();
-
-        // 방패를 터치했을 때의 2D/3D 전환 로직
-        const toggle3DMode = (e) => {
-            e.preventDefault(); // 스크롤이나 다른 터치 이벤트 방지
-            e.stopPropagation();
-
-            if (map.getPitch() > 40) {
-                // 현재 3D -> 탭하면 2D 평면 & 정북 방향으로 확정
-                map.easeTo({ pitch: 0, bearing: 0, duration: 800 });
-            } else {
-                // 현재 2D -> 탭하면 3D(65도)로 확정
-                map.easeTo({ pitch: 65, duration: 800 });
-            }
-        };
-
-        // 모바일 터치(touchstart)와 마우스 클릭(click) 모두 방패가 낚아챔
-        shield.addEventListener('touchstart', toggle3DMode, { passive: false });
-        shield.addEventListener('click', toggle3DMode);
-    }
-}, 1000);
- 
-    map.on('mousedown', stopRotate); map.on('touchstart', stopRotate); map.on('wheel', stopRotate); map.on('dragstart', stopRotate);
-    
+    // 트리플 탭 리셋 기능 (유지)
     let clickCount = 0;
     let clickTimer = null;
     map.on('click', function(e) {
