@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     map.addControl(geolocate, 'top-right');
 
-    // 💡 [UI 완벽 개선] 요청하신 강렬한 빨간색 순환 2화살표 및 X버튼 하단 중앙 정렬
+    // 💡 [UI 개선] 회전 화살표 삭제 및 닫기 버튼 하단 유지
     const style = document.createElement('style');
     style.innerHTML = `
         .mapboxgl-ctrl-top-right { top: max(15px, env(safe-area-inset-top)) !important; right: 15px !important; display: flex !important; flex-direction: column !important; gap: 12px !important; }
@@ -219,21 +219,13 @@ document.addEventListener('DOMContentLoaded', () => {
         .mapboxgl-ctrl-icon { transform: scale(1.4); } 
         .compass-touch-shield { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 9999; cursor: pointer; }
         
-        /* 🚨 업로드 이미지 그대로! 굵고 강렬한 빨간색(나침반 바늘색) 두 개의 순환 화살표 */
-        .compass-rotate-badge {
-            position: absolute; top: -6px; left: -6px; right: -6px; bottom: -6px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e00000'%3E%3Cpath d='M12 2.75a9.25 9.25 0 0 0-6.84 2.5l-2.2-2.2A.75.75 0 0 0 1.7 3.6v5.6c0 .41.34.75.75.75h5.6a.75.75 0 0 0 .53-1.28l-2.02-2.02a7.75 7.75 0 0 1 10.7 11.1l1.06 1.06A9.25 9.25 0 0 0 12 2.75zM21.55 14.05h-5.6a.75.75 0 0 0-.53 1.28l2.02 2.02a7.75 7.75 0 0 1-10.7-11.1l-1.06-1.06a9.25 9.25 0 0 0 6.16 16.06 9.25 9.25 0 0 0 6.84-2.5l2.2 2.2a.75.75 0 0 0 1.22-.53v-5.6a.75.75 0 0 0-.75-.75z'/%3E%3C/svg%3E");
-            background-size: cover; opacity: 0; transition: opacity 0.3s; pointer-events: none;
-        }
-        .mapboxgl-ctrl-compass.is-rotating .compass-rotate-badge { opacity: 1; }
-        
-        /* 🚨 사진 닫기(X) 버튼을 화면 맨 아래 가운데로 크게 이동 (아이폰 UI 스타일) */
+        /* 🚨 사진 닫기(X) 버튼 하단 중앙 정렬 유지 */
         #photoOverlay span[onclick*="close"], #photoOverlay .close, .close-photo {
             position: absolute !important;
-            top: auto !important; /* 상단 위치 해제 */
-            bottom: max(40px, calc(env(safe-area-inset-bottom) + 30px)) !important; /* 하단으로 내림 */
-            left: 50% !important; /* 중앙 정렬 */
-            transform: translateX(-50%) !important; /* 완벽한 중앙 교정 */
+            top: auto !important; 
+            bottom: max(40px, calc(env(safe-area-inset-bottom) + 30px)) !important; 
+            left: 50% !important; 
+            transform: translateX(-50%) !important; 
             font-size: 32px !important; 
             width: 65px !important; height: 65px !important; 
             background: rgba(0,0,0,0.85) !important; color: #fff !important;
@@ -285,10 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const shield = document.createElement('div');
             shield.className = 'compass-touch-shield';
             compassBtn.appendChild(shield);
-
-            const badge = document.createElement('div');
-            badge.className = 'compass-rotate-badge';
-            compassBtn.appendChild(badge);
 
             const toggleCompassMode = async (e) => {
                 e.stopPropagation(); e.preventDefault();
