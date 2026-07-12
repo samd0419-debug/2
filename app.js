@@ -1,3 +1,21 @@
+// 💡 [핵심 기술] 애니메이션 보호막: 이동 중일 때 센서가 개입하여 버벅이는 것을 막아줍니다.
+window.isFlying = false;
+let flyTimeout = null;
+
+function safeFlyTo(options) {
+    window.isFlying = true;
+    map.flyTo(options);
+    clearTimeout(flyTimeout);
+    flyTimeout = setTimeout(() => { window.isFlying = false; }, (options.duration || 1500) + 100);
+}
+
+function safeEaseTo(options) {
+    window.isFlying = true;
+    map.easeTo(options);
+    clearTimeout(flyTimeout);
+    flyTimeout = setTimeout(() => { window.isFlying = false; }, (options.duration || 500) + 100);
+}
+
 let map;
 let myLogMarkers = [], m100Markers = [], challengeMarkers = [];
 let tempMarker = null;
@@ -104,7 +122,10 @@ function startRotate(lng, lat) {
 function rotateCamera() {
     if (!isRotating || !targetCenter) return;
     const currentBearing = map.getBearing();
-    map.jumpTo({ bearing: currentBearing + 0.15, center: targetCenter, padding: getMapPadding() });
+    // 💡 비행(이동) 중이 아닐 때만 카메라를 빙글빙글 돌립니다
+    if (!window.isFlying) {
+        map.jumpTo({ bearing: currentBearing + 0.15, center: targetCenter, padding: getMapPadding() });
+    }
     rotateReqId = requestAnimationFrame(rotateCamera);
 }
 
@@ -120,7 +141,6 @@ function getMapPadding() {
     else if (currentSidebarState === 0) padBottom = 150;
     else if (currentSidebarState === 1) padBottom = window.innerHeight * 0.55;
     else if (currentSidebarState === 2) padBottom = window.innerHeight * 0.8;
-    
     const padTop = window.innerHeight < 700 ? 180 : 250; 
     return { top: padTop, bottom: padBottom };
 }
@@ -128,9 +148,14 @@ function getMapPadding() {
 function focusAndRotate(lng, lat, zoomLvl = 14, callback = null) {
     stopRotate();
     const padding = getMapPadding();
-    map.flyTo({ center: [lng, lat], zoom: zoomLvl, pitch: 65, bearing: map.getBearing(), padding: padding, duration: 2500, essential: true });
+    
+    safeFlyTo({ center: [lng, lat], zoom: zoomLvl, pitch: 65, bearing: map.getBearing(), padding: padding, duration: 2500, essential: true });
+    
     map.once('moveend', () => { 
-        startRotate(lng, lat); 
+        // 💡 만약 사용자가 '나침반 회전 모드'를 켜두었다면, 목적지 주변을 뱅글뱅글 도는 애니메이션을 생략하여 시야 어지러움을 막습니다.
+        if (!window.isAutoRotating) {
+            startRotate(lng, lat); 
+        }
         if (callback) callback();
     });
 }
@@ -187,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     map.addControl(geolocate, 'top-right');
 
-    // 💡 [UI 개선] X버튼 최적화 및 회색 나침반 화살표
+    // 💡 [UI 완벽 개선] 요청하신 강렬한 빨간색 순환 2화살표 디자인 적용
     const style = document.createElement('style');
     style.innerHTML = `
         .mapboxgl-ctrl-top-right { top: max(15px, env(safe-area-inset-top)) !important; right: 15px !important; display: flex !important; flex-direction: column !important; gap: 12px !important; }
@@ -197,49 +222,33 @@ document.addEventListener('DOMContentLoaded', () => {
         .mapboxgl-ctrl-icon { transform: scale(1.4); } 
         .compass-touch-shield { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 9999; cursor: pointer; }
         
-        /* 🚨 세련된 회색(#777) 순환 화살표 뱃지 */
+        /* 🚨 완벽한 빨간색 두 개의 순환 화살표 아이콘 */
         .compass-rotate-badge {
-            position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23777777' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8'/%3E%3Cpath d='M3 3v5h5'/%3E%3C/svg%3E");
+            position: absolute; top: -4px; left: -4px; right: -4px; bottom: -4px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='red' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8'/%3E%3Cpath d='M21 3v5h-5'/%3E%3Cpath d='M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16'/%3E%3Cpath d='M3 21v-5h5'/%3E%3C/svg%3E");
             background-size: cover; opacity: 0; transition: opacity 0.3s; pointer-events: none;
         }
         .mapboxgl-ctrl-compass.is-rotating .compass-rotate-badge { opacity: 1; }
         
-        /* 🚨 사진 전체화면 X 버튼 완벽 수정 (터치 영역 대폭 확대 및 하단 이동) */
         #photoOverlay span[onclick*="close"], #photoOverlay .close, .close-photo {
             position: absolute !important;
-            top: max(45px, calc(env(safe-area-inset-top) + 20px)) !important; /* 약간 아래로 더 내림 */
+            top: max(45px, calc(env(safe-area-inset-top) + 20px)) !important;
             right: 15px !important;
             font-size: 32px !important; 
-            width: 55px !important; 
-            height: 55px !important; 
-            background: rgba(0,0,0,0.75) !important; 
-            color: #fff !important;
-            border-radius: 50% !important; 
-            z-index: 999999 !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
-            line-height: 1 !important;
-            cursor: pointer !important;
-            text-shadow: none !important;
+            width: 55px !important; height: 55px !important; 
+            background: rgba(0,0,0,0.75) !important; color: #fff !important;
+            border-radius: 50% !important; z-index: 999999 !important;
+            display: flex !important; justify-content: center !important; align-items: center !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important; line-height: 1 !important; cursor: pointer !important; text-shadow: none !important;
         }
-        
-        /* 버벅임 방지를 위한 GPU 가속 처리 */
-        #expandedPhoto {
-            will-change: transform;
-            transform-origin: center center;
-        }
+        #expandedPhoto { will-change: transform; transform-origin: center center; }
     `;
     document.head.appendChild(style);
 
     window.isAutoRotating = false; 
     let isSensorGranted = false;
     let isMapTouched = false; 
-    
-    let currentHeading = 0;
-    let targetHeading = null;
+    let currentHeading = 0; let targetHeading = null;
 
     document.getElementById('map').addEventListener('touchstart', () => { isMapTouched = true; }, {passive: true});
     document.getElementById('map').addEventListener('touchend', () => { setTimeout(() => { isMapTouched = false; }, 1000); }, {passive: true});
@@ -247,7 +256,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('map').addEventListener('mouseup', () => { setTimeout(() => { isMapTouched = false; }, 1000); });
 
     function smoothRotateLoop() {
-        if (window.isAutoRotating && !isMapTouched && targetHeading !== null) {
+        // 💡 안전장치 추가: isFlying 상태일 때는 회전 엔진을 멈춰서 카메라 이동을 방해하지 않게 합니다.
+        if (window.isAutoRotating && !isMapTouched && !window.isFlying && targetHeading !== null) {
             let diff = targetHeading - currentHeading;
             while (diff < -180) diff += 360;
             while (diff > 180) diff -= 360;
@@ -287,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window.isAutoRotating) {
                     window.isAutoRotating = false;
                     compassBtn.classList.remove('is-rotating'); 
-                    map.easeTo({ bearing: 0, duration: 800 });
+                    safeEaseTo({ bearing: 0, duration: 800 });
                 } else {
                     if (!isSensorGranted) {
                         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -296,19 +306,25 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (permission === 'granted') {
                                     isSensorGranted = true;
                                     window.addEventListener('deviceorientation', handleOrientation, true);
-                                } else {
-                                    alert("❌ 센서 권한이 거부되었습니다."); return; 
-                                }
+                                } else { alert("❌ 센서 권한이 거부되었습니다."); return; }
                             } catch (err) { alert("❌ 센서 차단됨: " + err.message); return; }
-                        } else {
-                            isSensorGranted = true; window.addEventListener('deviceorientation', handleOrientation, true);
-                        }
+                        } else { isSensorGranted = true; window.addEventListener('deviceorientation', handleOrientation, true); }
                     }
                     window.isAutoRotating = true;
                     compassBtn.classList.add('is-rotating'); 
                 }
             };
             shield.addEventListener('click', toggleCompassMode);
+        }
+
+        // 💡 GPS 버튼 원터치 보호: 누르면 회전 엔진이 잠깐 멈추면서 현재 위치로 예쁘게 날아갑니다.
+        const gpsBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
+        if (gpsBtn) {
+            gpsBtn.addEventListener('click', () => {
+                window.isFlying = true;
+                clearTimeout(flyTimeout);
+                flyTimeout = setTimeout(() => { window.isFlying = false; }, 1600); // 1.5초 애니메이션 보장
+            });
         }
     }, 1000);
  
@@ -388,9 +404,23 @@ function clearMarkers(groupArray) {
     groupArray.length = 0;
 }
 
+// 💡 3번 탭하면 나침반, GPS, 화면까지 모든 것을 최초의 상태로 완벽히 리셋!
 function resetMapToDefault() {
     stopRotate();
-    map.flyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: {bottom: 0}, duration: 1500 });
+    
+    // 1. 나침반 회전 모드 강제 종료
+    window.isAutoRotating = false;
+    const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
+    if (compassBtn) compassBtn.classList.remove('is-rotating');
+    
+    // 2. GPS 기능 끄기 (이미 켜져있다면 네이티브 클릭으로 정상 종료)
+    const gpsBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
+    if (gpsBtn && (gpsBtn.classList.contains('mapboxgl-ctrl-geolocate-active') || gpsBtn.classList.contains('mapboxgl-ctrl-geolocate-background'))) {
+        gpsBtn.click(); 
+    }
+
+    safeFlyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: {bottom: 0}, duration: 1500 });
+    
     currentSidebarState = -1; updateSidebarState();
     clearMarkers(myLogMarkers); clearMarkers(m100Markers); clearMarkers(challengeMarkers);
     if(tempMarker) tempMarker.remove();
@@ -424,18 +454,14 @@ function updateSidebarState() {
             else dragText.innerText = '클릭하여 최소화 / 쓸어내려서 좁게 보기';
         }
     }
-    if(isRotating && targetCenter) { map.easeTo({ center: targetCenter, padding: getMapPadding(), duration: 500 }); }
+    if(isRotating && targetCenter) { safeEaseTo({ center: targetCenter, padding: getMapPadding(), duration: 500 }); }
 }
 
 function openTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); 
     document.getElementById(tabId).classList.add('active');
     
-    if (tabId === 'tabSearch') {
-        currentSidebarState = 1; 
-    } else {
-        if (currentSidebarState === -1) currentSidebarState = 0; 
-    }
+    if (tabId === 'tabSearch') { currentSidebarState = 1; } else { if (currentSidebarState === -1) currentSidebarState = 0; }
     updateSidebarState();
     
     clearMarkers(myLogMarkers); clearMarkers(m100Markers); clearMarkers(challengeMarkers);
@@ -443,8 +469,8 @@ function openTab(tabId) {
     
     if(tabId === 'tabChallenge') { renderChallengeMapAndList(); } 
     else if (tabId === 'tabM100') { renderM100Map(); } 
-    else if (tabId === 'tabMyLog') { renderAll(); map.flyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); } 
-    else if (tabId === 'tabSearch') { map.flyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); }
+    else if (tabId === 'tabMyLog') { renderAll(); safeFlyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); } 
+    else if (tabId === 'tabSearch') { safeFlyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); }
 }
 
 function initFABs() {
@@ -676,7 +702,7 @@ function renderM100Map() {
         });
         m100Markers.push(marker);
     });
-    map.flyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
+    safeFlyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
 }
 
 function renderChallengeMapAndList() {
@@ -754,7 +780,7 @@ function renderChallengeMapAndList() {
     
     document.getElementById('challengeCount').innerText = climbedCount;
     if(climbedCount === 0) { list.innerHTML = `<div style="padding: 40px 20px; text-align:center; color:#777;">아직 완등한 명산이 없습니다.</div>`; }
-    map.flyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
+    safeFlyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
 }
 
 let inlineSearchTimer;
@@ -858,7 +884,6 @@ window.prepareSave = function(name, lat, lng) {
     openTab('tabMyLog'); currentSidebarState = 2; updateSidebarState();
 }
 
-// 🚀 [사진 뷰어 혁신] 극강의 부드러움을 위한 하드웨어 가속 Pan & Zoom 로직
 let carouselPhotosArr = []; let currentCarouselIndex = 0;
 let currentPhotoScale = 1; let photoTranslateX = 0; let photoTranslateY = 0;
 
@@ -876,7 +901,6 @@ window.updateCarouselPhoto = function() {
     const imgEl = document.getElementById('expandedPhoto');
     imgEl.src = carouselPhotosArr[currentCarouselIndex]; 
     
-    // 사진을 넘길 때마다 줌 및 위치 완전 초기화
     currentPhotoScale = 1; photoTranslateX = 0; photoTranslateY = 0;
     imgEl.style.transform = `translate(0px, 0px) scale(1)`; 
     
@@ -891,7 +915,6 @@ window.nextPhoto = function() { if (currentCarouselIndex < carouselPhotosArr.len
 window.prevPhoto = function() { if (currentCarouselIndex > 0) { currentCarouselIndex--; updateCarouselPhoto(); } }
 window.closePhotoOverlay = function() { document.getElementById('photoOverlay').style.display = 'none'; }
 
-// 터치 상태 변수 (Pan & Zoom)
 let touchState = {
     startX1: 0, startY1: 0,
     startX2: 0, startY2: 0,
@@ -912,21 +935,20 @@ photoOverlayEl.addEventListener('touchstart', e => {
         touchState.initialScale = currentPhotoScale;
     } else if (e.touches.length === 1) {
         touchState.isPinching = false;
-        touchState.isPanning = currentPhotoScale > 1.05; // 줌이 조금이라도 되어있으면 패닝 모드 시작
+        touchState.isPanning = currentPhotoScale > 1.05; 
         touchState.startX1 = e.touches[0].clientX; touchState.startY1 = e.touches[0].clientY;
         touchState.initialTx = photoTranslateX; touchState.initialTy = photoTranslateY;
     }
 }, {passive: false});
 
 photoOverlayEl.addEventListener('touchmove', e => { 
-    e.preventDefault(); // 스크롤 바운싱 방지 (버벅임 원천 차단)
-    
+    e.preventDefault(); 
     if (touchState.isPinching && e.touches.length === 2) {
         const curX1 = e.touches[0].clientX, curY1 = e.touches[0].clientY;
         const curX2 = e.touches[1].clientX, curY2 = e.touches[1].clientY;
         const curDist = Math.hypot(curX1 - curX2, curY1 - curY2);
         const scaleDiff = curDist / touchState.initialDist;
-        currentPhotoScale = Math.max(1, Math.min(touchState.initialScale * scaleDiff, 5)); // 최대 5배 줌
+        currentPhotoScale = Math.max(1, Math.min(touchState.initialScale * scaleDiff, 5)); 
         
         requestAnimationFrame(() => {
             if(imgEl) imgEl.style.transform = `translate(${photoTranslateX}px, ${photoTranslateY}px) scale(${currentPhotoScale})`;
@@ -944,7 +966,6 @@ photoOverlayEl.addEventListener('touchmove', e => {
 
 photoOverlayEl.addEventListener('touchend', e => { 
     if (e.touches.length === 0) { touchState.isPinching = false; touchState.isPanning = false; }
-    // 줌아웃 상태일 때만 좌우로 넘기기 가능
     if (e.changedTouches.length === 1 && currentPhotoScale <= 1.05) { 
         const touchEndX = e.changedTouches[0].clientX; 
         if (touchEndX < touchState.startX1 - 50) window.nextPhoto(); 
@@ -952,23 +973,20 @@ photoOverlayEl.addEventListener('touchend', e => {
     }
 }, {passive: true});
 
-// 배경 클릭 시 닫기
 photoOverlayEl.addEventListener('click', e => { if(e.target === photoOverlayEl) window.closePhotoOverlay(); });
 
-// 🚀 [초경량 압축 로직] 기존 대비 용량을 1/5 수준으로 극한의 다이어트!
 function resizeImage(file) {
     return new Promise((resolve) => {
         const reader = new FileReader(); reader.onload = (e) => {
             const img = new Image(); img.onload = () => {
                 const canvas = document.createElement('canvas'); 
-                const maxSize = 250; // 해상도 제한 (모바일 확인용으로 충분한 250px)
+                const maxSize = 250; 
                 let width = img.width, height = img.height;
                 if (width > height && width > maxSize) { height *= maxSize / width; width = maxSize; } 
                 else if (height > maxSize) { width *= maxSize / height; height = maxSize; }
                 
                 canvas.width = width; canvas.height = height; 
                 canvas.getContext('2d').drawImage(img, 0, 0, width, height); 
-                // JPEG 포맷 + 0.35 품질 적용으로 메가바이트 단위의 사진을 10~20KB 초경량으로 변환
                 resolve(canvas.toDataURL('image/jpeg', 0.35)); 
             }; img.src = e.target.result;
         }; reader.readAsDataURL(file);
