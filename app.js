@@ -1036,15 +1036,3 @@ window.importData = function(event) {
         } catch(err) { alert('파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인해주세요.'); }
     }; reader.readAsText(file); event.target.value = ''; 
 }
-// 서비스 워커 등록
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        console.log('✅ 서비스 워커 등록 성공:', registration.scope);
-      })
-      .catch(error => {
-        console.log('❌ 서비스 워커 등록 실패:', error);
-      });
-  });
-}
