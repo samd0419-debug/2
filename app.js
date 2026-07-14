@@ -1036,3 +1036,11 @@ window.importData = function(event) {
         } catch(err) { alert('파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인해주세요.'); }
     }; reader.readAsText(file); event.target.value = ''; 
 }
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // 경로가 https://samd0419-debug.github.io/2/sw.js 가 되도록 지정
+    navigator.serviceWorker.register('./sw.js') 
+      .then(reg => console.log('SW 등록 성공'))
+      .catch(err => console.log('SW 등록 실패', err));
+  });
+}
