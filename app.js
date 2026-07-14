@@ -1036,4 +1036,3 @@ window.importData = function(event) {
         } catch(err) { alert('파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인해주세요.'); }
     }; reader.readAsText(file); event.target.value = ''; 
 }
-
