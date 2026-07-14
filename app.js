@@ -1036,3 +1036,11 @@ window.importData = function(event) {
         } catch(err) { alert('파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인해주세요.'); }
     }; reader.readAsText(file); event.target.value = ''; 
 }
+// 이 부분을 찾아 삭제 또는 주석(//) 처리하세요
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => { ... })
+      .catch(error => { ... });
+  });
+}
