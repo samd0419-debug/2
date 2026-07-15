@@ -1,20 +1,13 @@
 * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
 input, textarea { user-select: auto; -webkit-user-select: auto; }
 
-/* 배경을 블랙으로 맞추고 화면 크기를 모바일 100dvh로 고정 */
+/* 하단 블랙바 제거 및 풀화면(100dvh) 적용 */
 html, body { width: 100%; height: 100vh; height: 100dvh; margin: 0; padding: 0; }
-body { display: flex; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background-color: #000; overflow: hidden; overscroll-behavior: none; touch-action: pan-x pan-y; }
+body { display: flex; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background-color: #fff; overflow: hidden; overscroll-behavior: none; touch-action: pan-x pan-y; }
 
-/* 상단 노치 영역에 블랙 세이프존 생성 */
-body::before {
-    content: ''; position: fixed; top: 0; left: 0; right: 0;
-    height: env(safe-area-inset-top); background: #000; z-index: 10000;
-}
+#map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%; height: 100vh; height: 100dvh; z-index: 1; }
 
-/* 맵은 상단 세이프존 아래부터 화면 끝까지 꽉 채움 */
-#map { position: absolute; top: env(safe-area-inset-top); bottom: 0; left: 0; right: 0; width: 100%; height: calc(100dvh - env(safe-area-inset-top)); z-index: 1; }
-
-/* 💡 Mapbox 로고 및 우측 하단 느낌표 완전 삭제 */
+/* Mapbox 로고 및 우측 느낌표 숨기기 */
 .mapboxgl-ctrl-bottom-left, .mapboxgl-ctrl-bottom-right { display: none !important; }
 
 #splash { position: fixed; top:0; left:0; right:0; bottom:0; z-index: 9999; background: url('1.png') no-repeat center center/cover; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; cursor: pointer; }
@@ -192,7 +185,7 @@ h2.tab-title { color: #333; margin: 10px 0 15px 0; font-size: 1.5em; font-weight
 /* 하단 투명 HUD */
 #trackingHUD {
     position: fixed; 
-    bottom: calc(30px + env(safe-area-inset-bottom)); 
+    bottom: max(30px, env(safe-area-inset-bottom)); 
     left: 50%; transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(5px); border-radius: 15px;
     padding: 15px 25px; color: white; text-align: center; z-index: 990;
