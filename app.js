@@ -20,10 +20,10 @@ let myLogMarkers = [], m100Markers = [], challengeMarkers = [];
 let tempMarker = null;
 
 // 지도 스타일 관리 변수
-let mapMode = 0; // 0: 3D 지형도, 1: 3D 위성도, 2: 2D 지형도(배터리절약)
+let mapMode = 0; // 0: 3D 지형도, 1: 3D 위성도, 2: 2D 지형도
 window.lastReplayRoute = null;
+window.isReplaying = false;
 
-// 💡 사용자님 피드백 반영: '현재' 텍스트 제거 및 색상 유지
 window.updateMapModeButton = function() {
     const btn = document.getElementById('styleToggleBtn');
     if(!btn) return;
@@ -139,9 +139,8 @@ function startRotate(lng, lat) {
 
 function rotateCamera() {
     if (!isRotating || !targetCenter) return;
-    const currentBearing = map.getBearing();
-    if (!window.isFlying) {
-        map.jumpTo({ bearing: currentBearing + 0.15, center: targetCenter, padding: getMapPadding() });
+    if (!window.isMapTouched && !window.isFlying) {
+        map.setBearing(map.getBearing() + 0.15);
     }
     rotateReqId = requestAnimationFrame(rotateCamera);
 }
@@ -181,7 +180,7 @@ function restoreMapLayers() {
         if(!map.getSource('trackLine')) map.addSource('trackLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: trackRoute } } });
         if(!map.getLayer('trackLineLayer')) map.addLayer({ id: 'trackLineLayer', type: 'line', source: 'trackLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#E65100', 'line-width': 5 } });
     }
-    if (document.getElementById('tabTracking').classList.contains('active') && window.lastReplayRoute) {
+    if (window.isReplaying && window.lastReplayRoute) {
          if(!map.getSource('replayLine')) map.addSource('replayLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: window.lastReplayRoute } } });
          if(!map.getLayer('replayLineLayer')) map.addLayer({ id: 'replayLineLayer', type: 'line', source: 'replayLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#00B0FF', 'line-width': 6, 'line-opacity': 0.8 } });
     }
@@ -190,8 +189,6 @@ function restoreMapLayers() {
 window.toggleMapStyle = function() {
     const prevMode = mapMode;
     mapMode = (mapMode + 1) % 3;
-    
-    // 버튼 텍스트 바로 업데이트
     window.updateMapModeButton();
     
     if (mapMode === 0) {
@@ -218,6 +215,18 @@ window.toggleMapStyle = function() {
         }
     }
 };
+
+let wakeLock = null;
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    } catch (err) { console.error("WakeLock Fail:", err); }
+}
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && window.isTracking && !window.isPaused) {
+        requestWakeLock();
+    }
+});
 
 window.isMapTouched = false; 
 
@@ -254,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         restoreMapLayers();
     });
 
+    // 💡 9번 요청: 나침반과 GPS 버튼을 사용자 이미자와 동일하게 '크고 둥글게' 재적용
     const nav = new mapboxgl.NavigationControl({ showZoom: false, showCompass: true });
     map.addControl(nav, 'top-right');
 
@@ -267,25 +277,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const style = document.createElement('style');
     style.innerHTML = `
-        .mapboxgl-ctrl-top-right { top: max(15px, env(safe-area-inset-top)) !important; right: 15px !important; display: flex !important; flex-direction: column !important; gap: 12px !important; }
+        /* 우상단 버튼 크기 및 위치 (이미지처럼 크고 둥글게 복구) */
+        .mapboxgl-ctrl-top-right { top: max(15px, env(safe-area-inset-top)) !important; right: 15px !important; display: flex !important; flex-direction: column !important; gap: 15px !important; }
         .mapboxgl-ctrl-top-right .mapboxgl-ctrl { margin: 0 !important; } 
-        .mapboxgl-ctrl-group { border-radius: 12px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important; overflow: visible !important; background: white !important; }
-        .mapboxgl-ctrl-group > button { width: 48px !important; height: 48px !important; display: flex !important; justify-content: center !important; align-items: center !important; position: relative; }
-        .mapboxgl-ctrl-icon { transform: scale(1.4); } 
-        .compass-touch-shield { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 9999; cursor: pointer; }
+        .mapboxgl-ctrl-group { border-radius: 50% !important; box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important; background: white !important; overflow: hidden !important; }
+        .mapboxgl-ctrl-group > button { width: 50px !important; height: 50px !important; display: flex !important; justify-content: center !important; align-items: center !important; }
+        .mapboxgl-ctrl-icon { transform: scale(1.5); } 
         
+        /* 나침반 터치 실드 및 붉은색 화살표 */
+        .compass-touch-shield { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 9999; cursor: pointer; }
+        .mapboxgl-ctrl-compass .mapboxgl-ctrl-icon { background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 3 l3 7 -3 -1.5 -3 1.5 z' fill='%23D32F2F'/%3E%3Cpath d='M10 17 l3 -7 -3 1.5 -3 -1.5 z' fill='%23999999'/%3E%3C/svg%3E") !important; }
+        
+        /* 사진 팝업 닫기 버튼 설정 */
         #photoOverlay span[onclick*="close"], #photoOverlay .close, .close-photo {
-            position: absolute !important;
-            top: auto !important; 
-            bottom: max(40px, calc(env(safe-area-inset-bottom) + 30px)) !important; 
-            left: 50% !important; 
-            transform: translateX(-50%) !important; 
-            font-size: 32px !important; 
-            width: 65px !important; height: 65px !important; 
-            background: rgba(0,0,0,0.85) !important; color: #fff !important;
-            border-radius: 50% !important; z-index: 999999 !important;
-            display: flex !important; justify-content: center !important; align-items: center !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important; line-height: 1 !important; cursor: pointer !important; text-shadow: none !important;
+            position: absolute !important; top: auto !important; bottom: max(40px, calc(env(safe-area-inset-bottom) + 30px)) !important; 
+            left: 50% !important; transform: translateX(-50%) !important; font-size: 32px !important; width: 65px !important; height: 65px !important; 
+            background: rgba(0,0,0,0.85) !important; color: #fff !important; border-radius: 50% !important; z-index: 999999 !important;
+            display: flex !important; justify-content: center !important; align-items: center !important; box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important; line-height: 1 !important; cursor: pointer !important; text-shadow: none !important;
         }
         #expandedPhoto { will-change: transform; transform-origin: center center; }
     `;
@@ -295,7 +303,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSensorGranted = false;
     let currentHeading = 0; let targetHeading = null;
 
-    // 더블 탭(투명 HUD 전환) 및 트리플 탭(지도 초기화)
     let tapCount = 0; let tapTimer = null;
     document.getElementById('map').addEventListener('touchstart', function(e) {
         if (e.touches.length > 1) return;
@@ -320,7 +327,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (tapCount === 3) {
             e.preventDefault();
-            resetMapToDefault();
+            if(window.isReplaying) window.exitReplay();
+            else resetMapToDefault();
             tapCount = 0; clearTimeout(tapTimer);
         } else {
             clearTimeout(tapTimer); 
@@ -330,7 +338,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('map').addEventListener('touchend', () => { setTimeout(() => { window.isMapTouched = false; }, 1000); }, {passive: true});
 
-    // 마우스 클릭(PC 환경용 컨트롤)
     let clickCount = 0; let clickTimer = null;
     map.on('click', function(e) {
         clickCount++;
@@ -351,7 +358,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 clickTimer = setTimeout(() => { clickCount = 0; }, 300);
             }
         } else if (clickCount === 3) {
-            resetMapToDefault(); clickCount = 0; clearTimeout(clickTimer);
+            if(window.isReplaying) window.exitReplay();
+            else resetMapToDefault();
+            clickCount = 0; clearTimeout(clickTimer);
         } else {
             clearTimeout(clickTimer); clickTimer = setTimeout(() => { clickCount = 0; }, 400);
         }
@@ -430,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000);
 
     initFABs(); initDB(); initM100List();
-    window.updateMapModeButton(); // 첫 로딩 시 버튼 텍스트 적용
+    window.updateMapModeButton(); 
 });
 
 function createMarkerEl(type, labelHtml, isDim) {
@@ -501,6 +510,9 @@ function resetMapToDefault() {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     
     if(map.getSource('replayLine')) map.removeLayer('replayLineLayer').removeSource('replayLine');
+    if(map.getSource('replayPoint')) map.removeLayer('replayPointLayer').removeSource('replayPoint');
+    if(map.getSource('myLogRoute')) map.removeLayer('myLogRouteLayer').removeSource('myLogRoute');
+    if(window.replayMarkers) { window.replayMarkers.forEach(m => m.remove()); window.replayMarkers = []; }
 }
 
 const sidebar = document.getElementById('sidebar'), handleDrag = document.getElementById('dragHandle'), dragText = document.querySelector('.drag-text');
@@ -512,16 +524,11 @@ if (handleDrag) {
     handleDrag.addEventListener('pointerup', e => {
         if(!isHandleDragging) return; isHandleDragging = false; handleDrag.releasePointerCapture(e.pointerId);
         const diff = startY - e.clientY; 
-        
         const isTrackTab = document.getElementById('tabTracking').classList.contains('active');
-        const minState = isTrackTab ? 1 : 0; // 트래킹 중엔 1단계 스킵
-        
+        const minState = isTrackTab ? 1 : 0; 
         if (Math.abs(diff) > 40) { 
-            if (diff > 0) { 
-                if (currentSidebarState < 2) currentSidebarState++; 
-            } else { 
-                if (currentSidebarState > minState) currentSidebarState--; 
-            } 
+            if (diff > 0) { if (currentSidebarState < 2) currentSidebarState++; } 
+            else { if (currentSidebarState > minState) currentSidebarState--; } 
         } else { 
             if (currentSidebarState === 0) currentSidebarState = 1; 
             else if (currentSidebarState === 1) currentSidebarState = 2; 
@@ -533,11 +540,8 @@ if (handleDrag) {
         e.preventDefault(); 
         const isTrackTab = document.getElementById('tabTracking').classList.contains('active');
         const minState = isTrackTab ? 1 : 0;
-        if (e.deltaY > 0) { 
-            if (currentSidebarState > minState) currentSidebarState--; 
-        } else if (e.deltaY < 0) { 
-            if (currentSidebarState < 2) currentSidebarState++; 
-        } 
+        if (e.deltaY > 0) { if (currentSidebarState > minState) currentSidebarState--; } 
+        else if (e.deltaY < 0) { if (currentSidebarState < 2) currentSidebarState++; } 
         updateSidebarState(); 
     }, {passive: false});
 }
@@ -560,15 +564,13 @@ function openTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); 
     document.getElementById(tabId).classList.add('active');
     
-    if (tabId === 'tabSearch' || tabId === 'tabTracking') { 
-        currentSidebarState = 1; 
-    } else { 
-        if (currentSidebarState === -1) currentSidebarState = 0; 
-    }
+    if (tabId === 'tabSearch' || tabId === 'tabTracking') { currentSidebarState = 1; } 
+    else { if (currentSidebarState === -1) currentSidebarState = 0; }
     updateSidebarState();
     
     clearMarkers(myLogMarkers); clearMarkers(m100Markers); clearMarkers(challengeMarkers);
     if(tempMarker) tempMarker.remove(); stopRotate();
+    if(map.getSource('myLogRoute')) map.getSource('myLogRoute').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
     
     if(tabId === 'tabChallenge') { renderChallengeMapAndList(); } 
     else if (tabId === 'tabM100') { renderM100Map(); } 
@@ -652,6 +654,12 @@ function finishSplashAndStart() {
     else { if (map) map.resize(); renderAll(); }
 }
 
+window.showFullPhoto = function(url) {
+    document.getElementById('expandedPhoto').src = url;
+    document.getElementById('photoOverlay').style.display = 'flex';
+}
+window.closePhotoOverlay = function() { document.getElementById('photoOverlay').style.display = 'none'; }
+
 function renderAll() {
     clearMarkers(myLogMarkers); groupedData = {}; const groups = {};
     allRecords.forEach(r => {
@@ -684,26 +692,65 @@ function renderAll() {
         if (lbl) lbl.style.animation = `labelFadeIn 0.3s ease ${delay + 200}ms both`;
         
         let popupContent = `<div style="text-align:center;"><b>🏕️ ${group.name}</b><br><span style="color:#D32F2F; font-weight:bold;">고도: ${group.altNum > 0 ? group.altNum + 'm' : '정보 없음'}</span><hr style="margin:5px 0; border:0; border-top:1px solid #ddd;">`;
+        
+        let carouselCounter = 0;
         group.climbs.forEach(c => {
             popupContent += `<div style="font-size:0.9em; margin-bottom:5px; color:#555;">📅 ${c.date}</div>`;
+            
             if (c.photos && c.photos.length > 0) {
-                const carouselId = 'carousel_' + Math.random().toString(36).substr(2, 9);
-                popupContent += `<div class="carousel" id="${carouselId}"><div class="carousel-inner" id="inner_${carouselId}">`;
-                c.photos.forEach((url, idx) => { popupContent += `<div class="carousel-item"><img src="${url}" onclick="openCarousel(${c.id}, ${idx}, event)"></div>`; });
+                const cId = `carousel_${group.key.replace('.','_').replace(',','_')}_${carouselCounter++}`;
+                popupContent += `<div class="carousel" id="${cId}"><div class="carousel-inner" id="inner_${cId}">`;
+                c.photos.forEach(url => { 
+                    popupContent += `<div class="carousel-item"><img src="${url}" onclick="window.showFullPhoto('${url}')"></div>`; 
+                });
                 popupContent += `</div>`;
                 if (c.photos.length > 1) {
-                    popupContent += `<button class="carousel-control prev" onclick="moveCarousel('${carouselId}', -1, event)">&#10094;</button><button class="carousel-control next" onclick="moveCarousel('${carouselId}', 1, event)">&#10095;</button><div class="carousel-dots" id="dots_${carouselId}">`;
+                    popupContent += `<div class="carousel-dots" id="dots_${cId}">`;
                     c.photos.forEach((_, idx) => { popupContent += `<div class="carousel-dot ${idx===0 ? 'active' : ''}"></div>`; });
                     popupContent += `</div>`;
                 }
                 popupContent += `</div>`;
-                window[`state_${carouselId}`] = { current: 0, total: c.photos.length };
             }
         });
         popupContent += `</div>`;
         
         const popup = new mapboxgl.Popup({ offset: [0, -48], anchor: 'bottom', autoPan: false }).setHTML(popupContent);
         const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([group.lng, group.lat]).setPopup(popup).addTo(map);
+
+        popup.on('open', () => {
+            setTimeout(() => {
+                const popNode = popup.getElement();
+                const carousels = popNode.querySelectorAll('.carousel-inner');
+                carousels.forEach(inner => {
+                    const dotsId = inner.id.replace('inner_', 'dots_');
+                    const dotsContainer = document.getElementById(dotsId);
+                    if(dotsContainer) {
+                        inner.addEventListener('scroll', () => {
+                            const idx = Math.round(inner.scrollLeft / inner.clientWidth);
+                            Array.from(dotsContainer.children).forEach((dot, i) => {
+                                dot.className = i === idx ? 'carousel-dot active' : 'carousel-dot';
+                            });
+                        });
+                    }
+                });
+            }, 50);
+            
+            const hasRoute = group.climbs.some(c => c.route && c.route.length > 0);
+            if (hasRoute) {
+                const firstRoute = group.climbs.find(c => c.route && c.route.length > 0).route;
+                if(map.getSource('myLogRoute')) map.getSource('myLogRoute').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: firstRoute } });
+                else {
+                    map.addSource('myLogRoute', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: firstRoute } } });
+                    map.addLayer({ id: 'myLogRouteLayer', type: 'line', source: 'myLogRoute', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#4CAF50', 'line-width': 5, 'line-opacity': 0.8 } });
+                }
+            }
+        });
+
+        popup.on('close', () => {
+            const label = el.querySelector('.mountain-label');
+            if(label) label.style.display = 'block';
+            if(map.getSource('myLogRoute')) map.getSource('myLogRoute').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
+        });
 
         el.addEventListener('click', (e) => { 
             e.stopPropagation(); 
@@ -712,11 +759,6 @@ function renderAll() {
             focusAndRotate(group.lng, group.lat, 14.5, () => {
                 if (!marker.getPopup().isOpen()) marker.togglePopup();
             });
-        });
-
-        popup.on('close', () => {
-            const label = el.querySelector('.mountain-label');
-            if(label) label.style.display = 'block';
         });
 
         myLogMarkers.push(marker);
@@ -989,98 +1031,7 @@ window.prepareSave = function(name, lat, lng) {
     openTab('tabMyLog'); currentSidebarState = 2; updateSidebarState();
 }
 
-let carouselPhotosArr = []; let currentCarouselIndex = 0;
-let currentPhotoScale = 1; let photoTranslateX = 0; let photoTranslateY = 0;
-
-window.openCarousel = function(recordId, startIndex, event) {
-    if(event) event.stopPropagation(); 
-    const record = allRecords.find(r => r.id === recordId);
-    if(!record || !record.photos) return;
-    carouselPhotosArr = record.photos; 
-    currentCarouselIndex = startIndex; 
-    document.getElementById('photoOverlay').style.display = 'flex';
-    updateCarouselPhoto(); 
-}
-
-window.updateCarouselPhoto = function() {
-    const imgEl = document.getElementById('expandedPhoto');
-    imgEl.src = carouselPhotosArr[currentCarouselIndex]; 
-    
-    currentPhotoScale = 1; photoTranslateX = 0; photoTranslateY = 0;
-    imgEl.style.transform = `translate(0px, 0px) scale(1)`; 
-    
-    const indicator = document.getElementById('photoIndicator'); 
-    if(indicator) indicator.innerText = (currentCarouselIndex + 1) + " / " + carouselPhotosArr.length; 
-    const btnLeft = document.getElementById('photoNavLeft'); const btnRight = document.getElementById('photoNavRight'); 
-    if(btnLeft) btnLeft.style.display = currentCarouselIndex > 0 ? 'block' : 'none'; 
-    if(btnRight) btnRight.style.display = currentCarouselIndex < carouselPhotosArr.length - 1 ? 'block' : 'none';
-}
-
-window.nextPhoto = function() { if (currentCarouselIndex < carouselPhotosArr.length - 1) { currentCarouselIndex++; updateCarouselPhoto(); } }
-window.prevPhoto = function() { if (currentCarouselIndex > 0) { currentCarouselIndex--; updateCarouselPhoto(); } }
-window.closePhotoOverlay = function() { document.getElementById('photoOverlay').style.display = 'none'; }
-
-let touchState = {
-    startX1: 0, startY1: 0,
-    startX2: 0, startY2: 0,
-    initialDist: 0, initialScale: 1,
-    initialTx: 0, initialTy: 0,
-    isPinching: false, isPanning: false
-};
-
-const photoOverlayEl = document.getElementById('photoOverlay');
-const imgEl = document.getElementById('expandedPhoto');
-
-photoOverlayEl.addEventListener('touchstart', e => { 
-    if (e.touches.length === 2) {
-        touchState.isPinching = true; touchState.isPanning = false;
-        touchState.startX1 = e.touches[0].clientX; touchState.startY1 = e.touches[0].clientY;
-        touchState.startX2 = e.touches[1].clientX; touchState.startY2 = e.touches[1].clientY;
-        touchState.initialDist = Math.hypot(touchState.startX1 - touchState.startX2, touchState.startY1 - touchState.startY2);
-        touchState.initialScale = currentPhotoScale;
-    } else if (e.touches.length === 1) {
-        touchState.isPinching = false;
-        touchState.isPanning = currentPhotoScale > 1.05; 
-        touchState.startX1 = e.touches[0].clientX; touchState.startY1 = e.touches[0].clientY;
-        touchState.initialTx = photoTranslateX; touchState.initialTy = photoTranslateY;
-    }
-}, {passive: false});
-
-photoOverlayEl.addEventListener('touchmove', e => { 
-    e.preventDefault(); 
-    if (touchState.isPinching && e.touches.length === 2) {
-        const curX1 = e.touches[0].clientX, curY1 = e.touches[0].clientY;
-        const curX2 = e.touches[1].clientX, curY2 = e.touches[1].clientY;
-        const curDist = Math.hypot(curX1 - curX2, curY1 - curY2);
-        const scaleDiff = curDist / touchState.initialDist;
-        currentPhotoScale = Math.max(1, Math.min(touchState.initialScale * scaleDiff, 5)); 
-        
-        requestAnimationFrame(() => {
-            if(imgEl) imgEl.style.transform = `translate(${photoTranslateX}px, ${photoTranslateY}px) scale(${currentPhotoScale})`;
-        });
-    } else if (touchState.isPanning && e.touches.length === 1) {
-        const curX1 = e.touches[0].clientX; const curY1 = e.touches[0].clientY;
-        photoTranslateX = touchState.initialTx + (curX1 - touchState.startX1);
-        photoTranslateY = touchState.initialTy + (curY1 - touchState.startY1);
-        
-        requestAnimationFrame(() => {
-            if(imgEl) imgEl.style.transform = `translate(${photoTranslateX}px, ${photoTranslateY}px) scale(${currentPhotoScale})`;
-        });
-    }
-}, {passive: false});
-
-photoOverlayEl.addEventListener('touchend', e => { 
-    if (e.touches.length === 0) { touchState.isPinching = false; touchState.isPanning = false; }
-    if (e.changedTouches.length === 1 && currentPhotoScale <= 1.05) { 
-        const touchEndX = e.changedTouches[0].clientX; 
-        if (touchEndX < touchState.startX1 - 50) window.nextPhoto(); 
-        if (touchEndX > touchState.startX1 + 50) window.prevPhoto(); 
-    }
-}, {passive: true});
-
-photoOverlayEl.addEventListener('click', e => { if(e.target === photoOverlayEl) window.closePhotoOverlay(); });
-
-window.resizeImage = function(file) {
+function resizeImage(file) {
     return new Promise((resolve) => {
         const reader = new FileReader(); reader.onload = (e) => {
             const img = new Image(); img.onload = () => {
@@ -1114,7 +1065,7 @@ window.saveRecord = async function() {
     if (!lat || !lng) return alert("검색을 통해 산 위치를 선택해주세요!"); if (!date) return alert("등산하신 날짜를 골라주세요.");
 
     const saveBtn = document.getElementById('mainSaveBtn'); saveBtn.innerText = "처리 중... ⏳"; saveBtn.disabled = true;
-    let photoUrls = []; if (photoInput.files && photoInput.files.length > 0) { for(let i = 0; i < photoInput.files.length; i++) { photoUrls.push(await window.resizeImage(photoInput.files[i])); } }
+    let photoUrls = []; if (photoInput.files && photoInput.files.length > 0) { for(let i = 0; i < photoInput.files.length; i++) { photoUrls.push(await resizeImage(photoInput.files[i])); } }
 
     const store = db.transaction(['hike_records'], 'readwrite').objectStore('hike_records');
     if (editingId) {
@@ -1169,7 +1120,6 @@ window.isPaused = false;
 let trackStartTime = 0;
 let trackTimerInterval = null;
 let elapsedSeconds = 0;
-let wakeLock = null;
 
 let trackRoute = []; 
 let trackDistance = 0; 
@@ -1178,7 +1128,6 @@ let trackPhotos = [];
 window.prepareTracking = function() {
     openTab('tabTracking');
     
-    // 강제 클릭 방식으로 깔끔하게 2D 진입
     const toggleBtn = document.getElementById('styleToggleBtn');
     if (mapMode === 0) {
         toggleBtn.click(); 
@@ -1232,7 +1181,7 @@ window.startHikingTrack = async function() {
     currentSidebarState = -1;
     updateSidebarState();
 
-    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+    requestWakeLock();
 
     if (!trackTimerInterval) {
         trackStartTime = Date.now();
@@ -1266,11 +1215,11 @@ window.startHikingTrack = async function() {
                     document.getElementById('trackDist').innerText = trackDistance.toFixed(2);
                     document.getElementById('hudDist').innerText = trackDistance.toFixed(2);
                     
-                    trackRoute.push([lng, lat]);
+                    trackRoute.push([lng, lat, alt]); 
                     map.getSource('trackLine').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: trackRoute } });
                 }
             } else {
-                trackRoute.push([lng, lat]);
+                trackRoute.push([lng, lat, alt]);
             }
             
             if(!window.isMapTouched) safeEaseTo({ center: [lng, lat], pitch: 0, duration: 1000 });
@@ -1307,13 +1256,13 @@ window.captureTrackPhoto = async function(e) {
     const file = e.target.files[0];
     if(!file) return;
     
-    const resizedUrl = await window.resizeImage(file);
+    const resizedUrl = await resizeImage(file);
     if (trackRoute.length > 0) {
         const currentLoc = trackRoute[trackRoute.length - 1];
         trackPhotos.push({ coords: currentLoc, url: resizedUrl });
         
         const el = document.createElement('div');
-        el.innerHTML = '📸'; el.style.fontSize = '24px'; el.style.cursor = 'pointer';
+        el.innerHTML = '📸'; el.style.fontSize = '24px'; el.style.cursor = 'pointer'; el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))';
         new mapboxgl.Marker(el).setLngLat(currentLoc).addTo(map);
         alert("사진이 현재 위치에 기록되었습니다!");
     }
@@ -1328,7 +1277,7 @@ window.stopHikingTrack = function() {
     if (trackTimerInterval) clearInterval(trackTimerInterval);
     trackTimerInterval = null;
     
-    if(typeof wakeLock !== 'undefined' && wakeLock) wakeLock.release();
+    if(wakeLock) { wakeLock.release(); wakeLock = null; }
 
     document.getElementById('btnTrackStart').style.display = 'block';
     document.getElementById('activeTrackControls').style.display = 'none';
@@ -1348,13 +1297,16 @@ window.stopHikingTrack = function() {
     const maxAlt = document.getElementById('trackAlt').innerText;
     
     const photosOnly = trackPhotos.map(p => p.url);
+    let maxAltPoint = trackRoute.length > 0 ? trackRoute[0] : [128.0, 36.0, 0];
+    trackRoute.forEach(pt => { if(pt[2] && pt[2] > maxAltPoint[2]) maxAltPoint = pt; });
 
     const store = db.transaction(['hike_records'], 'readwrite').objectStore('hike_records');
     store.add({ 
         name: mName, date: today, alt: maxAlt, 
-        lat: trackRoute[0] ? trackRoute[0][1] : 36.0, 
-        lng: trackRoute[0] ? trackRoute[0][0] : 128.0, 
+        lat: maxAltPoint[1], 
+        lng: maxAltPoint[0], 
         photos: photosOnly, 
+        photoData: trackPhotos, 
         route: trackRoute, 
         time: finalTime,
         distance: trackDistance.toFixed(2)
@@ -1391,48 +1343,166 @@ window.renderTrackHistory = function() {
     tracks.forEach(t => {
         const div = document.createElement('div');
         div.className = 'record-card';
-        div.innerHTML = `<h4>⛰️ ${t.name} <small>(${t.distance}km / ${t.time})</small></h4><p>📅 ${t.date}</p>`;
-        div.onclick = () => window.replayRoute(t.route);
+        div.innerHTML = `
+            <div class="action-btns" style="z-index: 10;">
+                <button class="delete-btn" onclick="deleteRecord(${t.id}, event)">삭제</button>
+            </div>
+            <h4>⛰️ ${t.name} <small>(${t.distance}km / ${t.time})</small></h4><p>📅 ${t.date}</p>
+        `;
+        div.onclick = () => window.replayRoute(t.route, t);
         listEl.appendChild(div);
     });
 }
 
-window.replayRoute = function(routeArray) {
+window.exitReplay = function() {
+    window.isReplaying = false;
+    const banner = document.getElementById('replayBanner');
+    if (banner) banner.style.display = 'none';
+    if(map.getSource('replayLine')) map.removeLayer('replayLineLayer').removeSource('replayLine');
+    if(map.getSource('replayPoint')) map.removeLayer('replayPointLayer').removeSource('replayPoint');
+    if(window.replayMarkers) { window.replayMarkers.forEach(m => m.remove()); window.replayMarkers = []; }
+    resetMapToDefault();
+}
+
+window.replayRoute = function(routeArray, record) {
     if(!routeArray || routeArray.length < 2) return alert("동선 데이터가 부족합니다.");
     window.lastReplayRoute = routeArray;
+    window.isReplaying = true;
     
-    const toggleBtn = document.getElementById('styleToggleBtn');
-    if(mapMode === 0) { 
-        toggleBtn.click(); 
-    } else if(mapMode === 2) { 
-        toggleBtn.click();
-        setTimeout(() => { if(mapMode===0) toggleBtn.click(); }, 400);
+    let banner = document.getElementById('replayBanner');
+    if(!banner) {
+        banner = document.createElement('div'); banner.id = 'replayBanner'; document.body.appendChild(banner);
     }
+    banner.style.display = 'flex';
+    banner.innerHTML = `
+        <div style="flex:1; text-align:left;">
+            <b style="color:#FFD54F; font-size:1.1em;">🏃‍♂️ ${record.name}</b><br>
+            <span style="font-size:0.9em;">거리: ${record.distance}km | 시간: ${record.time} | 최고: ${record.alt}m</span>
+        </div>
+        <button onclick="window.exitReplay()" style="background:#D32F2F;color:white;border:none;border-radius:8px;padding:8px 12px;font-weight:bold;margin-left:10px;">종료</button>
+    `;
+
+    const toggleBtn = document.getElementById('styleToggleBtn');
+    if(mapMode === 0) { toggleBtn.click(); } 
+    else if(mapMode === 2) { toggleBtn.click(); setTimeout(() => { if(mapMode===0) toggleBtn.click(); }, 400); }
     
     if(map.getSource('replayLine')) map.removeLayer('replayLineLayer').removeSource('replayLine');
-    map.addSource('replayLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: routeArray } } });
-    map.addLayer({ id: 'replayLineLayer', type: 'line', source: 'replayLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#00B0FF', 'line-width': 6, 'line-opacity': 0.8 } });
+    if(map.getSource('replayPoint')) map.removeLayer('replayPointLayer').removeSource('replayPoint');
+
+    map.addSource('replayLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
+    map.addLayer({ id: 'replayLineLayer', type: 'line', source: 'replayLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#E65100', 'line-width': 6, 'line-opacity': 0.8 } });
+
+    map.addSource('replayPoint', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: routeArray[0] } } });
+    map.addLayer({
+        id: 'replayPointLayer', type: 'circle', source: 'replayPoint',
+        paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-width': 3, 'circle-stroke-color': '#E65100' }
+    });
+
+    window.replayMarkers = [];
+    if(record.photoData && record.photoData.length > 0) {
+        record.photoData.forEach(pd => {
+            const el = document.createElement('div');
+            el.innerHTML = '📸'; el.style.fontSize = '24px'; el.style.cursor = 'pointer'; el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))';
+            const marker = new mapboxgl.Marker({ element: el }).setLngLat(pd.coords).addTo(map);
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.showFullPhoto(pd.url);
+            });
+            window.replayMarkers.push(marker);
+        });
+    }
 
     currentSidebarState = -1; updateSidebarState();
     
-    let i = 0;
-    function animateCamera() {
-        if (i >= routeArray.length) { alert("리플레이가 종료되었습니다."); return; }
-        
-        const target = routeArray[i];
-        map.easeTo({
-            center: target,
-            zoom: 16.5,
-            pitch: 70, 
-            bearing: (i < routeArray.length - 1) ? turf.bearing(turf.point(target), turf.point(routeArray[i+1])) : map.getBearing(),
-            duration: 500, 
-            easing: t => t
-        });
-        
-        i += Math.ceil(routeArray.length / 100); 
-        setTimeout(animateCamera, 500);
-    }
+    let currentIdx = 0;
+    let isPaused = false;
     
-    safeFlyTo({ center: routeArray[0], zoom: 15, pitch: 0, duration: 2000 });
-    setTimeout(animateCamera, 2500);
+    safeFlyTo({ center: routeArray[0], zoom: 15.5, pitch: 60, bearing: 0, duration: 2000 });
+    
+    setTimeout(() => {
+        let lastTime = performance.now();
+        let currentBearing = map.getBearing();
+
+        function animateFrame(time) {
+            if (!window.isReplaying) return;
+            if (isPaused) {
+                requestAnimationFrame(animateFrame);
+                return;
+            }
+
+            const dt = time - lastTime;
+            if (dt > 40) { 
+                lastTime = time;
+                currentIdx += Math.max(1, Math.floor(routeArray.length / 300)); 
+
+                if (currentIdx >= routeArray.length) {
+                    const bounds = routeArray.reduce((b, coord) => b.extend(coord), new mapboxgl.LngLatBounds(routeArray[0], routeArray[0]));
+                    map.fitBounds(bounds, { padding: {top: 100, bottom: 50, left: 50, right: 50}, pitch: 0, bearing: 0, duration: 2500 });
+                    
+                    map.getSource('replayLine').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: routeArray } });
+                    map.getSource('replayPoint').setData({ type: 'Feature', geometry: { type: 'Point', coordinates: routeArray[routeArray.length-1] } });
+                    return;
+                }
+
+                const targetCoord = routeArray[currentIdx];
+                map.getSource('replayLine').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: routeArray.slice(0, currentIdx+1) } });
+                map.getSource('replayPoint').setData({ type: 'Feature', geometry: { type: 'Point', coordinates: targetCoord } });
+
+                const lookAheadIdx = Math.min(currentIdx + 15, routeArray.length - 1);
+                const targetBearing = turf.bearing(turf.point(targetCoord), turf.point(routeArray[lookAheadIdx]));
+                
+                let bearingDiff = targetBearing - currentBearing;
+                if (bearingDiff > 180) bearingDiff -= 360;
+                if (bearingDiff < -180) bearingDiff += 360;
+                currentBearing += bearingDiff * 0.08; 
+
+                map.easeTo({
+                    center: targetCoord,
+                    pitch: 65,
+                    bearing: currentBearing,
+                    zoom: 15.8,
+                    duration: 50,
+                    easing: t => t
+                });
+
+                if (record.photoData && record.photoData.length > 0) {
+                    for (let pIdx = 0; pIdx < record.photoData.length; pIdx++) {
+                        const photo = record.photoData[pIdx];
+                        if (!photo.shown && getDistance(targetCoord[1], targetCoord[0], photo.coords[1], photo.coords[0]) < 20) {
+                            photo.shown = true;
+                            isPaused = true;
+                            
+                            map.easeTo({ center: photo.coords, zoom: 17, pitch: 40, duration: 1000 });
+                            
+                            setTimeout(() => {
+                                const imgPopup = document.createElement('img');
+                                imgPopup.src = photo.url;
+                                imgPopup.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%) scale(0.5); opacity:0; z-index:10005; border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,0.8); max-width:85%; max-height:65%; transition:all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); object-fit:contain; background:#000;';
+                                document.body.appendChild(imgPopup);
+
+                                requestAnimationFrame(() => {
+                                    imgPopup.style.transform = 'translate(-50%, -50%) scale(1)';
+                                    imgPopup.style.opacity = '1';
+                                });
+
+                                setTimeout(() => {
+                                    imgPopup.style.transform = 'translate(-50%, -50%) scale(0.5)';
+                                    imgPopup.style.opacity = '0';
+                                    setTimeout(() => {
+                                        imgPopup.remove();
+                                        isPaused = false;
+                                    }, 500);
+                                }, 2500); 
+                            }, 1000);
+                            break;
+                        }
+                    }
+                }
+            }
+            requestAnimationFrame(animateFrame);
+        }
+        
+        if(record.photoData) record.photoData.forEach(p => p.shown = false);
+        requestAnimationFrame(animateFrame);
+    }, 2000);
 }
