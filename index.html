@@ -11,6 +11,7 @@
     
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="manifest" href="manifest.json">
     <title>나의 등산기</title>
     
     <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.js'></script>
@@ -119,7 +120,14 @@
 
     <script src="data.js?v=999"></script>
     <script src="app.js?v=999"></script>
-</body>
-</html>
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('Service Worker 등록 성공'))
+            .catch(err => console.log('Service Worker 등록 실패', err));
+    });
+}
+</script>
 </body>
 </html>
