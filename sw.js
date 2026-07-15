@@ -1,4 +1,4 @@
-const CACHE_NAME = 'peaklog-v1';
+const CACHE_NAME = 'peaklog-v2';
 const ASSETS = [
   './',
   './index.html',
