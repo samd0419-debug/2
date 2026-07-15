@@ -1,10 +1,14 @@
 * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
 input, textarea { user-select: auto; -webkit-user-select: auto; }
 
-html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
-body { display: flex; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background-color: #000; overflow: hidden; overscroll-behavior: none; touch-action: pan-x pan-y; }
+/* 하단 블랙바 제거 및 풀화면(100dvh) 적용 */
+html, body { width: 100%; height: 100vh; height: 100dvh; margin: 0; padding: 0; }
+body { display: flex; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background-color: #fff; overflow: hidden; overscroll-behavior: none; touch-action: pan-x pan-y; }
 
-#map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%; z-index: 1; }
+#map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%; height: 100vh; height: 100dvh; z-index: 1; }
+
+/* Mapbox 로고 및 우측 느낌표 숨기기 */
+.mapboxgl-ctrl-bottom-left, .mapboxgl-ctrl-bottom-right { display: none !important; }
 
 #splash { position: fixed; top:0; left:0; right:0; bottom:0; z-index: 9999; background: url('1.png') no-repeat center center/cover; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; cursor: pointer; }
 .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: popIn 1s cubic-bezier(0.2, 0.8, 0.2, 1); width: 100%; }
@@ -20,7 +24,7 @@ body { display: flex; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-
 @keyframes blinkHint { 0%, 100% { transform: scale(0.95); opacity: 0.6; } 50% { transform: scale(1.05); opacity: 1; } }
 
 #sidebar { 
-    position: fixed; bottom: 0; left: 0; width: 100%; height: 85vh; 
+    position: fixed; bottom: 0; left: 0; width: 100%; height: 85vh; height: 85dvh; 
     background: #fff; border-radius: 20px 20px 0 0;
     box-shadow: 0 -5px 20px rgba(0,0,0,0.15);
     transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
@@ -50,20 +54,21 @@ body { display: flex; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-
 }
 #styleToggleBtn:active { transform: scale(0.95); }
 
+/* --- 등산 중 UI 숨김 애니메이션 --- */
+.fab-widget { transition: opacity 0.3s, transform 0.3s; }
+body.ui-hidden .fab-widget { opacity: 0; pointer-events: none; transform: translateX(20px); }
+body.ui-hidden #sidebar { transform: translateY(100vh) !important; opacity: 0; pointer-events: none; }
+
 .fab-btn {
     width: 55px; height: 55px; border-radius: 50%; color: white; font-weight: 900; font-size: 0.75em; letter-spacing: -0.5px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.25); 
     backdrop-filter: blur(5px); transition: transform 0.3s, opacity 0.3s; cursor: pointer; position: relative; z-index: 20;
 }
 
-#searchWidget { position: fixed; right: 15px; bottom: 225px; z-index: 1000; touch-action: none; }
-#m100Widget { position: fixed; right: 15px; bottom: 160px; z-index: 1000; touch-action: none; }
-#challengeWidget { position: fixed; right: 15px; bottom: 95px; z-index: 1000; touch-action: none; }
-#myLogWidget { position: fixed; right: 15px; bottom: 30px; z-index: 1000; touch-action: none; }
-
 #searchFab { background: rgba(103, 58, 183, 0.9); } #searchFab::before { content: '🔎'; font-size: 1.6em; margin-bottom: 2px; }
 #m100Fab { background: rgba(21, 101, 192, 0.9); } #m100Fab::before { content: '⛰️'; font-size: 1.6em; margin-bottom: 2px; }
 #challengeFab { background: rgba(255, 143, 0, 0.9); } #challengeFab::before { content: '🏆'; font-size: 1.6em; margin-bottom: 2px; }
+#trackFab { background: rgba(211, 47, 47, 0.9); } #trackFab::before { content: '🏃‍♂️'; font-size: 1.6em; margin-bottom: 2px; }
 #myLogFab { background: rgba(46, 125, 50, 0.9); } #myLogFab::before { content: '🏕️'; font-size: 1.6em; margin-bottom: 2px; }
 
 .m100-list { padding: 0; margin: 0; list-style: none; }
@@ -152,7 +157,40 @@ h2.tab-title { color: #333; margin: 10px 0 15px 0; font-size: 1.5em; font-weight
 #expandedPhoto { max-width:90%; max-height:80%; object-fit:contain; border-radius:4px; transition: transform 0.3s ease; box-shadow: 0 5px 25px rgba(0,0,0,0.5); }
 #photoClose { position:absolute; top:20px; right:20px; color:white; font-size:3em; z-index:10001; padding:10px; cursor:pointer; line-height:1; }
 #photoIndicator { position:absolute; bottom:30px; color:white; font-size:1.2em; font-weight:bold; z-index:10001; background:rgba(0,0,0,0.5); padding:5px 15px; border-radius:15px; }
-/* 나침반 정북 방향(N) 화살표를 빨간색으로 변경 */
+
 .mapboxgl-ctrl-compass .mapboxgl-ctrl-icon {
     background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 3 l3 7 -3 -1.5 -3 1.5 z' fill='%23D32F2F'/%3E%3Cpath d='M10 17 l3 -7 -3 1.5 -3 -1.5 z' fill='%23999999'/%3E%3C/svg%3E") !important;
 }
+
+/* --- 트래킹 대시보드 및 하단 투명 HUD 스타일 --- */
+.track-dashboard { background: #f4f6f8; border-radius: 12px; padding: 10px 15px; text-align: center; border: 2px solid #e0e0e0; }
+.track-time { font-size: 2.2em; font-weight: 900; color: #1565C0; font-variant-numeric: tabular-nums; letter-spacing: -1px; margin-bottom: 10px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+.track-stats-grid { display: flex; justify-content: space-between; margin-bottom: 15px; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.stat-box { flex: 1; border-right: 1px solid #eee; }
+.stat-box:last-child { border-right: none; }
+.stat-box small { color: #777; font-size: 0.75em; font-weight: bold; }
+.stat-box b { font-size: 1.3em; color: #333; display: block; margin-top: 3px; }
+.stat-box .unit { font-size: 0.75em; color: #999; margin-left: 2px; }
+
+.track-controls { display: flex; flex-direction: column; gap: 8px; }
+.btn-large { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; color: white; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.15); transition: transform 0.1s; }
+.btn-large:active { transform: scale(0.98); }
+.btn-start { background: #E65100; font-size: 1.3em; padding: 15px;}
+.btn-pause { background: #FBC02D; color: #333; flex: 1; }
+.btn-photo { background: #8E24AA; flex: 1; }
+.btn-stop { background: #D32F2F; flex: 1; }
+
+#activeTrackControls { display: flex; width: 100%; }
+
+/* 하단 투명 HUD */
+#trackingHUD {
+    position: fixed; 
+    bottom: max(30px, env(safe-area-inset-bottom)); 
+    left: 50%; transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(5px); border-radius: 15px;
+    padding: 15px 25px; color: white; text-align: center; z-index: 990;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.3s; pointer-events: none;
+    width: 85%; max-width: 350px;
+}
+.hud-time { font-size: 2.5em; font-weight: 900; letter-spacing: 1px; text-shadow: 1px 1px 3px black; font-variant-numeric: tabular-nums; }
+.hud-stats { display: flex; gap: 10px; justify-content: space-around; margin-top: 5px; font-size: 1em; font-weight: bold; color: #E0E0E0; }

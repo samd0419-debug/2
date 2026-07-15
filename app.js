@@ -18,7 +18,26 @@ function safeEaseTo(options) {
 let map;
 let myLogMarkers = [], m100Markers = [], challengeMarkers = [];
 let tempMarker = null;
-let isSatelliteMode = false;
+
+// 지도 스타일 관리 변수
+let mapMode = 0; // 0: 3D 지형도, 1: 3D 위성도, 2: 2D 지형도(배터리절약)
+window.lastReplayRoute = null;
+
+// 💡 사용자님 피드백 반영: '현재' 텍스트 제거 및 색상 유지
+window.updateMapModeButton = function() {
+    const btn = document.getElementById('styleToggleBtn');
+    if(!btn) return;
+    if (mapMode === 0) {
+        btn.innerHTML = '⛰️ 3D 지형도';
+        btn.style.color = '#333'; btn.style.borderColor = '#333';
+    } else if (mapMode === 1) {
+        btn.innerHTML = '🛰️ 3D 위성도';
+        btn.style.color = '#1565C0'; btn.style.borderColor = '#1565C0';
+    } else if (mapMode === 2) {
+        btn.innerHTML = '🗺️ 2D 지형도';
+        btn.style.color = '#2E7D32'; btn.style.borderColor = '#2E7D32';
+    }
+};
 
 async function fetchWeather(lat, lng, containerId) {
     try {
@@ -157,19 +176,50 @@ function focusAndRotate(lng, lat, zoomLvl = 14, callback = null) {
     });
 }
 
+function restoreMapLayers() {
+    if (window.isTracking && trackRoute && trackRoute.length > 0) {
+        if(!map.getSource('trackLine')) map.addSource('trackLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: trackRoute } } });
+        if(!map.getLayer('trackLineLayer')) map.addLayer({ id: 'trackLineLayer', type: 'line', source: 'trackLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#E65100', 'line-width': 5 } });
+    }
+    if (document.getElementById('tabTracking').classList.contains('active') && window.lastReplayRoute) {
+         if(!map.getSource('replayLine')) map.addSource('replayLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: window.lastReplayRoute } } });
+         if(!map.getLayer('replayLineLayer')) map.addLayer({ id: 'replayLineLayer', type: 'line', source: 'replayLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#00B0FF', 'line-width': 6, 'line-opacity': 0.8 } });
+    }
+}
+
 window.toggleMapStyle = function() {
-    const btn = document.getElementById('styleToggleBtn');
-    isSatelliteMode = !isSatelliteMode;
-    const nextStyle = isSatelliteMode ? 'mapbox://styles/mapbox/satellite-streets-v12' : 'mapbox://styles/mapbox/outdoors-v12';
+    const prevMode = mapMode;
+    mapMode = (mapMode + 1) % 3;
     
-    map.setStyle(nextStyle);
-    map.once('style.load', () => {
-        map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 14 });
-        map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.1 });
-        map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
-    });
-    btn.innerHTML = isSatelliteMode ? '🗺️ 3D 지형도' : '🛰️ 3D 위성도';
+    // 버튼 텍스트 바로 업데이트
+    window.updateMapModeButton();
+    
+    if (mapMode === 0) {
+        if (prevMode === 2) {
+            if (!map.getSource('mapbox-dem')) map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 12 });
+            map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.1 });
+            if (!map.getLayer('sky')) map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
+            map.easeTo({ pitch: 45, duration: 1000 });
+        } else {
+            map.setStyle('mapbox://styles/mapbox/outdoors-v12');
+        }
+    } else if (mapMode === 1) {
+        map.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
+    } else {
+        if (prevMode === 1) {
+            map.setStyle('mapbox://styles/mapbox/outdoors-v12');
+            map.once('style.load', () => {
+                map.easeTo({ pitch: 0, duration: 1000 });
+            });
+        } else {
+            map.setTerrain(null);
+            if (map.getLayer('sky')) map.removeLayer('sky');
+            map.easeTo({ pitch: 0, duration: 1000 });
+        }
+    }
 };
+
+window.isMapTouched = false; 
 
 document.addEventListener('DOMContentLoaded', () => {
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FtZDIwMDAiLCJhIjoiY21yYmp1OG41MXV0bzMwczliZjk5enNjaSJ9.yb9rTbbR-mme-SZ89CTK1Q';
@@ -189,13 +239,19 @@ document.addEventListener('DOMContentLoaded', () => {
     map.addControl(new MapboxLanguage({ defaultLanguage: 'ko' }));
 
     map.on('style.load', () => {
-        if (!map.getSource('mapbox-dem')) {
-            map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 12 });
+        if (mapMode === 0 || mapMode === 1) {
+            if (!map.getSource('mapbox-dem')) {
+                map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 12 });
+            }
+            map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.1 });
+            if (!map.getLayer('sky')) {
+                map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
+            }
+        } else {
+            map.setTerrain(null);
+            if (map.getLayer('sky')) map.removeLayer('sky');
         }
-        map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.1 }); 
-        if (!map.getLayer('sky')) {
-            map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
-        }
+        restoreMapLayers();
     });
 
     const nav = new mapboxgl.NavigationControl({ showZoom: false, showCompass: true });
@@ -209,7 +265,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     map.addControl(geolocate, 'top-right');
 
-    // 💡 [UI 개선] 회전 화살표 삭제 및 닫기 버튼 하단 유지
     const style = document.createElement('style');
     style.innerHTML = `
         .mapboxgl-ctrl-top-right { top: max(15px, env(safe-area-inset-top)) !important; right: 15px !important; display: flex !important; flex-direction: column !important; gap: 12px !important; }
@@ -219,7 +274,6 @@ document.addEventListener('DOMContentLoaded', () => {
         .mapboxgl-ctrl-icon { transform: scale(1.4); } 
         .compass-touch-shield { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 9999; cursor: pointer; }
         
-        /* 🚨 사진 닫기(X) 버튼 하단 중앙 정렬 유지 */
         #photoOverlay span[onclick*="close"], #photoOverlay .close, .close-photo {
             position: absolute !important;
             top: auto !important; 
@@ -239,16 +293,72 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.isAutoRotating = false; 
     let isSensorGranted = false;
-    let isMapTouched = false; 
     let currentHeading = 0; let targetHeading = null;
 
-    document.getElementById('map').addEventListener('touchstart', () => { isMapTouched = true; }, {passive: true});
-    document.getElementById('map').addEventListener('touchend', () => { setTimeout(() => { isMapTouched = false; }, 1000); }, {passive: true});
-    document.getElementById('map').addEventListener('mousedown', () => { isMapTouched = true; });
-    document.getElementById('map').addEventListener('mouseup', () => { setTimeout(() => { isMapTouched = false; }, 1000); });
+    // 더블 탭(투명 HUD 전환) 및 트리플 탭(지도 초기화)
+    let tapCount = 0; let tapTimer = null;
+    document.getElementById('map').addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) return;
+        window.isMapTouched = true;
+        tapCount++;
+        if (tapCount === 2) {
+            if (window.isTracking) {
+                e.preventDefault();
+                if (document.body.classList.contains('ui-hidden')) {
+                    document.body.classList.remove('ui-hidden');
+                    document.getElementById('trackingHUD').style.display = 'none';
+                    currentSidebarState = 1; updateSidebarState(); 
+                } else {
+                    document.body.classList.add('ui-hidden');
+                    document.getElementById('trackingHUD').style.display = 'block';
+                    currentSidebarState = -1; updateSidebarState(); 
+                }
+                tapCount = 0; clearTimeout(tapTimer);
+            } else {
+                clearTimeout(tapTimer);
+                tapTimer = setTimeout(() => { tapCount = 0; }, 300);
+            }
+        } else if (tapCount === 3) {
+            e.preventDefault();
+            resetMapToDefault();
+            tapCount = 0; clearTimeout(tapTimer);
+        } else {
+            clearTimeout(tapTimer); 
+            tapTimer = setTimeout(() => { tapCount = 0; }, 400);
+        }
+    }, {passive: false});
+    
+    document.getElementById('map').addEventListener('touchend', () => { setTimeout(() => { window.isMapTouched = false; }, 1000); }, {passive: true});
+
+    // 마우스 클릭(PC 환경용 컨트롤)
+    let clickCount = 0; let clickTimer = null;
+    map.on('click', function(e) {
+        clickCount++;
+        if (clickCount === 2) {
+            if (window.isTracking) {
+                if (document.body.classList.contains('ui-hidden')) {
+                    document.body.classList.remove('ui-hidden');
+                    document.getElementById('trackingHUD').style.display = 'none';
+                    currentSidebarState = 1; updateSidebarState();
+                } else {
+                    document.body.classList.add('ui-hidden');
+                    document.getElementById('trackingHUD').style.display = 'block';
+                    currentSidebarState = -1; updateSidebarState();
+                }
+                clickCount = 0; clearTimeout(clickTimer);
+            } else {
+                clearTimeout(clickTimer);
+                clickTimer = setTimeout(() => { clickCount = 0; }, 300);
+            }
+        } else if (clickCount === 3) {
+            resetMapToDefault(); clickCount = 0; clearTimeout(clickTimer);
+        } else {
+            clearTimeout(clickTimer); clickTimer = setTimeout(() => { clickCount = 0; }, 400);
+        }
+    });
 
     function smoothRotateLoop() {
-        if (window.isAutoRotating && !isMapTouched && !window.isFlying && targetHeading !== null) {
+        if (window.isAutoRotating && !window.isMapTouched && !window.isFlying && targetHeading !== null) {
             let diff = targetHeading - currentHeading;
             while (diff < -180) diff += 360;
             while (diff > 180) diff -= 360;
@@ -307,38 +417,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const gpsBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
         if (gpsBtn) {
             gpsBtn.addEventListener('click', () => {
+                stopRotate(); 
+                window.isAutoRotating = false; 
+                const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
+                if(compassBtn) compassBtn.classList.remove('is-rotating');
+                
                 window.isFlying = true;
                 clearTimeout(flyTimeout);
                 flyTimeout = setTimeout(() => { window.isFlying = false; }, 1600); 
             });
         }
     }, 1000);
- 
-    let clickCount = 0; let clickTimer = null;
-    map.on('click', function(e) {
-        clickCount++;
-        if (clickCount === 3) { resetMapToDefault(); clickCount = 0; clearTimeout(clickTimer); } 
-        else { clearTimeout(clickTimer); clickTimer = setTimeout(() => { clickCount = 0; }, 500); }
-    });
-
-    let touchTapCount = 0; let touchTapTimer = null;
-    document.getElementById('map').addEventListener('touchstart', function(e) {
-        if (e.touches.length > 1) return;
-        touchTapCount++;
-        if (touchTapCount === 3) { resetMapToDefault(); e.preventDefault(); touchTapCount = 0; clearTimeout(touchTapTimer); } 
-        else { clearTimeout(touchTapTimer); touchTapTimer = setTimeout(() => { touchTapCount = 0; }, 500); }
-    }, {passive: false});
-
-    window.addEventListener('resize', () => {
-        const widgets = ['myLogWidget', 'challengeWidget', 'm100Widget', 'searchWidget'];
-        widgets.forEach(id => { const el = document.getElementById(id); if(el) { el.style.top = ''; el.style.left = ''; el.style.right = '15px'; el.style.bottom = ''; } });
-        document.getElementById('searchWidget').style.bottom = '225px';
-        document.getElementById('m100Widget').style.bottom = '160px';
-        document.getElementById('challengeWidget').style.bottom = '95px';
-        document.getElementById('myLogWidget').style.bottom = '30px';
-    });
 
     initFABs(); initDB(); initM100List();
+    window.updateMapModeButton(); // 첫 로딩 시 버튼 텍스트 적용
 });
 
 function createMarkerEl(type, labelHtml, isDim) {
@@ -407,6 +499,8 @@ function resetMapToDefault() {
     clearMarkers(myLogMarkers); clearMarkers(m100Markers); clearMarkers(challengeMarkers);
     if(tempMarker) tempMarker.remove();
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    
+    if(map.getSource('replayLine')) map.removeLayer('replayLineLayer').removeSource('replayLine');
 }
 
 const sidebar = document.getElementById('sidebar'), handleDrag = document.getElementById('dragHandle'), dragText = document.querySelector('.drag-text');
@@ -418,11 +512,34 @@ if (handleDrag) {
     handleDrag.addEventListener('pointerup', e => {
         if(!isHandleDragging) return; isHandleDragging = false; handleDrag.releasePointerCapture(e.pointerId);
         const diff = startY - e.clientY; 
-        if (Math.abs(diff) > 40) { if (diff > 0) { if (currentSidebarState < 2) currentSidebarState++; } else { if (currentSidebarState > 0) currentSidebarState--; } }
-        else { if (currentSidebarState === 0) currentSidebarState = 1; else if (currentSidebarState === 1) currentSidebarState = 2; else if (currentSidebarState === 2) currentSidebarState = 0; }
+        
+        const isTrackTab = document.getElementById('tabTracking').classList.contains('active');
+        const minState = isTrackTab ? 1 : 0; // 트래킹 중엔 1단계 스킵
+        
+        if (Math.abs(diff) > 40) { 
+            if (diff > 0) { 
+                if (currentSidebarState < 2) currentSidebarState++; 
+            } else { 
+                if (currentSidebarState > minState) currentSidebarState--; 
+            } 
+        } else { 
+            if (currentSidebarState === 0) currentSidebarState = 1; 
+            else if (currentSidebarState === 1) currentSidebarState = 2; 
+            else if (currentSidebarState === 2) currentSidebarState = minState; 
+        }
         updateSidebarState();
     });
-    handleDrag.addEventListener('wheel', e => { e.preventDefault(); if (e.deltaY > 0) { if (currentSidebarState > 0) currentSidebarState--; } else if (e.deltaY < 0) { if (currentSidebarState < 2) currentSidebarState++; } updateSidebarState(); }, {passive: false});
+    handleDrag.addEventListener('wheel', e => { 
+        e.preventDefault(); 
+        const isTrackTab = document.getElementById('tabTracking').classList.contains('active');
+        const minState = isTrackTab ? 1 : 0;
+        if (e.deltaY > 0) { 
+            if (currentSidebarState > minState) currentSidebarState--; 
+        } else if (e.deltaY < 0) { 
+            if (currentSidebarState < 2) currentSidebarState++; 
+        } 
+        updateSidebarState(); 
+    }, {passive: false});
 }
 
 function updateSidebarState() {
@@ -443,7 +560,11 @@ function openTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); 
     document.getElementById(tabId).classList.add('active');
     
-    if (tabId === 'tabSearch') { currentSidebarState = 1; } else { if (currentSidebarState === -1) currentSidebarState = 0; }
+    if (tabId === 'tabSearch' || tabId === 'tabTracking') { 
+        currentSidebarState = 1; 
+    } else { 
+        if (currentSidebarState === -1) currentSidebarState = 0; 
+    }
     updateSidebarState();
     
     clearMarkers(myLogMarkers); clearMarkers(m100Markers); clearMarkers(challengeMarkers);
@@ -460,6 +581,7 @@ function initFABs() {
     setupDraggableFab(document.getElementById('m100Fab'), document.getElementById('m100Widget'), () => openTab('tabM100'));
     setupDraggableFab(document.getElementById('challengeFab'), document.getElementById('challengeWidget'), () => openTab('tabChallenge'));
     setupDraggableFab(document.getElementById('searchFab'), document.getElementById('searchWidget'), () => openTab('tabSearch'));
+    setupDraggableFab(document.getElementById('trackFab'), document.getElementById('trackWidget'), () => window.prepareTracking());
 }
 
 function setupDraggableFab(fab, widget, onClickCallback) {
@@ -485,6 +607,7 @@ function loadSavedRecords() {
         calculateTotalAltOnly();
         document.getElementById('uiTotalAlt').innerText = totalAltitudeData.toLocaleString(); 
         if (isFirstLoad) { playSplashIntro(); } else { renderAll(); }
+        setTimeout(window.renderTrackHistory, 500);
     };
 }
 
@@ -957,7 +1080,7 @@ photoOverlayEl.addEventListener('touchend', e => {
 
 photoOverlayEl.addEventListener('click', e => { if(e.target === photoOverlayEl) window.closePhotoOverlay(); });
 
-function resizeImage(file) {
+window.resizeImage = function(file) {
     return new Promise((resolve) => {
         const reader = new FileReader(); reader.onload = (e) => {
             const img = new Image(); img.onload = () => {
@@ -991,7 +1114,7 @@ window.saveRecord = async function() {
     if (!lat || !lng) return alert("검색을 통해 산 위치를 선택해주세요!"); if (!date) return alert("등산하신 날짜를 골라주세요.");
 
     const saveBtn = document.getElementById('mainSaveBtn'); saveBtn.innerText = "처리 중... ⏳"; saveBtn.disabled = true;
-    let photoUrls = []; if (photoInput.files && photoInput.files.length > 0) { for(let i = 0; i < photoInput.files.length; i++) { photoUrls.push(await resizeImage(photoInput.files[i])); } }
+    let photoUrls = []; if (photoInput.files && photoInput.files.length > 0) { for(let i = 0; i < photoInput.files.length; i++) { photoUrls.push(await window.resizeImage(photoInput.files[i])); } }
 
     const store = db.transaction(['hike_records'], 'readwrite').objectStore('hike_records');
     if (editingId) {
@@ -1036,11 +1159,280 @@ window.importData = function(event) {
         } catch(err) { alert('파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인해주세요.'); }
     }; reader.readAsText(file); event.target.value = ''; 
 }
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // 경로가 https://samd0419-debug.github.io/2/sw.js 가 되도록 지정
-    navigator.serviceWorker.register('./sw.js') 
-      .then(reg => console.log('SW 등록 성공'))
-      .catch(err => console.log('SW 등록 실패', err));
-  });
+
+// --------------------------------------------------------
+// --- 실시간 등산 트래킹 로직 ---
+// --------------------------------------------------------
+let trackingWatchId = null;
+window.isTracking = false;
+window.isPaused = false;
+let trackStartTime = 0;
+let trackTimerInterval = null;
+let elapsedSeconds = 0;
+let wakeLock = null;
+
+let trackRoute = []; 
+let trackDistance = 0; 
+let trackPhotos = []; 
+
+window.prepareTracking = function() {
+    openTab('tabTracking');
+    
+    // 강제 클릭 방식으로 깔끔하게 2D 진입
+    const toggleBtn = document.getElementById('styleToggleBtn');
+    if (mapMode === 0) {
+        toggleBtn.click(); 
+        setTimeout(() => {
+            if(mapMode === 1) toggleBtn.click(); 
+        }, 400); 
+    } else if (mapMode === 1) {
+        toggleBtn.click(); 
+    } else {
+        map.easeTo({ pitch: 0, bearing: 0, duration: 1000 }); 
+    }
+    
+    currentSidebarState = 1; 
+    updateSidebarState();
+
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            stopRotate();
+            setTimeout(() => { 
+                safeFlyTo({
+                    center: [pos.coords.longitude, pos.coords.latitude],
+                    zoom: 15.5,
+                    pitch: 0, 
+                    bearing: 0,
+                    padding: getMapPadding(),
+                    duration: 1500
+                });
+            }, 500);
+        }, err => console.log("GPS Error", err), { enableHighAccuracy: true });
+    }
+}
+
+window.startHikingTrack = async function() {
+    if (!navigator.geolocation) return alert("GPS를 지원하지 않는 기기입니다.");
+    
+    window.isTracking = true; 
+    window.isPaused = false;
+    
+    if (elapsedSeconds === 0) {
+        trackRoute = []; trackDistance = 0; trackPhotos = [];
+    }
+    
+    document.getElementById('btnTrackStart').style.display = 'none';
+    document.getElementById('activeTrackControls').style.display = 'flex';
+    document.getElementById('btnTrackPause').innerText = "⏸️ 휴식";
+    document.getElementById('btnTrackPause').style.background = "#FBC02D";
+    document.getElementById('btnTrackPause').style.color = "#333";
+    
+    document.body.classList.add('ui-hidden');
+    document.getElementById('trackingHUD').style.display = 'block';
+    currentSidebarState = -1;
+    updateSidebarState();
+
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+
+    if (!trackTimerInterval) {
+        trackStartTime = Date.now();
+        trackTimerInterval = setInterval(updateTrackUI, 1000);
+    }
+
+    if(!map.getSource('trackLine')) {
+        map.addSource('trackLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
+        map.addLayer({ id: 'trackLineLayer', type: 'line', source: 'trackLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#E65100', 'line-width': 5 } });
+    }
+
+    if (!trackingWatchId) {
+        trackingWatchId = navigator.geolocation.watchPosition(pos => {
+            if (window.isPaused) return;
+            
+            const lng = pos.coords.longitude;
+            const lat = pos.coords.latitude;
+            const alt = Math.round(pos.coords.altitude || 0);
+            const speed = ((pos.coords.speed || 0) * 3.6).toFixed(1);
+            
+            document.getElementById('trackAlt').innerText = alt;
+            document.getElementById('hudAlt').innerText = alt;
+            document.getElementById('trackSpeed').innerText = speed;
+            document.getElementById('hudSpeed').innerText = speed;
+
+            if (trackRoute.length > 0) {
+                const lastCoord = trackRoute[trackRoute.length - 1];
+                const dist = getDistance(lastCoord[1], lastCoord[0], lat, lng) / 1000; 
+                if (dist > 0.005) { 
+                    trackDistance += dist;
+                    document.getElementById('trackDist').innerText = trackDistance.toFixed(2);
+                    document.getElementById('hudDist').innerText = trackDistance.toFixed(2);
+                    
+                    trackRoute.push([lng, lat]);
+                    map.getSource('trackLine').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: trackRoute } });
+                }
+            } else {
+                trackRoute.push([lng, lat]);
+            }
+            
+            if(!window.isMapTouched) safeEaseTo({ center: [lng, lat], pitch: 0, duration: 1000 });
+            
+        }, err => console.log(err), { enableHighAccuracy: true, maximumAge: 3000 });
+    }
+}
+
+window.togglePauseTrack = function() {
+    window.isPaused = !window.isPaused;
+    const btn = document.getElementById('btnTrackPause');
+    if (window.isPaused) {
+        btn.innerText = "▶️ 다시 출발";
+        btn.style.background = "#4CAF50";
+        btn.style.color = "white";
+        
+        document.body.classList.remove('ui-hidden');
+        document.getElementById('trackingHUD').style.display = 'none';
+        currentSidebarState = 1; 
+        updateSidebarState();
+    } else {
+        btn.innerText = "⏸️ 휴식";
+        btn.style.background = "#FBC02D";
+        btn.style.color = "#333";
+        
+        document.body.classList.add('ui-hidden');
+        document.getElementById('trackingHUD').style.display = 'block';
+        currentSidebarState = -1;
+        updateSidebarState();
+    }
+}
+
+window.captureTrackPhoto = async function(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    
+    const resizedUrl = await window.resizeImage(file);
+    if (trackRoute.length > 0) {
+        const currentLoc = trackRoute[trackRoute.length - 1];
+        trackPhotos.push({ coords: currentLoc, url: resizedUrl });
+        
+        const el = document.createElement('div');
+        el.innerHTML = '📸'; el.style.fontSize = '24px'; el.style.cursor = 'pointer';
+        new mapboxgl.Marker(el).setLngLat(currentLoc).addTo(map);
+        alert("사진이 현재 위치에 기록되었습니다!");
+    }
+}
+
+window.stopHikingTrack = function() {
+    if (!confirm("등산을 종료하고 기록을 저장하시겠습니까?")) return;
+    
+    if (trackingWatchId) navigator.geolocation.clearWatch(trackingWatchId);
+    trackingWatchId = null;
+    
+    if (trackTimerInterval) clearInterval(trackTimerInterval);
+    trackTimerInterval = null;
+    
+    if(typeof wakeLock !== 'undefined' && wakeLock) wakeLock.release();
+
+    document.getElementById('btnTrackStart').style.display = 'block';
+    document.getElementById('activeTrackControls').style.display = 'none';
+    
+    window.isTracking = false;
+    window.isPaused = false;
+    
+    document.body.classList.remove('ui-hidden');
+    document.getElementById('trackingHUD').style.display = 'none';
+    
+    currentSidebarState = 2;
+    updateSidebarState();
+
+    const mName = prompt("이 산의 이름을 적어주세요!", "이름 없는 산") || "이름 없는 산";
+    const finalTime = document.getElementById('trackTime').innerText;
+    const today = new Date().toISOString().split('T')[0];
+    const maxAlt = document.getElementById('trackAlt').innerText;
+    
+    const photosOnly = trackPhotos.map(p => p.url);
+
+    const store = db.transaction(['hike_records'], 'readwrite').objectStore('hike_records');
+    store.add({ 
+        name: mName, date: today, alt: maxAlt, 
+        lat: trackRoute[0] ? trackRoute[0][1] : 36.0, 
+        lng: trackRoute[0] ? trackRoute[0][0] : 128.0, 
+        photos: photosOnly, 
+        route: trackRoute, 
+        time: finalTime,
+        distance: trackDistance.toFixed(2)
+    }).onsuccess = () => {
+        alert("내 기록에 자동 저장되었습니다!");
+        loadSavedRecords(); 
+        
+        elapsedSeconds = 0;
+        document.getElementById('trackTime').innerText = "00:00:00";
+        document.getElementById('hudTime').innerText = "00:00:00";
+    };
+}
+
+function updateTrackUI() {
+    if(window.isPaused) return; 
+    elapsedSeconds++;
+    const h = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0');
+    const s = String(elapsedSeconds % 60).padStart(2, '0');
+    
+    const timeStr = `${h}:${m}:${s}`;
+    document.getElementById('trackTime').innerText = timeStr;
+    document.getElementById('hudTime').innerText = timeStr;
+}
+
+window.renderTrackHistory = function() {
+    const listEl = document.getElementById('trackHistoryList');
+    if(!listEl) return;
+    listEl.innerHTML = '';
+    const tracks = allRecords.filter(r => r.route && r.route.length > 0);
+    
+    if(tracks.length === 0) { listEl.innerHTML = "<p style='text-align:center; color:#999; padding: 20px;'>트래킹 기록이 없습니다.</p>"; return; }
+    
+    tracks.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'record-card';
+        div.innerHTML = `<h4>⛰️ ${t.name} <small>(${t.distance}km / ${t.time})</small></h4><p>📅 ${t.date}</p>`;
+        div.onclick = () => window.replayRoute(t.route);
+        listEl.appendChild(div);
+    });
+}
+
+window.replayRoute = function(routeArray) {
+    if(!routeArray || routeArray.length < 2) return alert("동선 데이터가 부족합니다.");
+    window.lastReplayRoute = routeArray;
+    
+    const toggleBtn = document.getElementById('styleToggleBtn');
+    if(mapMode === 0) { 
+        toggleBtn.click(); 
+    } else if(mapMode === 2) { 
+        toggleBtn.click();
+        setTimeout(() => { if(mapMode===0) toggleBtn.click(); }, 400);
+    }
+    
+    if(map.getSource('replayLine')) map.removeLayer('replayLineLayer').removeSource('replayLine');
+    map.addSource('replayLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: routeArray } } });
+    map.addLayer({ id: 'replayLineLayer', type: 'line', source: 'replayLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#00B0FF', 'line-width': 6, 'line-opacity': 0.8 } });
+
+    currentSidebarState = -1; updateSidebarState();
+    
+    let i = 0;
+    function animateCamera() {
+        if (i >= routeArray.length) { alert("리플레이가 종료되었습니다."); return; }
+        
+        const target = routeArray[i];
+        map.easeTo({
+            center: target,
+            zoom: 16.5,
+            pitch: 70, 
+            bearing: (i < routeArray.length - 1) ? turf.bearing(turf.point(target), turf.point(routeArray[i+1])) : map.getBearing(),
+            duration: 500, 
+            easing: t => t
+        });
+        
+        i += Math.ceil(routeArray.length / 100); 
+        setTimeout(animateCamera, 500);
+    }
+    
+    safeFlyTo({ center: routeArray[0], zoom: 15, pitch: 0, duration: 2000 });
+    setTimeout(animateCamera, 2500);
 }

@@ -9,16 +9,17 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#2E7D32">
     
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
     <link rel="manifest" href="manifest.json">
     <title>나의 등산기</title>
     
     <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.js'></script>
     <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.css' rel='stylesheet' />
     <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-language/v1.0.0/mapbox-gl-language.js'></script>
+    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
     
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
 
@@ -32,22 +33,34 @@
         </div>
     </div>
 
+    <!-- 투명 HUD 창 (등산 중 정보 표시, 하단 위치) -->
+    <div id="trackingHUD" style="display: none;">
+        <div class="hud-time" id="hudTime">00:00:00</div>
+        <div class="hud-stats">
+            <div><span id="hudAlt">0</span>m</div>
+            <div><span id="hudDist">0.0</span>km</div>
+            <div><span id="hudSpeed">0.0</span>km/h</div>
+        </div>
+    </div>
+
     <button id="styleToggleBtn" onclick="toggleMapStyle()">🛰️ 3D 위성도</button>
     <div id="map"></div>
 
-    <div id="searchWidget"><div id="searchFab" class="fab-btn">검색</div></div>
-    <div id="m100Widget"><div id="m100Fab" class="fab-btn">명산100</div></div>
-    <div id="challengeWidget"><div id="challengeFab" class="fab-btn">도전100</div></div>
-    <div id="myLogWidget"><div id="myLogFab" class="fab-btn">내기록</div></div>
+    <div id="searchWidget" class="fab-widget" style="position: fixed; right: 15px; bottom: 225px; z-index: 1000; touch-action: none;"><div id="searchFab" class="fab-btn">검색</div></div>
+    <div id="m100Widget" class="fab-widget" style="position: fixed; right: 15px; bottom: 160px; z-index: 1000; touch-action: none;"><div id="m100Fab" class="fab-btn">명산100</div></div>
+    <div id="challengeWidget" class="fab-widget" style="position: fixed; right: 15px; bottom: 95px; z-index: 1000; touch-action: none;"><div id="challengeFab" class="fab-btn">도전100</div></div>
+    <div id="trackWidget" class="fab-widget" style="position: fixed; right: 15px; bottom: 290px; z-index: 1000; touch-action: none;"><div id="trackFab" class="fab-btn">트래킹</div></div>
+    <div id="myLogWidget" class="fab-widget" style="position: fixed; right: 15px; bottom: 30px; z-index: 1000; touch-action: none;"><div id="myLogFab" class="fab-btn">내기록</div></div>
 
     <div id="sidebar" class="hidden">
         <div id="dragHandle"><div class="bar"></div><div class="drag-text">스와이프 하여 닫기/열기</div></div>
         <div id="sidebarContent">
+            
             <div id="tabMyLog" class="tab-content active">
                 <h2 class="tab-title">🏕️ 나의 등산기</h2>
                 <div class="total-alt-banner">🔥 총 누적 등반 고도: <span id="uiTotalAlt" style="font-size:1.3em; color:#D32F2F;">0</span> m</div>
                 <div style="font-size: 0.85em; color: #555; margin-bottom: 15px; background: #e8f5e9; padding: 12px; border-radius: 6px; border-left: 4px solid #4CAF50;">
-                    <b>💡 꿀팁:</b> 지도를 **세 번 탭**하면 초기 화면(정북 방향)으로 돌아옵니다!
+                    <b>💡 꿀팁:</b> 지도를 <b>세 번 탭</b>하면 초기 화면(정북 방향)으로 돌아옵니다!
                 </div>
                 
                 <label>1. 등산한 산 이름 (직접 검색)</label>
@@ -107,6 +120,35 @@
                 <div style="padding: 15px; text-align: center; font-size: 1.1em; font-weight: bold; background: #FFF8E1; border-radius: 8px; margin-bottom: 10px;">완등 <span id="challengeCount" style="color:#E65100; font-size:1.3em;">0</span> / 100</div>
                 <ul class="m100-list" id="challengeList"></ul>
             </div>
+
+            <!-- 실시간 트래킹 탭 -->
+            <div id="tabTracking" class="tab-content">
+                <h2 class="tab-title">🏃‍♂️ 실시간 등산 트래킹</h2>
+                
+                <div class="track-dashboard">
+                    <div id="trackTime" class="track-time">00:00:00</div>
+                    <div class="track-stats-grid">
+                        <div class="stat-box"><small>현재 고도</small><br><b id="trackAlt">0</b><span class="unit">m</span></div>
+                        <div class="stat-box"><small>이동 거리</small><br><b id="trackDist">0.0</b><span class="unit">km</span></div>
+                        <div class="stat-box"><small>현재 속도</small><br><b id="trackSpeed">0.0</b><span class="unit">km/h</span></div>
+                    </div>
+                    
+                    <div class="track-controls">
+                        <button id="btnTrackStart" class="btn-large btn-start" onclick="startHikingTrack()">🚀 등산 시작</button>
+                        <div id="activeTrackControls" style="display: none; gap: 8px;">
+                            <button id="btnTrackPause" class="btn-large btn-pause" onclick="togglePauseTrack()">⏸️ 휴식</button>
+                            <button id="btnTrackPhoto" class="btn-large btn-photo" onclick="document.getElementById('trackCamera').click()">📷 사진</button>
+                            <button id="btnTrackStop" class="btn-large btn-stop" onclick="stopHikingTrack()">🛑 종료</button>
+                        </div>
+                        <input type="file" id="trackCamera" accept="image/*" capture="environment" style="display:none;" onchange="captureTrackPhoto(event)">
+                    </div>
+                </div>
+
+                <hr style="margin: 15px 0; border-top: 1px solid #eee;">
+                <h3 style="color: #333; margin: 0 0 10px 0;">나의 트래킹 기록 <span style="font-size:0.6em; font-weight:normal; color:#666;">(탭하여 동선 보기)</span></h3>
+                <div id="trackHistoryList"></div>
+            </div>
+            
         </div>
     </div>
 
@@ -118,17 +160,15 @@
         <div id="photoIndicator"></div>
     </div>
 
-    <script src="data.js?v=999"></script>
-    <script src="app.js?v=999"></script>
+    <script src="./data.js?v=999"></script>
+    <script src="./app.js?v=999"></script>
 
-<script src="data.js?v=999"></script>
-<script src="app.js?v=999"></script>
-
-<script>
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js');
-    });
-</script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW 등록 실패', err));
+        });
+    }
+    </script>
 </body>
 </html>
