@@ -23,7 +23,6 @@ let tempMarker = null;
 let mapMode = 0; // 0: 3D 지형도, 1: 3D 위성도, 2: 2D 지형도(배터리절약)
 window.lastReplayRoute = null;
 
-// 💡 사용자님 피드백 반영: '현재' 텍스트 제거 및 색상 유지
 window.updateMapModeButton = function() {
     const btn = document.getElementById('styleToggleBtn');
     if(!btn) return;
@@ -191,7 +190,6 @@ window.toggleMapStyle = function() {
     const prevMode = mapMode;
     mapMode = (mapMode + 1) % 3;
     
-    // 버튼 텍스트 바로 업데이트
     window.updateMapModeButton();
     
     if (mapMode === 0) {
@@ -265,37 +263,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     map.addControl(geolocate, 'top-right');
 
-    const style = document.createElement('style');
-    style.innerHTML = `
-        .mapboxgl-ctrl-top-right { top: max(15px, env(safe-area-inset-top)) !important; right: 15px !important; display: flex !important; flex-direction: column !important; gap: 12px !important; }
-        .mapboxgl-ctrl-top-right .mapboxgl-ctrl { margin: 0 !important; } 
-        .mapboxgl-ctrl-group { border-radius: 12px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important; overflow: visible !important; background: white !important; }
-        .mapboxgl-ctrl-group > button { width: 48px !important; height: 48px !important; display: flex !important; justify-content: center !important; align-items: center !important; position: relative; }
-        .mapboxgl-ctrl-icon { transform: scale(1.4); } 
-        .compass-touch-shield { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 9999; cursor: pointer; }
-        
-        #photoOverlay span[onclick*="close"], #photoOverlay .close, .close-photo {
-            position: absolute !important;
-            top: auto !important; 
-            bottom: max(40px, calc(env(safe-area-inset-bottom) + 30px)) !important; 
-            left: 50% !important; 
-            transform: translateX(-50%) !important; 
-            font-size: 32px !important; 
-            width: 65px !important; height: 65px !important; 
-            background: rgba(0,0,0,0.85) !important; color: #fff !important;
-            border-radius: 50% !important; z-index: 999999 !important;
-            display: flex !important; justify-content: center !important; align-items: center !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important; line-height: 1 !important; cursor: pointer !important; text-shadow: none !important;
-        }
-        #expandedPhoto { will-change: transform; transform-origin: center center; }
-    `;
-    document.head.appendChild(style);
-
     window.isAutoRotating = false; 
     let isSensorGranted = false;
     let currentHeading = 0; let targetHeading = null;
 
-    // 더블 탭(투명 HUD 전환) 및 트리플 탭(지도 초기화)
     let tapCount = 0; let tapTimer = null;
     document.getElementById('map').addEventListener('touchstart', function(e) {
         if (e.touches.length > 1) return;
@@ -330,7 +301,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('map').addEventListener('touchend', () => { setTimeout(() => { window.isMapTouched = false; }, 1000); }, {passive: true});
 
-    // 마우스 클릭(PC 환경용 컨트롤)
     let clickCount = 0; let clickTimer = null;
     map.on('click', function(e) {
         clickCount++;
@@ -429,8 +399,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 1000);
 
+    // 💡 화면 리사이즈 시에도 하단 버튼들이 안전 영역(safe-area)을 반영하도록 수정
+    window.addEventListener('resize', () => {
+        const widgets = ['myLogWidget', 'challengeWidget', 'm100Widget', 'searchWidget', 'trackWidget'];
+        widgets.forEach(id => { const el = document.getElementById(id); if(el) { el.style.top = ''; el.style.left = ''; el.style.right = '15px'; el.style.bottom = ''; } });
+        if(document.getElementById('trackWidget')) document.getElementById('trackWidget').style.bottom = 'calc(290px + env(safe-area-inset-bottom))';
+        if(document.getElementById('searchWidget')) document.getElementById('searchWidget').style.bottom = 'calc(225px + env(safe-area-inset-bottom))';
+        if(document.getElementById('m100Widget')) document.getElementById('m100Widget').style.bottom = 'calc(160px + env(safe-area-inset-bottom))';
+        if(document.getElementById('challengeWidget')) document.getElementById('challengeWidget').style.bottom = 'calc(95px + env(safe-area-inset-bottom))';
+        if(document.getElementById('myLogWidget')) document.getElementById('myLogWidget').style.bottom = 'calc(30px + env(safe-area-inset-bottom))';
+    });
+
     initFABs(); initDB(); initM100List();
-    window.updateMapModeButton(); // 첫 로딩 시 버튼 텍스트 적용
+    window.updateMapModeButton(); 
 });
 
 function createMarkerEl(type, labelHtml, isDim) {
@@ -1080,7 +1061,7 @@ photoOverlayEl.addEventListener('touchend', e => {
 
 photoOverlayEl.addEventListener('click', e => { if(e.target === photoOverlayEl) window.closePhotoOverlay(); });
 
-window.resizeImage = function(file) {
+function resizeImage(file) {
     return new Promise((resolve) => {
         const reader = new FileReader(); reader.onload = (e) => {
             const img = new Image(); img.onload = () => {
@@ -1114,7 +1095,7 @@ window.saveRecord = async function() {
     if (!lat || !lng) return alert("검색을 통해 산 위치를 선택해주세요!"); if (!date) return alert("등산하신 날짜를 골라주세요.");
 
     const saveBtn = document.getElementById('mainSaveBtn'); saveBtn.innerText = "처리 중... ⏳"; saveBtn.disabled = true;
-    let photoUrls = []; if (photoInput.files && photoInput.files.length > 0) { for(let i = 0; i < photoInput.files.length; i++) { photoUrls.push(await window.resizeImage(photoInput.files[i])); } }
+    let photoUrls = []; if (photoInput.files && photoInput.files.length > 0) { for(let i = 0; i < photoInput.files.length; i++) { photoUrls.push(await resizeImage(photoInput.files[i])); } }
 
     const store = db.transaction(['hike_records'], 'readwrite').objectStore('hike_records');
     if (editingId) {
@@ -1178,7 +1159,7 @@ let trackPhotos = [];
 window.prepareTracking = function() {
     openTab('tabTracking');
     
-    // 강제 클릭 방식으로 깔끔하게 2D 진입
+    // 버튼 강제 클릭 방식으로 2D 깔끔 진입
     const toggleBtn = document.getElementById('styleToggleBtn');
     if (mapMode === 0) {
         toggleBtn.click(); 
@@ -1307,7 +1288,7 @@ window.captureTrackPhoto = async function(e) {
     const file = e.target.files[0];
     if(!file) return;
     
-    const resizedUrl = await window.resizeImage(file);
+    const resizedUrl = await resizeImage(file);
     if (trackRoute.length > 0) {
         const currentLoc = trackRoute[trackRoute.length - 1];
         trackPhotos.push({ coords: currentLoc, url: resizedUrl });
