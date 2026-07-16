@@ -24,16 +24,43 @@
 <body>
 
     <div id="splash">
-        <div class="splash-content">
-            <div id="splashCounterContainer">
-                <div class="splash-alt-label">🔥 나의 누적 등반 고도</div>
-                <div class="splash-alt-number" id="splashCounter">0</div><span class="splash-alt-unit">m</span>
+        <div id="splashCounterContainer">
+            <div class="splash-alt-label">🔥 나의 누적 등반 고도</div>
+            <div class="splash-alt-number-wrap">
+                <span class="splash-alt-number" id="splashCounter">0</span>
+                <span class="splash-alt-unit">m</span>
             </div>
-            <div class="touch-hint" id="touchHint">로딩 중...</div>
+        </div>
+        <div class="touch-hint" id="touchHint">화면을 터치하여 지도 보기 🗺️</div>
+    </div>
+
+    <div id="replayTopHUD" style="display:none;">
+        <div class="rh-val">🕒 <span id="rhTime">00:00:00</span></div>
+        <div class="rh-val">📏 <span id="rhDist">0.0</span> km</div>
+        <div class="rh-val">⛰️ <span id="rhAlt">0</span> m</div>
+    </div>
+
+    <div id="replayFinal" style="display:none;">
+        <h1 id="rfName">산 이름</h1>
+        <div id="rfDate" style="color: #FFCA28; font-size: 1.0em; font-weight: bold; margin-top: -3px; margin-bottom: 15px;">2026-01-01</div>
+        <div class="rf-stats">
+            <span><small>이동거리</small><b><span id="rfDist">0.0</span>km</b></span>
+            <span><small>이동시간</small><b id="rfTime">00:00:00</b></span>
+            <span><small>최고고도</small><b><span id="rfAlt">0</span>m</b></span>
         </div>
     </div>
 
-    <!-- 투명 HUD 창 (등산 중 정보 표시, 하단 위치) -->
+    <div id="replayControls" style="display:none;">
+        <div class="rc-buttons">
+            <button onclick="jumpReplay(-5)"><span class="icon">⏪</span><span class="txt">5초</span></button>
+            <button id="btnReplayPlay" onclick="toggleReplayPlay()"><span class="icon">▶️</span><span class="txt">재생</span></button>
+            <button onclick="stopReplay()"><span class="icon">⏹️</span><span class="txt">정지</span></button>
+            <button onclick="jumpReplay(5)"><span class="icon">⏩</span><span class="txt">5초</span></button>
+            <button onclick="exitReplay()" class="exit-btn">나가기</button>
+        </div>
+        <input type="range" id="replaySeekBar" min="0" max="1000" value="0">
+    </div>
+
     <div id="trackingHUD" style="display: none;">
         <div class="hud-time" id="hudTime">00:00:00</div>
         <div class="hud-stats">
@@ -59,8 +86,17 @@
             <div id="tabMyLog" class="tab-content active">
                 <h2 class="tab-title">🏕️ 나의 등산기</h2>
                 <div class="total-alt-banner">🔥 총 누적 등반 고도: <span id="uiTotalAlt" style="font-size:1.3em; color:#D32F2F;">0</span> m</div>
-                <div style="font-size: 0.85em; color: #555; margin-bottom: 15px; background: #e8f5e9; padding: 12px; border-radius: 6px; border-left: 4px solid #4CAF50;">
-                    <b>💡 꿀팁:</b> 지도를 <b>세 번 탭</b>하면 초기 화면(정북 방향)으로 돌아옵니다!
+                
+                <div style="font-size: 0.85em; color: #555; margin-bottom: 15px; background: #e8f5e9; padding: 15px; border-radius: 6px; border-left: 4px solid #4CAF50; line-height: 1.6;">
+                    <b style="color:#2E7D32; font-size:1.05em; display:block; margin-bottom:8px;">💡 지도 조작 꿀팁</b>
+                    <div style="display:flex; margin-bottom:6px;">
+                        <span style="width:16px; flex-shrink:0;">1.</span>
+                        <span style="flex:1;">화면에서 <b>세 번 탭</b>하면 초기화면으로 돌아옵니다.</span>
+                    </div>
+                    <div style="display:flex;">
+                        <span style="width:16px; flex-shrink:0;">2.</span>
+                        <span style="flex:1;">트래킹에서 <b>등산시작</b> 버튼을 누른 후, 트래킹 중간에<br>지도 화면을 <b>두 번 탭</b>하면 하단 메뉴창이 올라옵니다.</span>
+                    </div>
                 </div>
                 
                 <label>1. 등산한 산 이름 (직접 검색)</label>
@@ -121,7 +157,6 @@
                 <ul class="m100-list" id="challengeList"></ul>
             </div>
 
-            <!-- 실시간 트래킹 탭 -->
             <div id="tabTracking" class="tab-content">
                 <h2 class="tab-title">🏃‍♂️ 실시간 등산 트래킹</h2>
                 
@@ -145,7 +180,7 @@
                 </div>
 
                 <hr style="margin: 15px 0; border-top: 1px solid #eee;">
-                <h3 style="color: #333; margin: 0 0 10px 0;">나의 트래킹 기록 <span style="font-size:0.6em; font-weight:normal; color:#666;">(탭하여 동선 보기)</span></h3>
+                <h3 style="color: #333; margin: 0 0 10px 0;">나의 트래킹 기록 <span style="font-size:0.6em; font-weight:normal; color:#666;">(탭하여 리플레이 준비)</span></h3>
                 <div id="trackHistoryList"></div>
             </div>
             
@@ -153,22 +188,15 @@
     </div>
 
     <div id="photoOverlay">
-        <div id="photoNavLeft" onclick="prevPhoto(event)">&#10094;</div>
+        <div id="photoNavLeft" class="nav-btn" onclick="prevPhoto(event)">&#10094;</div>
         <img id="expandedPhoto" src="">
-        <div id="photoNavRight" onclick="nextPhoto(event)">&#10095;</div>
+        <div id="photoNavRight" class="nav-btn" onclick="nextPhoto(event)">&#10095;</div>
         <div id="photoClose" onclick="closePhotoOverlay(event)">&times;</div>
-        <div id="photoIndicator"></div>
+        <div id="photoIndicator">1 / 1</div>
     </div>
 
     <script src="./data.js?v=999"></script>
     <script src="./app.js?v=999"></script>
 
-    <script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW 등록 실패', err));
-        });
-    }
-    </script>
 </body>
 </html>

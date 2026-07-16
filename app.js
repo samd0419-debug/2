@@ -15,13 +15,48 @@ function safeEaseTo(options) {
     flyTimeout = setTimeout(() => { window.isFlying = false; }, (options.duration || 500) + 100);
 }
 
+// 부드러운 이동을 위한 선형 보간(Lerp) 수학 함수
+function lerp(start, end, amt) {
+    return (1 - amt) * start + amt * end;
+}
+
 let map;
 let myLogMarkers = [], m100Markers = [], challengeMarkers = [];
 let tempMarker = null;
 
-// 지도 스타일 관리 변수
-let mapMode = 0; // 0: 3D 지형도, 1: 3D 위성도, 2: 2D 지형도
-window.lastReplayRoute = null;
+let mapMode = 0; 
+window.isRotationPausedByUser = false; 
+
+function applyMapStyleFeatures() {
+    const layers = map.getStyle().layers;
+    if (layers) {
+        layers.forEach((layer) => {
+            if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
+                try {
+                    map.setLayoutProperty(layer.id, 'text-field', [
+                        'coalesce',
+                        ['get', 'name_ko'],
+                        ['get', 'name']
+                    ]);
+                } catch (e) {}
+            }
+        });
+    }
+
+    if (mapMode === 0 || mapMode === 1) {
+        if (!map.getSource('mapbox-dem')) {
+            map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 14 });
+        }
+        map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.8 }); 
+        if (!map.getLayer('sky')) {
+            map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
+        }
+    } else {
+        map.setTerrain(null);
+        if (map.getLayer('sky')) map.removeLayer('sky');
+    }
+    restoreMapLayers();
+}
 
 window.updateMapModeButton = function() {
     const btn = document.getElementById('styleToggleBtn');
@@ -35,6 +70,33 @@ window.updateMapModeButton = function() {
     } else if (mapMode === 2) {
         btn.innerHTML = '🗺️ 2D 지형도';
         btn.style.color = '#2E7D32'; btn.style.borderColor = '#2E7D32';
+    }
+};
+
+window.toggleMapStyle = function() {
+    const prevMode = mapMode;
+    mapMode = (mapMode + 1) % 3;
+    window.updateMapModeButton();
+
+    if (mapMode === 0) {
+        if (prevMode === 2) {
+            applyMapStyleFeatures();
+            map.easeTo({ pitch: 60, duration: 1000 });
+        } else {
+            map.setStyle('mapbox://styles/mapbox/outdoors-v12');
+            map.once('style.load', () => map.easeTo({ pitch: 60, duration: 1000 }));
+        }
+    } else if (mapMode === 1) {
+        map.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
+        map.once('style.load', () => map.easeTo({ pitch: 60, duration: 1000 }));
+    } else if (mapMode === 2) {
+        if (prevMode === 0) {
+            applyMapStyleFeatures();
+            map.easeTo({ pitch: 0, duration: 1000 });
+        } else {
+            map.setStyle('mapbox://styles/mapbox/outdoors-v12');
+            map.once('style.load', () => map.easeTo({ pitch: 0, duration: 1000 }));
+        }
     }
 };
 
@@ -138,7 +200,7 @@ function startRotate(lng, lat) {
 
 function rotateCamera() {
     if (!isRotating || !targetCenter) return;
-    if (!window.isMapTouched && !window.isFlying) {
+    if (!window.isMapTouched && !window.isFlying && !window.isRotationPausedByUser) {
         map.setBearing(map.getBearing() + 0.15);
     }
     rotateReqId = requestAnimationFrame(rotateCamera);
@@ -163,6 +225,7 @@ function getMapPadding() {
 function focusAndRotate(lng, lat, zoomLvl = 14, callback = null) {
     stopRotate();
     const padding = getMapPadding();
+    window.isRotationPausedByUser = false; 
     
     safeFlyTo({ center: [lng, lat], zoom: zoomLvl, pitch: 65, bearing: map.getBearing(), padding: padding, duration: 2500, essential: true });
     
@@ -177,43 +240,23 @@ function focusAndRotate(lng, lat, zoomLvl = 14, callback = null) {
 function restoreMapLayers() {
     if (window.isTracking && trackRoute && trackRoute.length > 0) {
         if(!map.getSource('trackLine')) map.addSource('trackLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: trackRoute } } });
-        if(!map.getLayer('trackLineLayer')) map.addLayer({ id: 'trackLineLayer', type: 'line', source: 'trackLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#E65100', 'line-width': 5 } });
+        if(!map.getLayer('trackLineGlow')) map.addLayer({ id: 'trackLineGlow', type: 'line', source: 'trackLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFFF00', 'line-width': 12, 'line-opacity': 0.5, 'line-blur': 6 } });
+        if(!map.getLayer('trackLineLayer')) map.addLayer({ id: 'trackLineLayer', type: 'line', source: 'trackLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFF59D', 'line-width': 4 } });
     }
+    
     if (window.replayState && window.replayState.active && window.replayState.route) {
-         if(!map.getSource('replayLine')) map.addSource('replayLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: window.replayState.route.slice(0, window.replayState.idx+1) } } });
-         if(!map.getLayer('replayLineLayer')) map.addLayer({ id: 'replayLineLayer', type: 'line', source: 'replayLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#E65100', 'line-width': 6, 'line-opacity': 0.8 } });
+         if(!map.getSource('replayLine')) map.addSource('replayLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: window.replayState.route.slice(0, Math.floor(window.replayState.idx)+1) } } });
+         if(!map.getLayer('replayLineGlow')) map.addLayer({ id: 'replayLineGlow', type: 'line', source: 'replayLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFFF00', 'line-width': 12, 'line-opacity': 0.6, 'line-blur': 6 } });
+         if(!map.getLayer('replayLineLayer')) map.addLayer({ id: 'replayLineLayer', type: 'line', source: 'replayLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFF59D', 'line-width': 4 } });
+         
+         const currentPt = window.replayState.route[0];
+         if(!map.getSource('replayPoint')) map.addSource('replayPoint', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: currentPt } } });
+         if(!map.getLayer('replayPointLayer')) map.addLayer({
+            id: 'replayPointLayer', type: 'circle', source: 'replayPoint',
+            paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-width': 3, 'circle-stroke-color': '#E65100' }
+        });
     }
 }
-
-window.toggleMapStyle = function() {
-    const prevMode = mapMode;
-    mapMode = (mapMode + 1) % 3;
-    window.updateMapModeButton();
-    
-    if (mapMode === 0) {
-        if (prevMode === 2) {
-            if (!map.getSource('mapbox-dem')) map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 12 });
-            map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.1 });
-            if (!map.getLayer('sky')) map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
-            map.easeTo({ pitch: 45, duration: 1000 });
-        } else {
-            map.setStyle('mapbox://styles/mapbox/outdoors-v12');
-        }
-    } else if (mapMode === 1) {
-        map.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
-    } else {
-        if (prevMode === 1) {
-            map.setStyle('mapbox://styles/mapbox/outdoors-v12');
-            map.once('style.load', () => {
-                map.easeTo({ pitch: 0, duration: 1000 });
-            });
-        } else {
-            map.setTerrain(null);
-            if (map.getLayer('sky')) map.removeLayer('sky');
-            map.easeTo({ pitch: 0, duration: 1000 });
-        }
-    }
-};
 
 let wakeLock = null;
 async function requestWakeLock() {
@@ -232,34 +275,24 @@ window.isMapTouched = false;
 document.addEventListener('DOMContentLoaded', () => {
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FtZDIwMDAiLCJhIjoiY21ybXlpZGhuMnhocjJ4cXp3dXE4NGRmMiJ9.cBYcIuZLJvBXuecq21zAKg';
     
+    // 💡 초기 맵 시점: 한반도 전체가 나오는 완벽한 평면(Pitch 0) 상태로 시작
     map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/outdoors-v12',
-        center: [128.0, 36.0], 
-        zoom: window.innerWidth <= 768 ? 5.3 : 5.8,
-        pitch: 45,
+        center: [127.8, 36.1], 
+        zoom: window.innerWidth <= 768 ? 5.2 : 5.7,
+        pitch: 0, // 💡 완전 평면 셋업 (이미지 1 상태)
         bearing: 0, 
         projection: 'mercator', 
         doubleClickZoom: false
     });
 
     mapboxgl.setRTLTextPlugin('https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.2.3/mapbox-gl-rtl-text.js');
-    map.addControl(new MapboxLanguage({ defaultLanguage: 'ko' }));
+    const language = new MapboxLanguage({ defaultLanguage: 'ko' });
+    map.addControl(language);
 
     map.on('style.load', () => {
-        if (mapMode === 0 || mapMode === 1) {
-            if (!map.getSource('mapbox-dem')) {
-                map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 12 });
-            }
-            map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.1 });
-            if (!map.getLayer('sky')) {
-                map.addLayer({ 'id': 'sky', 'type': 'sky', 'paint': { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
-            }
-        } else {
-            map.setTerrain(null);
-            if (map.getLayer('sky')) map.removeLayer('sky');
-        }
-        restoreMapLayers();
+        applyMapStyleFeatures();
     });
 
     const nav = new mapboxgl.NavigationControl({ showZoom: false, showCompass: true });
@@ -283,14 +316,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         .compass-touch-shield { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 9999; cursor: pointer; }
         .mapboxgl-ctrl-compass .mapboxgl-ctrl-icon { background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 3 l3 7 -3 -1.5 -3 1.5 z' fill='%23D32F2F'/%3E%3Cpath d='M10 17 l3 -7 -3 1.5 -3 -1.5 z' fill='%23999999'/%3E%3C/svg%3E") !important; }
-        
-        #photoOverlay span[onclick*="close"], #photoOverlay .close, .close-photo {
-            position: absolute !important; top: auto !important; bottom: max(40px, calc(env(safe-area-inset-bottom) + 30px)) !important; 
-            left: 50% !important; transform: translateX(-50%) !important; font-size: 32px !important; width: 65px !important; height: 65px !important; 
-            background: rgba(0,0,0,0.85) !important; color: #fff !important; border-radius: 50% !important; z-index: 999999 !important;
-            display: flex !important; justify-content: center !important; align-items: center !important; box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important; line-height: 1 !important; cursor: pointer !important; text-shadow: none !important;
-        }
-        #expandedPhoto { will-change: transform; transform-origin: center center; }
     `;
     document.head.appendChild(style);
 
@@ -336,7 +361,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let clickCount = 0; let clickTimer = null;
     map.on('click', function(e) {
         clickCount++;
-        if (clickCount === 2) {
+        if (clickCount === 1) {
+            clickTimer = setTimeout(() => { 
+                if(clickCount === 1) {
+                    if (isRotating) window.isRotationPausedByUser = !window.isRotationPausedByUser;
+                }
+                clickCount = 0; 
+            }, 300);
+        } else if (clickCount === 2) {
+            clearTimeout(clickTimer);
             if (window.isTracking) {
                 if (document.body.classList.contains('ui-hidden')) {
                     document.body.classList.remove('ui-hidden');
@@ -347,19 +380,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('trackingHUD').style.display = 'block';
                     currentSidebarState = -1; updateSidebarState();
                 }
-                clickCount = 0; clearTimeout(clickTimer);
-            } else {
-                clearTimeout(clickTimer);
-                clickTimer = setTimeout(() => { clickCount = 0; }, 300);
             }
+            clickCount = 0; 
         } else if (clickCount === 3) {
+            clearTimeout(clickTimer);
             if(window.replayState && window.replayState.active) window.exitReplay();
             else resetMapToDefault();
-            clickCount = 0; clearTimeout(clickTimer);
-        } else {
-            clearTimeout(clickTimer); clickTimer = setTimeout(() => { clickCount = 0; }, 400);
+            clickCount = 0;
         }
     });
+
+    map.on('dragstart', () => { if(isRotating) window.isRotationPausedByUser = true; });
+    map.on('zoomstart', () => { if(isRotating) window.isRotationPausedByUser = true; });
 
     function smoothRotateLoop() {
         if (window.isAutoRotating && !window.isMapTouched && !window.isFlying && targetHeading !== null) {
@@ -431,6 +463,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 flyTimeout = setTimeout(() => { window.isFlying = false; }, 1600); 
             });
         }
+        
+        const seekBar = document.getElementById('replaySeekBar');
+        if (seekBar) {
+            seekBar.addEventListener('input', (e) => {
+                if(!window.replayState.active) return;
+                const ratio = e.target.value / 1000;
+                window.replayState.elapsedTime = window.replayState.duration * ratio;
+                updateReplayVisuals(ratio);
+                
+                if (window.replayState.isEndRotation) {
+                    window.replayState.isEndRotation = false;
+                    cancelAnimationFrame(window.replayState.endRotationReqId);
+                    document.getElementById('replayFinal').style.display = 'none';
+                    document.getElementById('replayTopHUD').style.display = 'flex'; 
+                    document.getElementById('btnReplayPlay').innerHTML = '<span class="icon">▶️</span><span class="txt">재생</span>';
+                    window.replayState.playing = false;
+                }
+            });
+        }
     }, 1000);
 
     initFABs(); initDB(); initM100List();
@@ -450,7 +501,7 @@ function createMarkerEl(type, labelHtml, isDim) {
     const svgId = 'grad-' + Math.random().toString(36).substr(2, 9);
     
     el.innerHTML = `
-        <div class="marker-pin-wrapper">
+        <div class="marker-pin-wrapper drop-in-anim">
             <svg viewBox="0 0 40 64" width="30" height="48" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <radialGradient id="${svgId}" cx="35%" cy="30%" r="65%">
@@ -477,6 +528,12 @@ function createMarkerEl(type, labelHtml, isDim) {
         </div>
         ${labelHtml || ''}
     `;
+    
+    setTimeout(() => {
+        const pin = el.querySelector('.marker-pin-wrapper');
+        if(pin) pin.classList.remove('drop-in-anim');
+    }, 1500); // 바운스 대기시간 넉넉히
+
     return el;
 }
 
@@ -497,14 +554,16 @@ function resetMapToDefault() {
         gpsBtn.click(); 
     }
 
-    safeFlyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: {bottom: 0}, duration: 1500 });
+    safeFlyTo({ center: [127.8, 36.1], zoom: window.innerWidth <= 768 ? 5.2 : 5.7, pitch: 35, bearing: 0, padding: {bottom: 0}, duration: 1500 });
     
     currentSidebarState = -1; updateSidebarState();
     clearMarkers(myLogMarkers); clearMarkers(m100Markers); clearMarkers(challengeMarkers);
     if(tempMarker) tempMarker.remove();
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     
-    if(map.getSource('myLogRoute')) map.removeLayer('myLogRouteLayer').removeSource('myLogRoute');
+    if(map.getSource('myLogRoute')) {
+        map.getSource('myLogRoute').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
+    }
     if(window.replayState && window.replayState.active) window.exitReplay();
 }
 
@@ -566,10 +625,23 @@ function openTab(tabId) {
     if(map.getSource('myLogRoute')) map.getSource('myLogRoute').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
     if(window.replayState && window.replayState.active) window.exitReplay();
     
-    if(tabId === 'tabChallenge') { renderChallengeMapAndList(); } 
-    else if (tabId === 'tabM100') { renderM100Map(); } 
-    else if (tabId === 'tabMyLog') { renderAll(); safeFlyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); } 
-    else if (tabId === 'tabSearch') { safeFlyTo({ center: [128.0, 36.0], zoom: window.innerWidth <= 768 ? 5.3 : 5.8, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 }); }
+    if (tabId === 'tabTracking') {
+        if (mapMode !== 2) {
+            mapMode = 2; window.updateMapModeButton();
+            map.setStyle('mapbox://styles/mapbox/outdoors-v12');
+            map.once('style.load', () => map.easeTo({ pitch: 0, duration: 1000 }));
+        } else {
+            map.easeTo({ pitch: 0, duration: 1000 });
+        }
+    } else if(tabId === 'tabChallenge') { 
+        renderChallengeMapAndList(); 
+    } else if (tabId === 'tabM100') { 
+        renderM100Map(); 
+    } else if (tabId === 'tabMyLog') { 
+        renderAll(); safeFlyTo({ center: [127.8, 36.1], zoom: window.innerWidth <= 768 ? 5.2 : 5.7, pitch: 35, bearing: 0, padding: getMapPadding(), duration: 1500 }); 
+    } else if (tabId === 'tabSearch') { 
+        safeFlyTo({ center: [127.8, 36.1], zoom: window.innerWidth <= 768 ? 5.2 : 5.7, pitch: 35, bearing: 0, padding: getMapPadding(), duration: 1500 }); 
+    }
 }
 
 function initFABs() {
@@ -628,7 +700,9 @@ function playSplashIntro() {
 
     setTimeout(() => {
         if (splashSkipTriggered) return; 
-        counterContainer.classList.add('show'); hintObj.style.opacity = '1'; hintObj.innerText = "터치 시 바로 시작할 수 있습니다";
+        counterContainer.classList.add('show'); 
+        hintObj.style.opacity = '1'; 
+        
         setTimeout(() => {
             if (splashSkipTriggered) return; let startTimestamp = null; const duration = 1500; 
             const step = (timestamp) => {
@@ -636,23 +710,42 @@ function playSplashIntro() {
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
                 counterObj.innerText = Math.floor((progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress)) * totalAltitudeData).toLocaleString();
                 if (progress < 1) window.requestAnimationFrame(step); 
-                else { hintObj.innerText = "화면을 터치하여 지도 보기 🗺️"; hintObj.style.animation = 'blinkHint 1s infinite'; }
             }; window.requestAnimationFrame(step);
         }, 300); 
     }, 600); 
 }
 
+// 💡 화면이 튀는 현상 해결: map.resize()를 애니메이션 시작 전으로 이동하고 핀과 동시 연출
 function finishSplashAndStart() {
-    const splash = document.getElementById('splash'); isFirstLoad = false;
-    if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; if (map) map.resize(); renderAll(); }, 500); } 
-    else { if (map) map.resize(); renderAll(); }
-}
+    const splash = document.getElementById('splash'); 
+    isFirstLoad = false;
+    
+    if(splash) { 
+        splash.style.opacity = '0'; 
+        splash.style.pointerEvents = 'none'; // 페이드아웃 중 터치 방지
+        
+        // 💡 화면 튀는 현상 완벽 방지 (애니메이션 전에 리사이즈 처리)
+        if (map) map.resize(); 
 
-window.showFullPhoto = function(url) {
-    document.getElementById('expandedPhoto').src = url;
-    document.getElementById('photoOverlay').style.display = 'flex';
+        setTimeout(() => {
+            // 💡 0도에서 30도로 2.5초간 매우 부드럽게 세워지는 시퀀스 진행
+            if (map) map.easeTo({ pitch: 30, duration: 2500, essential: true }); 
+            // 세워지기 시작함과 동시에 핀 드롭 연출 같이 실행
+            renderAll(); 
+        }, 50); 
+
+        setTimeout(() => { 
+            splash.style.display = 'none'; 
+        }, 500); 
+    } 
+    else { 
+        if (map) {
+            map.resize(); 
+            map.easeTo({ pitch: 30, duration: 2500, essential: true });
+        }
+        renderAll(); 
+    }
 }
-window.closePhotoOverlay = function() { document.getElementById('photoOverlay').style.display = 'none'; }
 
 function renderAll() {
     clearMarkers(myLogMarkers); groupedData = {}; const groups = {};
@@ -676,26 +769,28 @@ function renderAll() {
         const latestDate = group.climbs[0].date;
         const altText = group.altNum > 0 ? ` (${group.altNum}m)` : "";
         
-        const labelHtml = `<div class="mountain-label label-mylog"><b>${group.name}${altText}</b><br><span style="font-size:0.85em;">${latestDate}</span></div>`;
+        const labelHtml = `<div class="mountain-label label-mylog show-anim"><b>${group.name}${altText}</b><br><span style="font-size:0.85em;">${latestDate}</span></div>`;
         const el = createMarkerEl('mylog', labelHtml);
-
-        const delay = index * 80;
+        
+        // 💡 핀 드롭 속도를 우아하게 늦추고 간격도 넓힘
+        const delay = index * 120 + 300; 
+        
         const pin = el.querySelector('.marker-pin-wrapper');
-        if (pin) pin.style.animation = `dropIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}ms both`;
+        if (pin) pin.style.animation = `dropIn 1s cubic-bezier(0.28, 0.84, 0.42, 1) ${delay}ms both`; // 바운스
+        
         const lbl = el.querySelector('.mountain-label');
-        if (lbl) lbl.style.animation = `labelFadeIn 0.3s ease ${delay + 200}ms both`;
+        if (lbl) lbl.style.animation = `labelFadeIn 0.5s ease ${delay + 600}ms both`; // 바운스가 끝날 때쯤 라벨 페이드인
         
         let popupContent = `<div style="text-align:center;"><b>🏕️ ${group.name}</b><br><span style="color:#D32F2F; font-weight:bold;">고도: ${group.altNum > 0 ? group.altNum + 'm' : '정보 없음'}</span><hr style="margin:5px 0; border:0; border-top:1px solid #ddd;">`;
         
-        let carouselCounter = 0;
         group.climbs.forEach(c => {
             popupContent += `<div style="font-size:0.9em; margin-bottom:5px; color:#555;">📅 ${c.date}</div>`;
             
             if (c.photos && c.photos.length > 0) {
-                const cId = `carousel_${group.key.replace('.','_').replace(',','_')}_${carouselCounter++}`;
+                const cId = `carousel_${Date.now()}_${Math.floor(Math.random()*1000)}`;
                 popupContent += `<div class="carousel" id="${cId}"><div class="carousel-inner" id="inner_${cId}">`;
-                c.photos.forEach(url => { 
-                    popupContent += `<div class="carousel-item"><img src="${url}" onclick="window.showFullPhoto('${url}')"></div>`; 
+                c.photos.forEach((url) => { 
+                    popupContent += `<div class="carousel-item"><img src="${url}"></div>`; 
                 });
                 popupContent += `</div>`;
                 if (c.photos.length > 1) {
@@ -732,10 +827,12 @@ function renderAll() {
             const hasRoute = group.climbs.some(c => c.route && c.route.length > 0);
             if (hasRoute) {
                 const firstRoute = group.climbs.find(c => c.route && c.route.length > 0).route;
-                if(map.getSource('myLogRoute')) map.getSource('myLogRoute').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: firstRoute } });
-                else {
+                if(map.getSource('myLogRoute')) {
+                    map.getSource('myLogRoute').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: firstRoute } });
+                } else {
                     map.addSource('myLogRoute', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: firstRoute } } });
-                    map.addLayer({ id: 'myLogRouteLayer', type: 'line', source: 'myLogRoute', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#4CAF50', 'line-width': 5, 'line-opacity': 0.8 } });
+                    map.addLayer({ id: 'myLogRouteGlow', type: 'line', source: 'myLogRoute', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFFF00', 'line-width': 12, 'line-opacity': 0.5, 'line-blur': 6 } });
+                    map.addLayer({ id: 'myLogRouteLayer', type: 'line', source: 'myLogRoute', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFF59D', 'line-width': 4 } });
                 }
             }
         });
@@ -785,7 +882,16 @@ function renderRecordList() {
             });
         };
 
-        div.innerHTML = `<div class="action-btns"><button class="edit-btn" onclick="editRecord(${data.id}, event)">수정</button><button class="delete-btn" onclick="deleteRecord(${data.id}, event)">삭제</button></div><h4>⛰️ ${data.name} <span style="font-size:0.8em; color:#2E7D32;">${data.alt !== "정보 없음" ? '('+data.alt+'m)' : ''}</span></h4><p>📅 ${data.date}</p>`;
+        div.innerHTML = `
+            <div class="record-info">
+                <h4>⛰️ ${data.name} <span style="font-size:0.8em; color:#2E7D32;">${data.alt !== "정보 없음" ? '('+data.alt+'m)' : ''}</span></h4>
+                <p>📅 ${data.date}</p>
+            </div>
+            <div class="action-btns">
+                <button class="edit-btn" onclick="editRecord(${data.id}, event)">수정</button>
+                <button class="delete-btn" onclick="deleteRecord(${data.id}, event)">삭제</button>
+            </div>
+        `;
         recordListEl.appendChild(div);
     });
     
@@ -1030,14 +1136,14 @@ function resizeImage(file) {
         const reader = new FileReader(); reader.onload = (e) => {
             const img = new Image(); img.onload = () => {
                 const canvas = document.createElement('canvas'); 
-                const maxSize = 250; 
+                const maxSize = 1200; 
                 let width = img.width, height = img.height;
                 if (width > height && width > maxSize) { height *= maxSize / width; width = maxSize; } 
                 else if (height > maxSize) { width *= maxSize / height; height = maxSize; }
                 
                 canvas.width = width; canvas.height = height; 
                 canvas.getContext('2d').drawImage(img, 0, 0, width, height); 
-                resolve(canvas.toDataURL('image/jpeg', 0.35)); 
+                resolve(canvas.toDataURL('image/jpeg', 0.6)); 
             }; img.src = e.target.result;
         }; reader.readAsDataURL(file);
     });
@@ -1086,27 +1192,18 @@ window.deleteRecord = function(id, event) {
 
 window.exportData = function() {
     if(allRecords.length === 0) return alert('백업할 기록이 없습니다.'); 
-    
-    // 1. 데이터를 문자열로 변환
     const dataStr = JSON.stringify(allRecords); 
-    
-    // 2. Blob 객체 생성 (대용량 사진 데이터 다운로드 호환성 해결 핵심)
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
-    // 3. 다운로드 링크 생성 및 강제 클릭
     const linkElement = document.createElement('a'); 
     linkElement.href = url; 
     linkElement.download = `hike_records_backup_${new Date().toISOString().split('T')[0]}.json`; 
-    
-    // 사파리 모바일 환경 다운로드 트리거 안정화
     document.body.appendChild(linkElement);
     linkElement.click(); 
     document.body.removeChild(linkElement);
-    
-    // 4. 메모리 해제
     URL.revokeObjectURL(url);
 }
+
 window.importData = function(event) {
     const file = event.target.files[0]; if(!file) return; const reader = new FileReader();
     reader.onload = function(e) {
@@ -1196,14 +1293,28 @@ window.startHikingTrack = async function() {
 
     requestWakeLock();
 
-    if (!trackTimerInterval) {
-        trackStartTime = Date.now();
-        trackTimerInterval = setInterval(updateTrackUI, 1000);
-    }
+    if (trackTimerInterval) clearInterval(trackTimerInterval);
+    trackStartTime = Date.now() - (elapsedSeconds * 1000);
+    trackTimerInterval = setInterval(() => {
+        if(window.isPaused) {
+            trackStartTime += 1000;
+            return;
+        }
+        elapsedSeconds = Math.floor((Date.now() - trackStartTime) / 1000);
+        
+        const h = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0');
+        const m = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0');
+        const s = String(elapsedSeconds % 60).padStart(2, '0');
+        
+        const timeStr = `${h}:${m}:${s}`;
+        document.getElementById('trackTime').innerText = timeStr;
+        document.getElementById('hudTime').innerText = timeStr;
+    }, 1000);
 
     if(!map.getSource('trackLine')) {
         map.addSource('trackLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
-        map.addLayer({ id: 'trackLineLayer', type: 'line', source: 'trackLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#E65100', 'line-width': 5 } });
+        map.addLayer({ id: 'trackLineGlow', type: 'line', source: 'trackLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFFF00', 'line-width': 12, 'line-opacity': 0.5, 'line-blur': 6 } });
+        map.addLayer({ id: 'trackLineLayer', type: 'line', source: 'trackLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFF59D', 'line-width': 4 } });
     }
 
     if (!trackingWatchId) {
@@ -1212,7 +1323,13 @@ window.startHikingTrack = async function() {
             
             const lng = pos.coords.longitude;
             const lat = pos.coords.latitude;
-            const alt = Math.round(pos.coords.altitude || 0); // 💡 고도 수집
+            
+            let alt = pos.coords.altitude;
+            if(!alt || alt === 0) {
+                alt = map.queryTerrainElevation([lng, lat]) || 0;
+            }
+            alt = Math.round(alt);
+
             const speed = ((pos.coords.speed || 0) * 3.6).toFixed(1);
             
             document.getElementById('trackAlt').innerText = alt;
@@ -1275,7 +1392,7 @@ window.captureTrackPhoto = async function(e) {
         trackPhotos.push({ coords: currentLoc, url: resizedUrl });
         
         const el = document.createElement('div');
-        el.innerHTML = '📸'; el.style.fontSize = '24px'; el.style.cursor = 'pointer'; el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))';
+        el.innerHTML = '📷'; el.style.fontSize = '24px'; el.style.cursor = 'pointer'; el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))';
         new mapboxgl.Marker(el).setLngLat(currentLoc).addTo(map);
         alert("사진이 현재 위치에 기록되었습니다!");
     }
@@ -1307,16 +1424,16 @@ window.stopHikingTrack = function() {
     const mName = prompt("이 산의 이름을 적어주세요!", "이름 없는 산") || "이름 없는 산";
     const finalTime = document.getElementById('trackTime').innerText;
     const today = new Date().toISOString().split('T')[0];
-    const maxAlt = document.getElementById('trackAlt').innerText;
     
-    // 최고 고도 계산하여 정상 핀 박기
-    const photosOnly = trackPhotos.map(p => p.url);
     let maxAltPoint = trackRoute.length > 0 ? trackRoute[0] : [128.0, 36.0, 0];
     trackRoute.forEach(pt => { if(pt[2] && pt[2] > maxAltPoint[2]) maxAltPoint = pt; });
+    const realMaxAlt = Math.round(maxAltPoint[2] || 0);
+    
+    const photosOnly = trackPhotos.map(p => p.url);
 
     const store = db.transaction(['hike_records'], 'readwrite').objectStore('hike_records');
     store.add({ 
-        name: mName, date: today, alt: maxAlt, 
+        name: mName, date: today, alt: realMaxAlt, 
         lat: maxAltPoint[1], 
         lng: maxAltPoint[0], 
         photos: photosOnly, 
@@ -1334,18 +1451,6 @@ window.stopHikingTrack = function() {
     };
 }
 
-function updateTrackUI() {
-    if(window.isPaused) return; 
-    elapsedSeconds++;
-    const h = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0');
-    const m = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0');
-    const s = String(elapsedSeconds % 60).padStart(2, '0');
-    
-    const timeStr = `${h}:${m}:${s}`;
-    document.getElementById('trackTime').innerText = timeStr;
-    document.getElementById('hudTime').innerText = timeStr;
-}
-
 window.renderTrackHistory = function() {
     const listEl = document.getElementById('trackHistoryList');
     if(!listEl) return;
@@ -1356,12 +1461,15 @@ window.renderTrackHistory = function() {
     
     tracks.forEach(t => {
         const div = document.createElement('div');
-        div.className = 'record-card';
+        div.className = 'track-card';
         div.innerHTML = `
-            <div class="action-btns" style="z-index: 10;">
+            <div class="track-info">
+                <h4>⛰️ ${t.name} <small style="color:#666;">(${t.distance}km / ${t.time})</small></h4>
+                <p>📅 ${t.date}</p>
+            </div>
+            <div class="action-btns">
                 <button class="delete-btn" onclick="deleteRecord(${t.id}, event)">삭제</button>
             </div>
-            <h4>⛰️ ${t.name} <small>(${t.distance}km / ${t.time})</small></h4><p>📅 ${t.date}</p>
         `;
         div.onclick = () => window.replayRoute(t.route, t);
         listEl.appendChild(div);
@@ -1369,19 +1477,31 @@ window.renderTrackHistory = function() {
 }
 
 // --------------------------------------------------------
-// 🌟 🌟 동영상 플레이어 & 시네마틱 리플레이 🌟 🌟
+// 🌟 🌟 방송급 시네마틱 15초(2배속) 리플레이 엔진 🌟 🌟
 // --------------------------------------------------------
 window.replayState = {
     active: false,
     playing: false,
-    idx: 0,
+    isEndRotation: false,
     route: [],
     record: null,
+    highestPoint: null,
+    initialBearing: 0,
+    peakProgress: 0,
     totalPoints: 0,
     totalSeconds: 0,
+    
+    elapsedTime: 0, 
+    duration: 20000,
     lastFrameTime: 0,
-    reqId: null
+    reqId: null,
+    endRotationReqId: null,
+    maxHudAlt: 0 
 };
+
+window.replayHighestMarker = null;
+window.replayStartMarker = null;
+window.replayEndMarker = null; 
 
 function timeStrToSeconds(timeStr) {
     const parts = timeStr.split(':');
@@ -1396,145 +1516,216 @@ function secondsToTimeStr(secs) {
 
 window.exitReplay = function() {
     window.replayState.active = false;
+    window.replayState.isEndRotation = false;
     cancelAnimationFrame(window.replayState.reqId);
+    cancelAnimationFrame(window.replayState.endRotationReqId);
+    
+    document.body.classList.remove('replay-mode'); 
     document.getElementById('replayTopHUD').style.display = 'none';
     document.getElementById('replayControls').style.display = 'none';
     document.getElementById('replayFinal').style.display = 'none';
-    if(map.getSource('replayLine')) map.removeLayer('replayLineLayer').removeSource('replayLine');
+    
+    if(map.getSource('replayLine')) {
+        map.removeLayer('replayLineLayer');
+        map.removeLayer('replayLineGlow');
+        map.removeSource('replayLine');
+    }
     if(map.getSource('replayPoint')) map.removeLayer('replayPointLayer').removeSource('replayPoint');
+    
     if(window.replayMarkers) { window.replayMarkers.forEach(m => m.remove()); window.replayMarkers = []; }
+    if(window.replayHighestMarker) { window.replayHighestMarker.remove(); window.replayHighestMarker = null; }
+    if(window.replayStartMarker) { window.replayStartMarker.remove(); window.replayStartMarker = null; }
+    if(window.replayEndMarker) { window.replayEndMarker.remove(); window.replayEndMarker = null; }
+
     resetMapToDefault();
 }
 
 window.replayRoute = function(routeArray, record) {
-    if(!routeArray || routeArray.length < 2) return alert("동선 데이터가 부족합니다.");
+    if(!routeArray || routeArray.length < 2) {
+        alert("GPS 동선 데이터가 부족하여 리플레이를 실행할 수 없습니다.");
+        return;
+    }
+    
+    if (window.replayState.active) { window.exitReplay(); }
     
     window.replayState.active = true;
     window.replayState.playing = false; 
-    window.replayState.idx = 0;
+    window.replayState.isEndRotation = false;
+    window.replayState.elapsedTime = 0; 
+    window.replayState.maxHudAlt = 0;
     window.replayState.route = routeArray;
     window.replayState.record = record;
     window.replayState.totalPoints = routeArray.length;
     window.replayState.totalSeconds = timeStrToSeconds(record.time);
     
+    let maxAlt = -1;
+    let highestIdx = 0;
+    routeArray.forEach((pt, idx) => { if(pt[2] && pt[2] > maxAlt) { maxAlt = pt[2]; highestIdx = idx; } });
+    window.replayState.highestPoint = routeArray[highestIdx];
+    window.replayState.peakProgress = highestIdx / (routeArray.length - 1);
+    
+    window.replayState.initialBearing = turf.bearing(turf.point(routeArray[0]), turf.point(routeArray[highestIdx]));
+
+    document.body.classList.add('replay-mode'); 
     document.getElementById('replayTopHUD').style.display = 'flex';
     document.getElementById('replayControls').style.display = 'flex';
     document.getElementById('replayFinal').style.display = 'none';
-    document.getElementById('btnReplayPlay').innerText = '⏸️';
-
-    const toggleBtn = document.getElementById('styleToggleBtn');
-    if(mapMode === 0) { toggleBtn.click(); } 
-    else if(mapMode === 2) { toggleBtn.click(); setTimeout(() => { if(mapMode===0) toggleBtn.click(); }, 400); }
     
-    if(map.getSource('replayLine')) map.removeLayer('replayLineLayer').removeSource('replayLine');
-    if(map.getSource('replayPoint')) map.removeLayer('replayPointLayer').removeSource('replayPoint');
-
-    map.addSource('replayLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
-    map.addLayer({ id: 'replayLineLayer', type: 'line', source: 'replayLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#E65100', 'line-width': 6, 'line-opacity': 0.8 } });
-
-    map.addSource('replayPoint', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: routeArray[0] } } });
-    map.addLayer({
-        id: 'replayPointLayer', type: 'circle', source: 'replayPoint',
-        paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-width': 3, 'circle-stroke-color': '#E65100' }
-    });
-
-    window.replayMarkers = [];
-    if(record.photoData && record.photoData.length > 0) {
-        record.photoData.forEach(pd => {
-            const el = document.createElement('div');
-            el.innerHTML = '📸'; el.style.fontSize = '24px'; el.style.cursor = 'pointer'; el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))';
-            const marker = new mapboxgl.Marker({ element: el }).setLngLat(pd.coords).addTo(map);
-            el.addEventListener('click', (e) => { e.stopPropagation(); window.showFullPhoto(pd.url); });
-            window.replayMarkers.push(marker);
-            pd.shown = false;
-        });
-    }
-
+    document.getElementById('btnReplayPlay').innerHTML = '<span class="icon">▶️</span><span class="txt">재생</span>';
     currentSidebarState = -1; updateSidebarState();
-    
-    // 1단계: 전체 경로를 한눈에 보는 스카이뷰
-    const bounds = routeArray.reduce((b, coord) => b.extend(coord), new mapboxgl.LngLatBounds(routeArray[0], routeArray[0]));
-    map.fitBounds(bounds, { padding: {top: 150, bottom: 150, left: 50, right: 50}, pitch: 0, bearing: 0, duration: 2000 });
 
-    // 스카이뷰 감상 후 2.5초 뒤 자동 재생 시작
-    setTimeout(() => {
-        if(!window.replayState.active) return;
-        window.replayState.playing = true;
-        window.replayState.lastFrameTime = performance.now();
-        replayLoop(performance.now());
-    }, 2500);
+    const initReplay = () => {
+        if(!map.getSource('replayLine')) {
+            map.addSource('replayLine', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
+            map.addLayer({ id: 'replayLineGlow', type: 'line', source: 'replayLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFFF00', 'line-width': 12, 'line-opacity': 0.6, 'line-blur': 6 } });
+            map.addLayer({ id: 'replayLineLayer', type: 'line', source: 'replayLine', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFF59D', 'line-width': 4 } });
+        }
+        if(!map.getSource('replayPoint')) {
+            map.addSource('replayPoint', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: routeArray[0] } } });
+            map.addLayer({ id: 'replayPointLayer', type: 'circle', source: 'replayPoint', paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-width': 3, 'circle-stroke-color': '#E65100' } });
+        }
+
+        window.replayMarkers = [];
+        if(record.photoData && record.photoData.length > 0) {
+            record.photoData.forEach((pd) => {
+                const el = document.createElement('div');
+                el.innerHTML = '📷'; el.style.fontSize = '20px'; el.style.cursor = 'pointer'; el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))';
+                const marker = new mapboxgl.Marker({ element: el }).setLngLat(pd.coords).addTo(map);
+                window.replayMarkers.push(marker);
+                pd.shown = false;
+            });
+        }
+        
+        const startEl = document.createElement('div');
+        startEl.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center;">
+            <div style="font-size:15px; font-weight:900; background:rgba(255,255,255,0.95); color:#2E7D32; padding:5px 12px; border-radius:8px; box-shadow:0 3px 6px rgba(0,0,0,0.5); white-space:nowrap; line-height:1; border: 2px solid #4CAF50;">🏁 출발</div>
+            <div style="width:3px; height:35px; background:#4CAF50; box-shadow: 2px 0 4px rgba(0,0,0,0.3);"></div>
+            <div style="width:12px; height:12px; background:#4CAF50; border:2px solid white; border-radius:50%; box-shadow:0 2px 4px rgba(0,0,0,0.5); transform: translateY(-2px);"></div>
+        </div>`;
+        startEl.style.zIndex = '1000';
+        window.replayStartMarker = new mapboxgl.Marker({element: startEl, anchor: 'bottom'}).setLngLat(routeArray[0]).addTo(map);
+
+        const highestEl = document.createElement('div');
+        highestEl.innerHTML = `<div style="width:14px; height:14px; background:#D32F2F; border:2.5px solid white; border-radius:50%; box-shadow:0 2px 4px rgba(0,0,0,0.5);"></div>`;
+        highestEl.style.zIndex = '900';
+        window.replayHighestMarker = new mapboxgl.Marker({element: highestEl, anchor: 'center'}).setLngLat(window.replayState.highestPoint).addTo(map);
+
+        const bounds = routeArray.reduce((b, coord) => b.extend(coord), new mapboxgl.LngLatBounds(routeArray[0], routeArray[0]));
+        map.fitBounds(bounds, { padding: {top: 150, bottom: 250, left: 50, right: 50}, pitch: 60, bearing: window.replayState.initialBearing, duration: 2000 });
+
+        updateReplayVisuals(0); 
+    };
+
+    if (mapMode !== 1) { 
+        mapMode = 1; window.updateMapModeButton();
+        map.once('style.load', initReplay); 
+        map.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
+    } else {
+        initReplay();
+    }
 }
 
 function replayLoop(time) {
     if(!window.replayState.active) return;
     
-    if(window.replayState.playing) {
-        const dt = time - window.replayState.lastFrameTime;
-        
-        // 프레임 업데이트 주기 (30ms)
-        if (dt > 30) {
+    try {
+        if(window.replayState.playing && !window.replayState.isEndRotation) {
+            let dt = time - window.replayState.lastFrameTime;
             window.replayState.lastFrameTime = time;
             
-            // 약 20초 만에 완주하도록 속도 계산
-            const pointsPerSec = window.replayState.totalPoints / 20; 
-            const step = Math.max(1, Math.floor(pointsPerSec * (dt / 1000)));
+            if (dt > 0 && dt < 1000) {
+                window.replayState.elapsedTime += dt;
+            }
             
-            window.replayState.idx += step;
+            let progress = window.replayState.elapsedTime / window.replayState.duration;
+            if (progress >= 1) progress = 1;
 
-            if(window.replayState.idx >= window.replayState.totalPoints - 1) {
-                window.replayState.idx = window.replayState.totalPoints - 1;
-                updateReplayVisuals();
+            updateReplayVisuals(progress);
+
+            if (progress >= 1) {
                 finishReplay();
                 return;
             }
-            updateReplayVisuals();
+        } else {
+            window.replayState.lastFrameTime = time; 
         }
+    } catch(err) {
+        console.error("Replay Error:", err);
     }
+    
     window.replayState.reqId = requestAnimationFrame(replayLoop);
 }
 
-function updateReplayVisuals() {
+function updateReplayVisuals(progress) {
     const s = window.replayState;
-    const i = s.idx;
     const route = s.route;
     const record = s.record;
-    const currentPt = route[i];
+    
+    const exactIdx = progress * (s.totalPoints - 1);
+    const i1 = Math.floor(exactIdx);
+    const i2 = Math.ceil(exactIdx);
+    const frac = exactIdx - i1;
+    
+    const p1 = route[i1];
+    const p2 = route[i2] || p1;
+    
+    const currentPt = [
+        lerp(p1[0], p2[0], frac),
+        lerp(p1[1], p2[1], frac),
+        lerp(p1[2] || 0, p2[2] || 0, frac)
+    ];
 
-    map.getSource('replayLine').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: route.slice(0, i+1) } });
+    const drawnRoute = route.slice(0, i1 + 1);
+    drawnRoute.push(currentPt);
+
+    map.getSource('replayLine').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: drawnRoute } });
     map.getSource('replayPoint').setData({ type: 'Feature', geometry: { type: 'Point', coordinates: currentPt } });
 
-    // 상단 실시간 데이터 동기화
-    const p = i / s.totalPoints;
-    document.getElementById('rhDist').innerText = (record.distance * p).toFixed(2);
-    document.getElementById('rhTime').innerText = secondsToTimeStr(s.totalSeconds * p);
-    document.getElementById('rhAlt').innerText = currentPt[2] ? Math.round(currentPt[2]) : "0";
+    document.getElementById('rhDist').innerText = (record.distance * progress).toFixed(2);
+    document.getElementById('rhTime').innerText = secondsToTimeStr(s.totalSeconds * progress);
+    
+    let altVal = currentPt[2];
+    if (!altVal || altVal === 0) altVal = map.queryTerrainElevation(currentPt) || 0;
+    let roundedAlt = Math.round(altVal);
+    document.getElementById('rhAlt').innerText = roundedAlt;
+    
+    if (roundedAlt > s.maxHudAlt) {
+        s.maxHudAlt = roundedAlt;
+    }
+    
+    const seekBar = document.getElementById('replaySeekBar');
+    if(seekBar) seekBar.value = progress * 1000;
 
-    // 카메라 180도 스위핑 연출 (좌로 갔다가 우로 돌아옴)
-    let targetBearing = 0;
-    if(p < 0.5) targetBearing = -180 * (p / 0.5);
-    else targetBearing = -180 + 180 * ((p - 0.5) / 0.5);
+    let targetZoom = 14.5;
+    let targetPitch = 60; 
+    let targetBearing = s.initialBearing;
 
-    let targetZoom = 15;
-    if(p < 0.5) targetZoom = 13 + (3 * (p / 0.5)); 
-    else targetZoom = 16 - (3 * ((p - 0.5) / 0.5)); 
+    if (progress < 0.2) {
+        targetZoom = 14.5;
+        targetPitch = 60;
+        targetBearing = s.initialBearing;
+    } else if (progress < 0.8) {
+        let t = (progress - 0.2) / 0.6;
+        targetZoom = 14.5 + (2 * t); 
+        targetPitch = 60; 
+        targetBearing = s.initialBearing + (t * 360); 
+    } else {
+        let t = (progress - 0.8) / 0.2;
+        targetZoom = 16.5 - (2 * t); 
+        targetPitch = 60 - (15 * t); 
+        targetBearing = s.initialBearing + 360 + (t * 90); 
+    }
 
-    map.easeTo({
-        center: currentPt,
-        pitch: 65,
-        bearing: targetBearing,
-        zoom: targetZoom,
-        duration: 100, 
-        easing: t => t
-    });
-
-    // 사진 스팟 도달 시 팝업 줌인
+    let photoPaused = false;
     if (record.photoData) {
         for (let pIdx = 0; pIdx < record.photoData.length; pIdx++) {
             const photo = record.photoData[pIdx];
-            if (!photo.shown && getDistance(currentPt[1], currentPt[0], photo.coords[1], photo.coords[0]) < 20) {
+            if (!photo.shown && getDistance(currentPt[1], currentPt[0], photo.coords[1], photo.coords[0]) < 25) {
                 photo.shown = true;
+                photoPaused = true;
+                
                 window.replayState.playing = false; 
-                document.getElementById('btnReplayPlay').innerText = '▶️';
+                document.getElementById('btnReplayPlay').innerHTML = '<span class="icon">▶️</span><span class="txt">재생</span>';
                 
                 map.easeTo({ center: photo.coords, zoom: 17, pitch: 40, duration: 1000 });
                 
@@ -1554,69 +1745,161 @@ function updateReplayVisuals() {
                         imgPopup.style.opacity = '0';
                         setTimeout(() => {
                             imgPopup.remove();
-                            if(window.replayState.active) {
+                            if(window.replayState.active && progress < 1) {
                                 window.replayState.playing = true;
-                                document.getElementById('btnReplayPlay').innerText = '⏸️';
+                                document.getElementById('btnReplayPlay').innerHTML = '<span class="icon">⏸️</span><span class="txt">일시정지</span>';
                                 window.replayState.lastFrameTime = performance.now();
                             }
                         }, 500);
-                    }, 2500); 
+                    }, 3000); 
                 }, 1000);
                 break;
             }
         }
     }
+
+    if (!photoPaused && window.replayState.playing) {
+        map.jumpTo({
+            center: currentPt,
+            zoom: targetZoom,
+            pitch: targetPitch,
+            bearing: targetBearing
+        });
+    }
 }
 
 window.toggleReplayPlay = function() {
     window.replayState.playing = !window.replayState.playing;
-    document.getElementById('btnReplayPlay').innerText = window.replayState.playing ? '⏸️' : '▶️';
+    document.getElementById('btnReplayPlay').innerHTML = window.replayState.playing ? '<span class="icon">⏸️</span><span class="txt">일시정지</span>' : '<span class="icon">▶️</span><span class="txt">재생</span>';
+    
     if(window.replayState.playing) {
-        window.replayState.lastFrameTime = performance.now();
-        if(window.replayState.idx >= window.replayState.totalPoints - 1) {
-            window.replayState.idx = 0;
+        if(window.replayState.isEndRotation) {
+            window.replayState.isEndRotation = false;
+            cancelAnimationFrame(window.replayState.endRotationReqId);
+            document.getElementById('replayFinal').style.display = 'none';
+            document.getElementById('replayTopHUD').style.display = 'flex'; 
+            window.replayState.elapsedTime = 0;
             if(window.replayState.record.photoData) window.replayState.record.photoData.forEach(p => p.shown = false);
+            if(window.replayEndMarker) { window.replayEndMarker.remove(); window.replayEndMarker = null; }
         }
+        window.replayState.lastFrameTime = performance.now();
+        cancelAnimationFrame(window.replayState.reqId);
+        window.replayState.reqId = requestAnimationFrame(replayLoop);
     }
 }
 
 window.jumpReplay = function(seconds) {
     const s = window.replayState;
-    const jumpPoints = Math.floor(s.totalPoints * (Math.abs(seconds) / 20));
-    if(seconds > 0) s.idx = Math.min(s.totalPoints - 1, s.idx + jumpPoints);
-    else s.idx = Math.max(0, s.idx - jumpPoints);
+    s.elapsedTime += (seconds * 1000);
     
-    updateReplayVisuals();
-    if(s.idx >= s.totalPoints - 1) finishReplay();
+    if(s.elapsedTime < 0) s.elapsedTime = 0;
+    if(s.elapsedTime >= s.duration) {
+        s.elapsedTime = s.duration;
+        updateReplayVisuals(1);
+        finishReplay();
+    } else {
+        if (s.isEndRotation) {
+            s.isEndRotation = false;
+            cancelAnimationFrame(s.endRotationReqId);
+            document.getElementById('replayFinal').style.display = 'none';
+            document.getElementById('replayTopHUD').style.display = 'flex';
+            document.getElementById('btnReplayPlay').innerHTML = '<span class="icon">▶️</span><span class="txt">재생</span>';
+            if(window.replayEndMarker) { window.replayEndMarker.remove(); window.replayEndMarker = null; }
+            s.playing = false;
+        }
+        updateReplayVisuals(s.elapsedTime / s.duration);
+    }
 }
 
 window.stopReplay = function() {
-    window.replayState.idx = window.replayState.totalPoints - 1;
-    updateReplayVisuals();
-    finishReplay();
+    const s = window.replayState;
+    s.playing = false;
+    document.getElementById('btnReplayPlay').innerHTML = '<span class="icon">▶️</span><span class="txt">재생</span>';
+    
+    if (s.isEndRotation) {
+        s.isEndRotation = false;
+        cancelAnimationFrame(s.endRotationReqId);
+        document.getElementById('replayFinal').style.display = 'none';
+        document.getElementById('replayTopHUD').style.display = 'flex';
+        if(window.replayEndMarker) { window.replayEndMarker.remove(); window.replayEndMarker = null; }
+    }
+    
+    s.elapsedTime = 0;
+    s.maxHudAlt = 0;
+    if(s.record.photoData) s.record.photoData.forEach(p => p.shown = false);
+    
+    updateReplayVisuals(0);
+    
+    const bounds = s.route.reduce((b, coord) => b.extend(coord), new mapboxgl.LngLatBounds(s.route[0], s.route[0]));
+    map.fitBounds(bounds, { padding: {top: 150, bottom: 250, left: 50, right: 50}, pitch: 60, bearing: s.initialBearing, duration: 1500 });
 }
 
 function finishReplay() {
     window.replayState.playing = false;
-    document.getElementById('btnReplayPlay').innerText = '▶️';
+    window.replayState.isEndRotation = true;
+    document.getElementById('btnReplayPlay').innerHTML = '<span class="icon">▶️</span><span class="txt">재생</span>';
     
-    const route = window.replayState.route;
     const record = window.replayState.record;
+    const finalMaxAlt = window.replayState.maxHudAlt || 0;
 
-    // 완료 시 스카이뷰로 줌아웃
-    const bounds = route.reduce((b, coord) => b.extend(coord), new mapboxgl.LngLatBounds(route[0], route[0]));
-    map.fitBounds(bounds, { padding: {top: 150, bottom: 250, left: 50, right: 50}, pitch: 0, bearing: 0, duration: 2500 });
+    const rfNameEl = document.getElementById('rfName');
+    if (rfNameEl) rfNameEl.innerText = record.name;
+    const rfDateEl = document.getElementById('rfDate');
+    if (rfDateEl) rfDateEl.innerText = record.date; 
+    document.getElementById('rfDist').innerText = record.distance + 'km';
+    document.getElementById('rfTime').innerText = record.time;
+    document.getElementById('rfAlt').innerText = finalMaxAlt + 'm'; 
     
-    // 최종 자막 오버레이 팝업
-    setTimeout(() => {
-        if(!window.replayState.active) return;
-        document.getElementById('rfName').innerText = record.name;
-        document.getElementById('rfDate').innerText = record.date;
-        document.getElementById('rfDist').innerText = record.distance;
-        document.getElementById('rfTime').innerText = record.time;
-        document.getElementById('rfAlt').innerText = record.alt;
+    document.getElementById('replayTopHUD').style.display = 'none';
+    document.getElementById('replayFinal').style.display = 'block';
+
+    let currentEndBearing = map.getBearing();
+    const endPoint = window.replayState.route[window.replayState.route.length - 1];
+
+    const endEl = document.createElement('div');
+    endEl.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center;">
+        <div style="font-size:15px; font-weight:900; background:rgba(255,255,255,0.95); color:#D32F2F; padding:5px 12px; border-radius:8px; box-shadow:0 3px 6px rgba(0,0,0,0.5); white-space:nowrap; line-height:1; border: 2px solid #D32F2F;">🏆 도착</div>
+        <div style="width:3px; height:35px; background:#D32F2F; box-shadow: 2px 0 4px rgba(0,0,0,0.3);"></div>
+        <div style="width:12px; height:12px; background:#D32F2F; border:2px solid white; border-radius:50%; box-shadow:0 2px 4px rgba(0,0,0,0.5); transform: translateY(-2px);"></div>
+    </div>`;
+    endEl.style.zIndex = '1000';
+    window.replayEndMarker = new mapboxgl.Marker({element: endEl, anchor: 'bottom'}).setLngLat(endPoint).addTo(map);
+    if(!window.replayMarkers) window.replayMarkers = [];
+    window.replayMarkers.push(window.replayEndMarker);
+
+    let startZoom = map.getZoom();
+    let targetZoom = startZoom - 1.5; 
+    let startPaddingTop = 0; 
+    let targetPaddingTop = window.innerHeight * 0.45; 
+    
+    let transitionStartTime = null; 
+    let transitionDuration = 2500; 
+
+    function rotateEnd(timestamp) {
+        if(!window.replayState.active || !window.replayState.isEndRotation) return;
+
+        if (!transitionStartTime) transitionStartTime = timestamp;
+
+        currentEndBearing += 0.10; 
+
+        let elapsed = timestamp - transitionStartTime;
+        let progress = Math.min(elapsed / transitionDuration, 1);
         
-        document.getElementById('replayTopHUD').style.display = 'none';
-        document.getElementById('replayFinal').style.display = 'block';
-    }, 1000);
+        let easeOut = 1 - Math.pow(1 - progress, 3); 
+
+        let currentZoom = lerp(startZoom, targetZoom, easeOut);
+        let currentPaddingTop = lerp(startPaddingTop, targetPaddingTop, easeOut);
+
+        map.jumpTo({ 
+            center: endPoint, 
+            bearing: currentEndBearing, 
+            pitch: 65,
+            zoom: currentZoom,
+            padding: { top: currentPaddingTop } 
+        });
+        
+        window.replayState.endRotationReqId = requestAnimationFrame(rotateEnd);
+    }
+
+    window.replayState.endRotationReqId = requestAnimationFrame(rotateEnd);
 }
