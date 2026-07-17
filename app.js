@@ -28,19 +28,17 @@ let mapMode = 0;
 window.isRotationPausedByUser = false; 
 
 function applyMapStyleFeatures() {
-    // 💡 1. 지명 100% 한글 강제화 (영어 섞임 현상 및 플러그인 충돌 완벽 해결)
     const layers = map.getStyle().layers;
     if (layers) {
         layers.forEach((layer) => {
             if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
                 const tfStr = JSON.stringify(layer.layout['text-field']);
-                // 'name' 속성이 포함된 텍스트 레이어만 스마트 타겟팅 (도로번호 ref 등은 안전하게 보호)
                 if (tfStr.includes('name')) {
                     try {
                         map.setLayoutProperty(layer.id, 'text-field', [
                             'coalesce',
-                            ['get', 'name_ko'], // 1순위: 무조건 한글
-                            ['get', 'name']     // 2순위: 한글 데이터가 없는 해외 오지 등은 현지어
+                            ['get', 'name_ko'], 
+                            ['get', 'name']     
                         ]);
                     } catch (e) {}
                 }
@@ -48,7 +46,6 @@ function applyMapStyleFeatures() {
         });
     }
 
-    // 💡 2. 3D 지형 효과 적용
     if (mapMode === 0 || mapMode === 1) {
         if (!map.getSource('mapbox-dem')) {
             map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 14 });
@@ -281,7 +278,6 @@ window.isMapTouched = false;
 document.addEventListener('DOMContentLoaded', () => {
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FtZDIwMDAiLCJhIjoiY21ybXlpZGhuMnhocjJ4cXp3dXE4NGRmMiJ9.cBYcIuZLJvBXuecq21zAKg';
     
-    // 💡 초기 맵 시점: 한반도 전체가 나오는 완벽한 평면(Pitch 0) 상태로 시작
     map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/outdoors-v12',
@@ -295,8 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     mapboxgl.setRTLTextPlugin('https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.2.3/mapbox-gl-rtl-text.js');
     
-    // 💡 충돌을 유발하던 mapbox-gl-language 기본 플러그인 연동 해제 (수동으로 완벽 제어함)
-
     map.on('style.load', () => {
         applyMapStyleFeatures();
     });
@@ -721,6 +715,7 @@ function playSplashIntro() {
     }, 600); 
 }
 
+// 💡 1. 화면 튀는(Hiccup) 원인 완벽 제거 및 부드러운 오프닝 시퀀스 연결
 function finishSplashAndStart() {
     const splash = document.getElementById('splash'); 
     isFirstLoad = false;
@@ -731,15 +726,18 @@ function finishSplashAndStart() {
         
         if (map) map.resize(); 
 
+        // 💡 치명적 오류였던 setTimeout 닫는 괄호를 완벽히 복구하고, 자연스러운 카메라 애니메이션 연출
         setTimeout(() => {
-            if (map) map.easeTo({
-                pitch: 35,
-                duration: 2800,
-                essential: true,
-                easing: function(t) { return t * (2 - t); } 
-            });
-        }
-        
+            if (map) {
+                map.easeTo({
+                    pitch: 35,
+                    duration: 2800,
+                    essential: true,
+                    easing: function(t) { return t * (2 - t); } 
+                });
+            }
+        }, 50);
+
         renderAll(); 
 
         setTimeout(() => { 
@@ -1358,7 +1356,10 @@ window.startHikingTrack = async function() {
                 trackRoute.push([lng, lat, alt]);
             }
             
-            if(!window.isMapTouched) safeEaseTo({ center: [lng, lat], pitch: 0, duration: 1000 });
+            // 💡 실시간 트래킹 시 애니메이션 중첩으로 화면이 엉키는 현상을 막기 위해 panTo로 변경
+            if(!window.isMapTouched) {
+                map.panTo([lng, lat], { duration: 800 });
+            }
             
         }, err => console.log(err), { enableHighAccuracy: true, maximumAge: 3000 });
     }
