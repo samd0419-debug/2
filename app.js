@@ -28,21 +28,27 @@ let mapMode = 0;
 window.isRotationPausedByUser = false; 
 
 function applyMapStyleFeatures() {
+    // 💡 1. 지명 100% 한글 강제화 (영어 섞임 현상 및 플러그인 충돌 완벽 해결)
     const layers = map.getStyle().layers;
     if (layers) {
         layers.forEach((layer) => {
             if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
-                try {
-                    map.setLayoutProperty(layer.id, 'text-field', [
-                        'coalesce',
-                        ['get', 'name_ko'],
-                        ['get', 'name']
-                    ]);
-                } catch (e) {}
+                const tfStr = JSON.stringify(layer.layout['text-field']);
+                // 'name' 속성이 포함된 텍스트 레이어만 스마트 타겟팅 (도로번호 ref 등은 안전하게 보호)
+                if (tfStr.includes('name')) {
+                    try {
+                        map.setLayoutProperty(layer.id, 'text-field', [
+                            'coalesce',
+                            ['get', 'name_ko'], // 1순위: 무조건 한글
+                            ['get', 'name']     // 2순위: 한글 데이터가 없는 해외 오지 등은 현지어
+                        ]);
+                    } catch (e) {}
+                }
             }
         });
     }
 
+    // 💡 2. 3D 지형 효과 적용
     if (mapMode === 0 || mapMode === 1) {
         if (!map.getSource('mapbox-dem')) {
             map.addSource('mapbox-dem', { 'type': 'raster-dem', 'url': 'mapbox://mapbox.mapbox-terrain-dem-v1', 'tileSize': 512, 'maxzoom': 14 });
@@ -281,15 +287,15 @@ document.addEventListener('DOMContentLoaded', () => {
         style: 'mapbox://styles/mapbox/outdoors-v12',
         center: [127.8, 36.1], 
         zoom: window.innerWidth <= 768 ? 5.2 : 5.7,
-        pitch: 0, // 💡 완전 평면 셋업 (이미지 1 상태)
+        pitch: 0, 
         bearing: 0, 
         projection: 'mercator', 
         doubleClickZoom: false
     });
 
     mapboxgl.setRTLTextPlugin('https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.2.3/mapbox-gl-rtl-text.js');
-    const language = new MapboxLanguage({ defaultLanguage: 'ko' });
-    map.addControl(language);
+    
+    // 💡 충돌을 유발하던 mapbox-gl-language 기본 플러그인 연동 해제 (수동으로 완벽 제어함)
 
     map.on('style.load', () => {
         applyMapStyleFeatures();
@@ -532,7 +538,7 @@ function createMarkerEl(type, labelHtml, isDim) {
     setTimeout(() => {
         const pin = el.querySelector('.marker-pin-wrapper');
         if(pin) pin.classList.remove('drop-in-anim');
-    }, 1500); // 바운스 대기시간 넉넉히
+    }, 1500); 
 
     return el;
 }
@@ -715,33 +721,34 @@ function playSplashIntro() {
     }, 600); 
 }
 
-// 💡 화면이 튀는 현상 해결: map.resize()를 애니메이션 시작 전으로 이동하고 핀과 동시 연출
 function finishSplashAndStart() {
     const splash = document.getElementById('splash'); 
     isFirstLoad = false;
     
     if(splash) { 
         splash.style.opacity = '0'; 
-        splash.style.pointerEvents = 'none'; // 페이드아웃 중 터치 방지
+        splash.style.pointerEvents = 'none'; 
         
-        // 💡 화면 튀는 현상 완벽 방지 (애니메이션 전에 리사이즈 처리)
         if (map) map.resize(); 
 
         setTimeout(() => {
-            // 💡 0도에서 30도로 2.5초간 매우 부드럽게 세워지는 시퀀스 진행
-            if (map) map.easeTo({ pitch: 30, duration: 2500, essential: true }); 
-            // 세워지기 시작함과 동시에 핀 드롭 연출 같이 실행
-            renderAll(); 
-        }, 50); 
+            if (map) map.easeTo({
+                pitch: 35,
+                duration: 2800,
+                essential: true,
+                easing: function(t) { return t * (2 - t); } 
+            });
+        }
+        
+        renderAll(); 
 
         setTimeout(() => { 
             splash.style.display = 'none'; 
-        }, 500); 
+        }, 1500); 
     } 
     else { 
         if (map) {
-            map.resize(); 
-            map.easeTo({ pitch: 30, duration: 2500, essential: true });
+            map.easeTo({ pitch: 35, duration: 2800, easing: function(t) { return t * (2 - t); } });
         }
         renderAll(); 
     }
@@ -772,14 +779,13 @@ function renderAll() {
         const labelHtml = `<div class="mountain-label label-mylog show-anim"><b>${group.name}${altText}</b><br><span style="font-size:0.85em;">${latestDate}</span></div>`;
         const el = createMarkerEl('mylog', labelHtml);
         
-        // 💡 핀 드롭 속도를 우아하게 늦추고 간격도 넓힘
         const delay = index * 120 + 300; 
         
         const pin = el.querySelector('.marker-pin-wrapper');
-        if (pin) pin.style.animation = `dropIn 1s cubic-bezier(0.28, 0.84, 0.42, 1) ${delay}ms both`; // 바운스
+        if (pin) pin.style.animation = `dropIn 1s cubic-bezier(0.28, 0.84, 0.42, 1) ${delay}ms both`;
         
         const lbl = el.querySelector('.mountain-label');
-        if (lbl) lbl.style.animation = `labelFadeIn 0.5s ease ${delay + 600}ms both`; // 바운스가 끝날 때쯤 라벨 페이드인
+        if (lbl) lbl.style.animation = `labelFadeIn 0.5s ease ${delay + 600}ms both`; 
         
         let popupContent = `<div style="text-align:center;"><b>🏕️ ${group.name}</b><br><span style="color:#D32F2F; font-weight:bold;">고도: ${group.altNum > 0 ? group.altNum + 'm' : '정보 없음'}</span><hr style="margin:5px 0; border:0; border-top:1px solid #ddd;">`;
         
