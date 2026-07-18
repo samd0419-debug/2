@@ -325,7 +325,7 @@ window.activateCompass = async function() {
 window.isMapTouched = false; 
 
 // 💡 30% 더 밑으로 이동하고 북한까지 노출되는 시야각 (전역 상수)
-const DEFAULT_MAP_CENTER = [127.8, 34.9]; 
+const DEFAULT_MAP_CENTER = [127.8, 34.6]; 
 const DEFAULT_MAP_ZOOM = window.innerWidth <= 768 ? 5.5 : 6.1;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1701,7 +1701,7 @@ window.stopHikingTrack = function() {
     // 💡 데이터 백업이 끝났으므로 안심하고 상태를 완벽히 싹 비웁니다.
     cleanupTrackingState();
 
-    // 저장 진행
+   // 저장 진행
     const store = db.transaction(['hike_records'], 'readwrite').objectStore('hike_records');
     store.add({ 
         name: mName, date: today, alt: realMaxAlt, 
@@ -1712,15 +1712,25 @@ window.stopHikingTrack = function() {
         route: finalRoute, 
         time: finalTime,
         distance: finalDistance
+// ... 앞부분 생략 ...
     }).onsuccess = () => {
         alert("내 기록에 자동 저장되었습니다!");
-        loadSavedRecords(); 
         
-        // 플로팅 버튼 살리기 및 내기록 탭 띄우기
+        // 1. 트래킹 중 숨겨졌던 기본 버튼들을 먼저 살립니다.
         document.body.classList.remove('ui-hidden');
+        
+        // 2. 바텀창을 '내기록' 탭으로 맞추고 화면 위로 띄웁니다.
         openTab('tabMyLog'); 
-        currentSidebarState = 2;
-        updateSidebarState();
+        currentSidebarState = 1; 
+        updateSidebarState(); 
+        
+        // 💡 3. [핵심] 창이 열리는 애니메이션이 시작된 직후(0.1초 뒤)에 리스트를 갱신합니다.
+        // 이렇게 하면 탭 화면이 활성화된 상태에서 리스트가 쏙! 하고 정상적으로 그려집니다.
+        setTimeout(() => {
+            if (typeof loadSavedRecords === 'function') {
+                loadSavedRecords(); 
+            }
+        }, 1000); 
     };
 }
 window.renderTrackHistory = function() {
@@ -2199,7 +2209,7 @@ window.addEventListener('resize', () => {
             // 💡 현재 등산 기록 중(트래킹 모드)이 아닐 때만 한국 지도 크기 조정
             if (isLandscape && !window.isTracking) {
                 // 중심점을 대한민국 중앙 부근으로 설정 (경도, 위도)
-                cameraOptions.center = [127.8, 36.0]; 
+                cameraOptions.center = [127.8, 35.0]; 
                 
                 // 💡 [핵심] 여기서 줌 레벨을 조절하여 지도의 크기를 맞춥니다.
                 // - 숫자가 작을수록(예: 5.5) 지도가 작아져서 한반도 전체가 보입니다.
