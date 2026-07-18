@@ -325,7 +325,7 @@ window.activateCompass = async function() {
 window.isMapTouched = false; 
 
 // 💡 30% 더 밑으로 이동하고 북한까지 노출되는 시야각 (전역 상수)
-const DEFAULT_MAP_CENTER = [127.8, 34.6]; 
+const DEFAULT_MAP_CENTER = [127.8, 34.5]; 
 const DEFAULT_MAP_ZOOM = window.innerWidth <= 768 ? 5.5 : 6.1;
 
 document.addEventListener('DOMContentLoaded', () => {
