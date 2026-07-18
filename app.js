@@ -1,3 +1,4 @@
+
 window.isFlying = false;
 let flyTimeout = null;
 window.geolocateControl = null;
@@ -95,24 +96,29 @@ window.toggleMapStyle = function() {
     mapMode = (mapMode + 1) % 3;
     window.updateMapModeButton();
 
-    if (mapMode === 0) {
+    // 💡 현재 줌 레벨을 변수에 저장
+    const currentZoom = map.getZoom();
+
+    if (mapMode === 0) { // 3D 지형도
         if (prevMode === 2) {
             applyMapStyleFeatures();
-            map.easeTo({ pitch: 40, duration: 1000 });
+            // 💡 zoom: currentZoom 추가
+            map.easeTo({ pitch: 40, zoom: currentZoom, duration: 1000 });
         } else {
             map.setStyle('mapbox://styles/mapbox/outdoors-v12');
-            map.once('style.load', () => { applyMapStyleFeatures(); map.easeTo({ pitch: 40, duration: 1000 }); });
+            map.once('style.load', () => { applyMapStyleFeatures(); map.easeTo({ pitch: 40, zoom: currentZoom, duration: 1000 }); });
         }
-    } else if (mapMode === 1) {
+    } else if (mapMode === 1) { // 3D 위성도
         map.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
-        map.once('style.load', () => { applyMapStyleFeatures(); map.easeTo({ pitch: 40, duration: 1000 }); });
-    } else if (mapMode === 2) {
+        map.once('style.load', () => { applyMapStyleFeatures(); map.easeTo({ pitch: 40, zoom: currentZoom, duration: 1000 }); });
+    } else if (mapMode === 2) { // 2D 지형도
         if (prevMode === 0) {
             applyMapStyleFeatures();
-            map.easeTo({ pitch: 0, duration: 1000 });
+            // 💡 zoom: currentZoom 추가
+            map.easeTo({ pitch: 0, zoom: currentZoom, duration: 1000 });
         } else {
             map.setStyle('mapbox://styles/mapbox/outdoors-v12');
-            map.once('style.load', () => { applyMapStyleFeatures(); map.easeTo({ pitch: 0, duration: 1000 }); });
+            map.once('style.load', () => { applyMapStyleFeatures(); map.easeTo({ pitch: 0, zoom: currentZoom, duration: 1000 }); });
         }
     }
 };
@@ -229,16 +235,20 @@ function stopRotate() {
 }
 
 function getMapPadding() {
-    const sidebarEl = document.getElementById('sidebar');
-    let padBottom = 30;
-    if (!sidebarEl || sidebarEl.classList.contains('hidden')) padBottom = 30;
-    else if (currentSidebarState === 0) padBottom = 150;
-    else if (currentSidebarState === 1) padBottom = window.innerHeight * 0.55;
-    else if (currentSidebarState === 2) padBottom = window.innerHeight * 0.8;
+    // 💡 화면이 가로 모드인지 확인
+    const isLandscape = window.innerWidth > window.innerHeight;
+    
+    if (isLandscape) {
+        // [핵심] 가로 모드일 때는 우측 28%(최소 260px) 공간을 UI 전용 영역으로 비워둡니다 (3:1 분할).
+        // 지도가 널뛰지 않고 항상 좌측에 안정적으로 고정됩니다.
+        const rightPad = Math.max(window.innerWidth * 0.28, 260);
+        return { top: 30, bottom: 30, right: rightPad, left: 0 };
+    }
+    
+    // 세로 모드 기존 (여백 고정 유지)
     const padTop = window.innerHeight < 700 ? 180 : 250; 
-    return { top: padTop, bottom: padBottom };
+    return { top: padTop, bottom: 30, right: 0, left: 0 };
 }
-
 function focusAndRotate(lng, lat, zoomLvl = 14, callback = null) {
     stopRotate();
     const padding = getMapPadding();
@@ -302,23 +312,10 @@ window.activateCompass = async function() {
     if (window.geolocateControl) {
         window.geolocateControl.trigger();
     }
-    setTimeout(async () => {
+    // 💡 중복된 권한 요청 로직을 삭제하고 UI만 제어합니다.
+    setTimeout(() => {
         const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
         if (!window.isAutoRotating) {
-            if (!window.isSensorGranted) {
-                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    try {
-                        const permission = await DeviceOrientationEvent.requestPermission();
-                        if (permission === 'granted') {
-                            window.isSensorGranted = true;
-                            window.addEventListener('deviceorientation', window.handleOrientation, true);
-                        }
-                    } catch (err) { }
-                } else { 
-                    window.isSensorGranted = true; 
-                    window.addEventListener('deviceorientation', window.handleOrientation, true); 
-                }
-            }
             window.isAutoRotating = true;
             if (compassBtn) compassBtn.classList.add('is-rotating');
         }
@@ -328,8 +325,8 @@ window.activateCompass = async function() {
 window.isMapTouched = false; 
 
 // 💡 30% 더 밑으로 이동하고 북한까지 노출되는 시야각 (전역 상수)
-const DEFAULT_MAP_CENTER = [127.8, 37.6]; 
-const DEFAULT_MAP_ZOOM = window.innerWidth <= 768 ? 5.0 : 5.6;
+const DEFAULT_MAP_CENTER = [127.8, 34.9]; 
+const DEFAULT_MAP_ZOOM = window.innerWidth <= 768 ? 5.5 : 6.1;
 
 document.addEventListener('DOMContentLoaded', () => {
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FtZDIwMDAiLCJhIjoiY21ybXlpZGhuMnhocjJ4cXp3dXE4NGRmMiJ9.cBYcIuZLJvBXuecq21zAKg';
@@ -340,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container: 'map',
         style: 'mapbox://styles/mapbox/outdoors-v12',
         center: DEFAULT_MAP_CENTER, 
-        zoom: DEFAULT_MAP_ZOOM,
+        zoom: DEFAULT_MAP_ZOOM - 1.5,
         pitch: 0, 
         bearing: 0, 
         projection: 'mercator', 
@@ -360,8 +357,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.geolocateControl = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
         trackUserLocation: true, 
-        showUserHeading: true,
-        fitBoundsOptions: { maxZoom: 16, duration: 1500 } 
+        showUserHeading: false,
+        fitBoundsOptions: { maxZoom: 16, duration: 1500,padding: { bottom: 200, top: 0 } 
+        } 
     });
     map.addControl(window.geolocateControl, 'top-right');
 
@@ -500,6 +498,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     compassBtn.classList.remove('is-rotating'); 
                     safeEaseTo({ bearing: 0, duration: 800 });
                 } else {
+                    // 💡 [핵심] 나침반을 클릭한 직후 동기적으로 권한을 요청합니다.
+                    if (!window.isSensorGranted && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                        try {
+                            const permission = await DeviceOrientationEvent.requestPermission();
+                            if (permission === 'granted') {
+                                window.isSensorGranted = true;
+                                window.addEventListener('deviceorientation', window.handleOrientation, true);
+                            }
+                        } catch(err) {}
+                    } else if (!window.isSensorGranted) {
+                        window.isSensorGranted = true;
+                        window.addEventListener('deviceorientation', window.handleOrientation, true);
+                    }
                     window.activateCompass();
                 }
             };
@@ -606,21 +617,44 @@ function resetMapToDefault(keepTracking = false) {
     const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
     if (compassBtn) compassBtn.classList.remove('is-rotating');
     
+    currentSidebarState = -1; 
+    updateSidebarState();
+    
+    const defaultPadding = getMapPadding();
+    const targetZoom = DEFAULT_MAP_ZOOM;
+    const startZoom = targetZoom - 1.5; 
+
+    // 💡 변경된 부분: 지도가 안정화(idle)될 때까지 기다렸다가 애니메이션을 실행하는 로직
+    const runCinematicAnimation = () => {
+        // 1. 초기 줌아웃 상태로 고정
+        map.jumpTo({ center: DEFAULT_MAP_CENTER, zoom: startZoom, pitch: 0, bearing: 0, padding: defaultPadding });
+        
+        // 2. 아주 짧은 지연 후 40도 눕히며 줌인
+        setTimeout(() => {
+            safeEaseTo({ 
+                center: DEFAULT_MAP_CENTER, 
+                zoom: targetZoom, 
+                pitch: 40, 
+                bearing: 0, 
+                padding: defaultPadding, 
+                duration: 2500 
+            });
+        }, 100);
+    };
+
     if (mapMode !== 0) {
         mapMode = 0; window.updateMapModeButton();
         map.setStyle('mapbox://styles/mapbox/outdoors-v12');
-        map.once('style.load', () => { 
+        // 💡 지도가 로드되고 나서 '안정화'된 시점을 포착
+        map.once('idle', () => { 
             applyMapStyleFeatures(); 
-            map.easeTo({ center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM, pitch: 0, bearing: 0, padding: {bottom: 0}, duration: 1000 }); 
+            runCinematicAnimation();
         });
     } else {
-        safeFlyTo({ center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM, pitch: 0, bearing: 0, padding: {bottom: 0}, duration: 1500 });
+        runCinematicAnimation();
     }
-
-    currentSidebarState = -1; updateSidebarState();
     
     document.body.classList.remove('ui-hidden');
-    
     clearMarkers(myLogMarkers); clearMarkers(m100Markers); clearMarkers(challengeMarkers);
     if(tempMarker) tempMarker.remove();
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -671,7 +705,20 @@ if (handleDrag) {
 
 function updateSidebarState() {
     sidebar.classList.remove('hidden', 'collapsed', 'half', 'full'); 
-    if (currentSidebarState === -1) { sidebar.classList.add('hidden'); } 
+    
+    if (currentSidebarState === -1) { 
+        sidebar.classList.add('hidden'); 
+        
+        // 💡 [추가된 핵심 코드] 바텀창이 완전히 닫힐 때 나침반 시선 모드 해제 및 정북 방향 복귀
+        window.isAutoRotating = false;
+        const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
+        if (compassBtn) compassBtn.classList.remove('is-rotating');
+        
+        // 지도가 회전되어 있다면 0도(정북)로 부드럽게 원상복구
+        if (map && map.getBearing() !== 0) {
+            map.easeTo({ bearing: 0, duration: 800 });
+        }
+    } 
     else {
         sidebar.classList.add(states[currentSidebarState]);
         if (dragText) {
@@ -680,7 +727,7 @@ function updateSidebarState() {
             else dragText.innerText = '클릭하여 최소화 / 쓸어내려서 좁게 보기';
         }
     }
-    if(isRotating && targetCenter) { safeEaseTo({ center: targetCenter, padding: getMapPadding(), duration: 500 }); }
+    // if(isRotating && targetCenter) { safeEaseTo({ center: targetCenter, padding: getMapPadding(), duration: 500 }); }
 }
 
 function openTab(tabId) {
@@ -701,9 +748,9 @@ function openTab(tabId) {
     } else if (tabId === 'tabM100') { 
         renderM100Map(); 
     } else if (tabId === 'tabMyLog') { 
-        renderAll(); safeFlyTo({ center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM, pitch: 35, bearing: 0, padding: getMapPadding(), duration: 1500 }); 
+        renderAll(); safeFlyTo({ center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM, pitch: 40, bearing: 0, padding: getMapPadding(), duration: 1500 }); 
     } else if (tabId === 'tabSearch') { 
-        safeFlyTo({ center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM, pitch: 35, bearing: 0, padding: getMapPadding(), duration: 1500 }); 
+        safeFlyTo({ center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM, pitch: 40, bearing: 0, padding: getMapPadding(), duration: 1500 }); 
     }
 }
 
@@ -847,9 +894,16 @@ function finishSplashAndStart() {
     isFirstLoad = false;
     
     if(splash) { 
+        // 💡 1. 스플래시가 화면을 가리고 있을 때 미리 지도를 줌아웃 위치로 세팅 및 정지
+        if (map) {
+            map.stop(); 
+            map.jumpTo({ center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM - 1.5, pitch: 0, bearing: 0 }); 
+            map.resize(); 
+        }
+        
+        // 💡 2. 위치 세팅이 끝난 후 스플래시 페이드아웃 시작
         splash.style.opacity = '0'; 
         splash.style.pointerEvents = 'none'; 
-        if (map) map.resize(); 
 
         setTimeout(() => {
             resetMapToDefault(false); 
@@ -1062,7 +1116,7 @@ function renderM100Map() {
         });
         m100Markers.push(marker);
     });
-    safeFlyTo({ center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
+    safeFlyTo({ center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM, pitch: 40, bearing: 0, padding: getMapPadding(), duration: 1500 });
 }
 
 function renderChallengeMapAndList() {
@@ -1140,7 +1194,7 @@ function renderChallengeMapAndList() {
     
     document.getElementById('challengeCount').innerText = climbedCount;
     if(climbedCount === 0) { list.innerHTML = `<div style="padding: 40px 20px; text-align:center; color:#777;">아직 완등한 명산이 없습니다.</div>`; }
-    safeFlyTo({ center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM, pitch: 45, bearing: 0, padding: getMapPadding(), duration: 1500 });
+    safeFlyTo({ center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM, pitch: 40, bearing: 0, padding: getMapPadding(), duration: 1500 });
 }
 
 let inlineSearchTimer;
@@ -1291,10 +1345,26 @@ window.saveRecord = async function() {
 }
 
 window.deleteRecord = function(id, event) {
-    if(event) event.stopPropagation(); if (!confirm("정말로 이 등산 기록을 삭제하시겠습니까?")) return;
-    db.transaction(['hike_records'], 'readwrite').objectStore('hike_records').delete(id).onsuccess = () => { loadSavedRecords(); };
+    if(event) event.stopPropagation(); 
+    if (!confirm("정말로 이 등산 기록을 삭제하시겠습니까?")) return;
+    
+    db.transaction(['hike_records'], 'readwrite').objectStore('hike_records').delete(id).onsuccess = () => { 
+        // 1. 메모리(allRecords) 상에서 방금 삭제한 데이터를 즉시 제외
+        allRecords = allRecords.filter(r => r.id !== id);
+        
+        // 2. 총 누적 고도 다시 계산 및 텍스트 즉시 반영
+        calculateTotalAltOnly();
+        document.getElementById('uiTotalAlt').innerText = totalAltitudeData.toLocaleString(); 
+        
+        // 3. '내 기록' 리스트와 지도 위 마커 즉시 다시 그리기
+        renderAll();
+        
+        // 4. '트래킹 역사' 리스트도 즉시 갱신
+        if (typeof window.renderTrackHistory === 'function') {
+            window.renderTrackHistory();
+        }
+    };
 }
-
 window.exportData = function() {
     if(allRecords.length === 0) return alert('백업할 기록이 없습니다.'); 
     const dataStr = JSON.stringify(allRecords); 
@@ -1359,59 +1429,22 @@ let elapsedSeconds = 0;
 let autoSaveInterval = null; 
 
 // 💡 4. 트래킹 진입 시 FAB 숨김 및 GPS 권한 기반 자동 3단 탭 로직 
-window.prepareTracking = function() {
+// 💡 함수에 async를 추가합니다.
+window.prepareTracking = async function() {
     clearMarkers(myLogMarkers); 
     clearMarkers(m100Markers); 
     clearMarkers(challengeMarkers);
     if(tempMarker) tempMarker.remove();
     if(window.replayState && window.replayState.active) window.exitReplay();
 
-    // 시작 전에도 우측 플로팅 버튼(FAB)들은 즉시 사라집니다.
     document.body.classList.add('ui-hidden');
-
     currentSidebarState = -1; 
     updateSidebarState();
 
-    const hud = document.getElementById('trackingHUD');
-    hud.style.display = 'block';
+    document.getElementById('trackingHUD').style.display = 'block';
 
-    if (!window.isTracking) {
-        document.getElementById('hudStartControl').style.display = 'block';
-        document.getElementById('hudActiveControls').style.display = 'none';
-        document.getElementById('hudTime').innerText = "00:00:00";
-        document.getElementById('hudAlt').innerText = "0";
-        document.getElementById('hudDist').innerText = "0.0";
-        document.getElementById('hudSpeed').innerText = "0.0";
-    } else {
-        document.getElementById('hudStartControl').style.display = 'none';
-        document.getElementById('hudActiveControls').style.display = 'flex';
-    }
-    
-    // GPS 자동 클릭 및 1초 뒤 연속 나침반 탭 로직
-    const setupGPS = async () => {
-        applyMapStyleFeatures(); 
-        map.jumpTo({ pitch: 0, bearing: 0 }); 
-
-        // GPS와 나침반을 연속적으로 탭해주는 함수
-        const triggerTaps = () => {
-            if (window.geolocateControl) {
-                // 동의 또는 즉시 진입 후 1초 뒤 2번째 탭 (나침반 락온 유도)
-                setTimeout(() => {
-                    window.geolocateControl.trigger();
-                    // 그 후 1초 뒤 3번째 탭 확인 사살
-                    setTimeout(() => {
-                        window.geolocateControl.trigger();
-                    }, 1000);
-                }, 1000);
-            }
-        };
-        
-        // ① 트래킹을 누르자마자 1차 탭: 지도 위치 포커싱 및 권한 프롬프트 유도
-        if (window.geolocateControl) {
-            window.geolocateControl.trigger(); 
-        }
-
-        // 동작 및 방향 접근 허용(나침반 권한)이 필요한 기기 대응
+    // 💡 1. 권한 먼저 체크
+    const requestSensorPermission = async () => {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             try {
                 const permission = await DeviceOrientationEvent.requestPermission();
@@ -1419,27 +1452,44 @@ window.prepareTracking = function() {
                     window.isSensorGranted = true;
                     window.addEventListener('deviceorientation', window.handleOrientation, true);
                 }
-                triggerTaps(); // 권한 동의 후 연속 탭 실행
-            } catch(e) {
-                triggerTaps(); // 에러나 취소 시에도 진행
-            }
+            } catch(e) {}
         } else {
-            // 권한 요청이 필요 없는 안드로이드 등의 기기
             window.isSensorGranted = true;
             window.addEventListener('deviceorientation', window.handleOrientation, true);
-            triggerTaps();
         }
     };
+
+    // 💡 2. 지도 스타일 및 GPS/나침반 실행
+    const setupTracking = async () => {
+        applyMapStyleFeatures();
+        // 언어 한글 강제 적용을 위해 딜레이
+        setTimeout(applyMapStyleFeatures, 500);
+        
+        map.jumpTo({ pitch: 0, bearing: 0 });
+
+        // GPS 버튼 탭
+        if (window.geolocateControl) window.geolocateControl.trigger();
+
+        // 💡 3. 나침반 모드 자동 활성화 (내 시선 방향 모드)
+        setTimeout(() => {
+            const compassBtn = document.querySelector('.mapboxgl-ctrl-compass');
+            if (!window.isAutoRotating) {
+                window.isAutoRotating = true;
+                if(compassBtn) compassBtn.classList.add('is-rotating');
+            }
+        }, 1000);
+    };
+
+    await requestSensorPermission(); // 허용/거부 기다림
 
     if (mapMode !== 2) {
         mapMode = 2; window.updateMapModeButton();
         map.setStyle('mapbox://styles/mapbox/outdoors-v12');
-        map.once('style.load', setupGPS);
+        map.once('style.load', setupTracking);
     } else {
-        setupGPS();
+        setupTracking();
     }
 }
-
 window.startHikingTrack = async function() {
     if (!navigator.geolocation) return alert("GPS를 지원하지 않는 기기입니다.");
     
@@ -1526,7 +1576,7 @@ window.startHikingTrack = async function() {
             }
             
             if(!window.isMapTouched) {
-                map.panTo([lng, lat], { duration: 800, padding: { bottom: 320, top: 0 } });
+                map.panTo([lng, lat], { duration: 800, padding: { bottom: 200, top: 0 } });
             }
             
         }, err => console.log(err), { enableHighAccuracy: true, maximumAge: 3000 });
@@ -1576,78 +1626,103 @@ function cleanupTrackingState() {
     
     if(wakeLock) { wakeLock.release(); wakeLock = null; }
 
+    // 💡 1. 내부 기록 및 상태 변수 완벽 초기화
     window.isTracking = false;
     window.isPaused = false;
+    elapsedSeconds = 0;
+    trackDistance = 0;
+    trackRoute = [];
+    trackPhotos = [];
     
+    // 💡 2. 텍스트 수치들 0으로 초기화
+    document.getElementById('hudTime').innerText = "00:00:00";
+    document.getElementById('hudDist').innerText = "0.0";
+    document.getElementById('hudAlt').innerText = "0";
+    document.getElementById('hudSpeed').innerText = "0.0";
+
+    // 💡 3. [핵심] 여기서 UI 버튼 상태를 아예 '시작 전' 상태로 못 박아버립니다.
+    document.getElementById('hudStartControl').style.display = 'block'; // 시작 버튼 보이게
+    document.getElementById('hudActiveControls').style.display = 'none'; // 중지/종료 버튼 숨기게
+
+    // 💡 4. 혹시 휴식 상태에서 꺼졌을 경우를 대비해 버튼 텍스트 원상복구
+    const btnPause = document.getElementById('btnTrackPauseHUD');
+    if(btnPause) {
+        btnPause.innerText = "⏸️ 휴식";
+        btnPause.style.background = "rgba(251,192,45,0.9)";
+        btnPause.style.color = "#333";
+    }
+
+    // 💡 5. 화면에서 숨기기 및 선 지우기
     document.getElementById('trackingHUD').style.display = 'none';
-    
     if(map.getSource('trackLine')) {
         map.getSource('trackLine').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
     }
 }
 
-// 💡 5. X 버튼을 통해 나갈 때의 확인 및 분기 처리
+// 💡 [X] 나가기 버튼
 window.exitTrackingMode = function() {
     if (window.isTracking) {
-        // 기록 중인 상태 (버튼 4개 보일 때)
         if (confirm("등산 기록중인데 정말 나가시겠습니까?\n(기록은 저장되지 않습니다.)")) {
             cleanupTrackingState();
-            resetMapToDefault(false);
+            // 기본 화면으로 이동하지 않고 현재 지도 위치를 유지하며 우측 버튼만 살림
+            document.body.classList.remove('ui-hidden'); 
+            currentSidebarState = -1; updateSidebarState();
         }
     } else {
-        // 기록 시작 전 대기 상태 (버튼 1개 보일 때 묻지 않고 바로 나감)
-        document.getElementById('trackingHUD').style.display = 'none';
-        resetMapToDefault(false);
+        cleanupTrackingState();
+        document.body.classList.remove('ui-hidden'); 
+        currentSidebarState = -1; updateSidebarState();
     }
 };
 
+// 💡 [🛑 종료] 버튼
 window.stopHikingTrack = function() {
-    if (!confirm("등산을 종료하고 기록을 저장하시겠습니까?\n(취소를 누르면 저장 없이 즉시 종료됩니다.)")) {
-        cleanupTrackingState();
-        resetMapToDefault(false);
+    // 💡 문구 수정: 취소 시 기록이 계속 유지됨을 안내합니다.
+    if (!confirm("등산을 종료하고 기록을 저장하시겠습니까?\n(취소를 누르면 계속해서 등산을 기록합니다.)")) {
+        // [취소] 누를 경우: 아무것도 지우지 않고 바로 함수를 빠져나가 트래킹을 계속 이어나갑니다!
         return;
     }
     
-    cleanupTrackingState();
-
+    // [확인] 누를 경우: 백업 후 저장
     const mName = prompt("이 산의 이름을 적어주세요!", "이름 없는 산") || "이름 없는 산";
+    
+    // 상태 초기화 전 데이터 임시 백업
     const finalTime = document.getElementById('hudTime').innerText;
+    const finalDistance = trackDistance.toFixed(2);
+    const finalRoute = [...trackRoute];
+    const finalPhotoData = [...trackPhotos];
+    const photosOnly = trackPhotos.map(p => p.url);
     const today = new Date().toISOString().split('T')[0];
     
     let maxAltPoint = trackRoute.length > 0 ? trackRoute[0] : [128.0, 36.0, 0];
     trackRoute.forEach(pt => { if(pt[2] && pt[2] > maxAltPoint[2]) maxAltPoint = pt; });
     const realMaxAlt = Math.round(maxAltPoint[2] || 0);
     
-    const photosOnly = trackPhotos.map(p => p.url);
+    // 💡 데이터 백업이 끝났으므로 안심하고 상태를 완벽히 싹 비웁니다.
+    cleanupTrackingState();
 
+    // 저장 진행
     const store = db.transaction(['hike_records'], 'readwrite').objectStore('hike_records');
     store.add({ 
         name: mName, date: today, alt: realMaxAlt, 
         lat: maxAltPoint[1], 
         lng: maxAltPoint[0], 
         photos: photosOnly, 
-        photoData: trackPhotos, 
-        route: trackRoute, 
+        photoData: finalPhotoData, 
+        route: finalRoute, 
         time: finalTime,
-        distance: trackDistance.toFixed(2)
+        distance: finalDistance
     }).onsuccess = () => {
         alert("내 기록에 자동 저장되었습니다!");
         loadSavedRecords(); 
         
-        elapsedSeconds = 0;
-        document.getElementById('hudTime').innerText = "00:00:00";
-        
-        // 💡 1. 트래킹이 끝났으므로 숨겨두었던 우측 플로팅 버튼(FAB)을 다시 활성화
+        // 플로팅 버튼 살리기 및 내기록 탭 띄우기
         document.body.classList.remove('ui-hidden');
-
         openTab('tabMyLog'); 
-        
-        // 💡 2. 바텀창 상태를 2 (가장 위로 올라오는 3단계 Full 화면)로 강제 지정
         currentSidebarState = 2;
         updateSidebarState();
     };
 }
-
 window.renderTrackHistory = function() {
     const listEl = document.getElementById('trackHistoryList');
     if(!listEl) return;
@@ -2106,4 +2181,33 @@ function finishReplay() {
     }
 
     window.replayState.endRotationReqId = requestAnimationFrame(rotateEnd);
+
 }
+
+// 💡 화면 크기 변화 감지 및 가로 모드 시 한국 지도 줌 레벨 조절
+window.addEventListener('resize', () => {
+    if (typeof map !== 'undefined' && map) {
+        setTimeout(() => {
+            map.resize(); // 도화지는 화면에 꽉 차게 폄
+            
+            const isLandscape = window.innerWidth > window.innerHeight;
+            let cameraOptions = { 
+                padding: getMapPadding(), 
+                duration: 500 
+            };
+
+            // 💡 현재 등산 기록 중(트래킹 모드)이 아닐 때만 한국 지도 크기 조정
+            if (isLandscape && !window.isTracking) {
+                // 중심점을 대한민국 중앙 부근으로 설정 (경도, 위도)
+                cameraOptions.center = [127.8, 36.0]; 
+                
+                // 💡 [핵심] 여기서 줌 레벨을 조절하여 지도의 크기를 맞춥니다.
+                // - 숫자가 작을수록(예: 5.5) 지도가 작아져서 한반도 전체가 보입니다.
+                // - 숫자가 클수록(예: 7.0) 지도가 커져서 도/시 단위로 가깝게 보입니다.
+                cameraOptions.zoom = 7.3; 
+            }
+
+            map.easeTo(cameraOptions);
+        }, 200); 
+    }
+});

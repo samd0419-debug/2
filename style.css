@@ -1,3 +1,12 @@
+/* style.css 파일의 가장 첫 줄 */
+#map {
+    background-color: #e0e0e0; /* 지도 로드 전 배경색 지정 */
+    transition: none !important; /* 애니메이션 충돌 방지 */
+}
+
+/* 아래부터는 기존에 작성하신 나머지 코드들이 이어집니다 */
+* { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+/* ... 이하 생략 ... */
 * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
 input, textarea { user-select: auto; -webkit-user-select: auto; }
 
@@ -149,16 +158,55 @@ input:focus { border-color: #2E7D32; outline: none; background-color: #fff; }
 .search-btn { padding: 0 18px; background: #2E7D32; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 0.95em; cursor: pointer; white-space: nowrap; }
 .save-btn { width: 100%; padding: 14px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); cursor: pointer; }
 
-.record-card { position: relative; display: flex; justify-content: space-between; align-items: center; background: #fafafa; padding: 16px; margin-top: 15px; border-radius: 10px; border: 1px solid #eee; cursor: pointer; z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+/* 💡 내기록 탭의 카드 디자인 수정 */
+.record-card { 
+    position: relative; 
+    display: flex; 
+    flex-wrap: wrap; /* 💡 화면이 좁으면 자동 줄바꿈 */
+    justify-content: space-between; 
+    align-items: center; 
+    gap: 12px; /* 💡 줄바꿈 시 상하 여백 확보 */
+    background: #fafafa; 
+    padding: 16px 75px 16px 16px; /* 💡 핵심: 플로팅 버튼 영역(약 70px)을 피해 우측 패딩 75px 확보 */
+    margin-top: 15px; 
+    border-radius: 10px; 
+    border: 1px solid #eee; 
+    cursor: pointer; 
+    z-index: 1; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+}
 .record-info { flex: 1; text-align: left; padding-right: 5px; }
 .record-info h4 { margin: 0 0 5px 0; color: #333; font-size: 1.1em; font-weight: 900; line-height: 1.3; }
 .record-info p { margin: 0; font-size: 0.85em; color: #666; }
-.action-btns { display: flex; gap: 6px; flex-shrink: 0; z-index: 10; margin-right: 2px; }
-.action-btns button { padding: 7px 12px; border-radius: 6px; font-weight: bold; border: none; color: white; font-size: 0.8em; cursor: pointer; }
+
+/* 💡 버튼 그룹 래퍼 수정 */
+.action-btns { 
+    display: flex; 
+    flex-wrap: wrap; /* 💡 버튼이 3개가 되어도 안전하게 줄바꿈 */
+    gap: 6px; 
+    flex-shrink: 0; 
+    z-index: 10; 
+    margin-right: 2px; 
+}.action-btns button { padding: 7px 12px; border-radius: 6px; font-weight: bold; border: none; color: white; font-size: 0.8em; cursor: pointer; }
 .edit-btn { background: #1976D2; } .delete-btn { background: #d32f2f; }
 .replay-btn { background: #FF8F00; } 
 
-.track-card { display: flex; flex-direction: row; align-items: center; background: #fafafa; padding: 15px; margin-top: 15px; border-radius: 8px; border: 1px solid #eee; cursor: pointer; z-index: 1; box-shadow: 0 2px 5px rgba(0,0,0,0.05); justify-content: space-between;}
+/* 💡 트래킹 역사 탭의 카드 디자인 수정 */
+.track-card { 
+    display: flex; 
+    flex-wrap: wrap; /* 💡 자동 줄바꿈 */
+    align-items: center; 
+    gap: 12px; /* 💡 줄바꿈 시 상하 여백 확보 */
+    background: #fafafa; 
+    padding: 15px 75px 15px 15px; /* 💡 핵심: 플로팅 버튼 영역 회피용 패딩 75px */
+    margin-top: 15px; 
+    border-radius: 8px; 
+    border: 1px solid #eee; 
+    cursor: pointer; 
+    z-index: 1; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+    justify-content: space-between;
+}
 .track-card .track-info { flex: 1; text-align: left; }
 .track-card .track-info h4 { margin: 0 0 5px 0; color: #333; font-size: 1.1em; font-weight: 900; line-height: 1.3; }
 .track-card .track-info p { margin: 0; font-size: 0.85em; color: #666; }
@@ -295,3 +343,131 @@ h2.tab-title { color: #333; margin: 10px 0 15px 0; font-size: 1.5em; font-weight
 #powerSaveOverlay.pressing .ps-content { opacity: 1; }
 #powerSaveIcon { font-size: 3.5em; margin-bottom: 10px; transition: transform 1s cubic-bezier(0.25, 1, 0.5, 1); }
 #powerSaveOverlay.pressing #powerSaveIcon { transform: scale(1.5); }
+/* 📱 가로 모드(Landscape) 최적화: UI 잘림 방지 및 노치(Safe Area) 대응 */
+@media (orientation: landscape) and (max-height: 600px) {
+    /* 1. 우측 플로팅 버튼(FAB)들을 세로 배열에서 우측 하단 가로 배열로 변경 및 크기 축소 */
+    .fab-btn { width: 46px; height: 46px; font-size: 0.7em; }
+    .fab-btn::before { font-size: 1.3em !important; }
+    
+    /* 💡 inline 스타일을 강제로 덮어쓰기 위해 !important 사용 */
+    #myLogWidget { right: max(15px, env(safe-area-inset-right)) !important; bottom: 15px !important; }
+    #m100Widget { right: calc(max(15px, env(safe-area-inset-right)) + 60px) !important; bottom: 15px !important; }
+    #challengeWidget { right: calc(max(15px, env(safe-area-inset-right)) + 120px) !important; bottom: 15px !important; }
+    #searchWidget { right: calc(max(15px, env(safe-area-inset-right)) + 180px) !important; bottom: 15px !important; }
+    #trackWidget { right: calc(max(15px, env(safe-area-inset-right)) + 240px) !important; bottom: 15px !important; }
+
+    /* 2. 트래킹 HUD 창 축소 및 여백 조절 (위로 잘리지 않도록) */
+    #trackingHUD { 
+        transform: translateX(-50%) scale(0.85); 
+        transform-origin: bottom center; 
+        bottom: calc(5px + env(safe-area-inset-bottom)) !important; 
+        padding: 15px !important;
+    }
+
+    /* 3. 내 기록 바텀창(사이드바) 과도한 하단 스크롤 여백 축소 */
+    #sidebarContent { padding-bottom: 80px !important; }
+
+    /* 4. 시네마틱 리플레이 UI 축소 */
+    #replayFinal { transform: translateX(-50%) scale(0.85); transform-origin: top center; top: 5px !important; }
+    #replayControls { transform: translateX(-50%) scale(0.9); transform-origin: bottom center; bottom: 5px !important; }
+
+    /* 5. 스플래시 화면 텍스트가 위아래로 찌그러지는 현상 방지 */
+    .splash-alt-number { font-size: 3.5rem !important; }
+    #splashCounterContainer { margin-top: -10px !important; }
+    
+    /* 6. 좌측 상단 버튼 및 맵박스 기본 컨트롤(나침반 등) 노치 회피 */
+    #styleToggleBtn { left: max(15px, env(safe-area-inset-left)) !important; }
+    .mapboxgl-ctrl-top-right { right: max(15px, env(safe-area-inset-right)) !important; }
+}
+/* 📱 가로 모드(Landscape) 3:1 좌우 분할 레이아웃 */
+@media (orientation: landscape) {
+
+    /* 1. 바텀창을 우측 28% 패널(최소 260px)로 완전 고정 */
+    #sidebar { 
+        width: 28vw !important; 
+        min-width: 260px !important;
+        left: auto !important; 
+        right: 0 !important; 
+        top: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important; 
+        border-radius: 20px 0 0 20px !important;
+        box-shadow: -5px 0 20px rgba(0,0,0,0.15) !important;
+    }
+    
+    /* 슬라이드 애니메이션 방향 전환 (위아래 -> 우측에서 좌측으로) */
+    #sidebar.hidden { transform: translateX(100%) !important; }
+    #sidebar.collapsed, #sidebar.half, #sidebar.full { transform: translateX(0) !important; }
+    
+    /* 불필요한 위아래 드래그 핸들 제거 */
+    #dragHandle { display: none !important; }
+    
+    /* 내용물 영역 여백 조정 (노치 회피) */
+    #sidebarContent { 
+        padding-bottom: 30px !important; 
+        padding-top: max(15px, env(safe-area-inset-top)); 
+        height: 100%; 
+    }
+
+    /* 우측 상단 X 버튼 위치 보정 */
+    .sidebar-close-btn {
+        top: max(12px, env(safe-area-inset-top)) !important;
+        right: max(20px, env(safe-area-inset-right)) !important;
+    }
+
+    /* 2. 플로팅 버튼(FAB)을 3:1 경계선 기준 좌측 하단에 가로로 나란히 배치 */
+    .fab-btn { width: 48px; height: 48px; font-size: 0.7em; }
+    .fab-btn::before { font-size: 1.5em !important; margin-bottom: 0 !important; }
+    .fab-widget { bottom: max(15px, env(safe-area-inset-bottom)) !important; }
+    
+    /* FAB right 위치: 우측 패널 두께 + 아이템별 여백 */
+    #myLogWidget { right: calc(max(28vw, 260px) + 15px) !important; }
+    #m100Widget { right: calc(max(28vw, 260px) + 75px) !important; }
+    #challengeWidget { right: calc(max(28vw, 260px) + 135px) !important; }
+    #searchWidget { right: calc(max(28vw, 260px) + 195px) !important; }
+    #trackWidget { right: calc(max(28vw, 260px) + 255px) !important; }
+
+    /* 3. 트래킹 HUD 및 리플레이 컨트롤을 우측 패널(1의 영역)에 고정 */
+    #trackingHUD, #replayControls, #replayFinal {
+        left: auto !important; 
+        right: max(1.5vw, env(safe-area-inset-right)) !important; 
+        transform: none !important; 
+        width: 25vw !important; 
+        min-width: 240px !important;
+    }
+    
+    /* 트래킹 HUD는 우측 패널 수직 중앙 정렬 */
+    #trackingHUD { 
+        top: 50vh !important; 
+        bottom: auto !important; 
+        transform: translateY(-50%) !important; 
+    }
+    
+    #replayControls { bottom: max(15px, env(safe-area-inset-bottom)) !important; }
+    #replayFinal { top: max(15px, env(safe-area-inset-top)) !important; }
+
+ /* 1. 맵박스 기본 컨트롤(나침반, GPS) 좌측 이동 및 찌그러짐 방지 */
+ body   .mapboxgl-ctrl-top-right { 
+        position: absolute !important; /* 💡 [추가] 위치 고정을 최우선으로 강제함 */
+        right: auto !important; 
+        left: max(15px, env(safe-area-inset-left)) !important; 
+        
+        /* 💡 calc 계산식을 빼고 직관적으로 130px을 줍니다. 
+             (숫자를 150px, 180px 등으로 바꾸면 무조건 내려갑니다) */
+        top: 45px !important; 
+        
+        align-items: flex-start !important; 
+        width: 50px !important; 
+    }
+    
+    /* 💡 그룹 컨테이너도 50px 원형으로 한 번 더 강제 고정 */
+    .mapboxgl-ctrl-top-right .mapboxgl-ctrl-group {
+        width: 50px !important;
+        height: 50px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* 5. 스플래시 화면 텍스트 최적화 (찌그러짐 방지) */
+    .splash-alt-number { font-size: 3.5rem !important; }
+    #splashCounterContainer { margin-top: 0 !important; }
+}
