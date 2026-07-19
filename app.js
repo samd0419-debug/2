@@ -239,15 +239,19 @@ function getMapPadding() {
     const isLandscape = window.innerWidth > window.innerHeight;
     
     if (isLandscape) {
-        // [핵심] 가로 모드일 때는 우측 28%(최소 260px) 공간을 UI 전용 영역으로 비워둡니다 (3:1 분할).
-        // 지도가 널뛰지 않고 항상 좌측에 안정적으로 고정됩니다.
+        // 우측 UI 3:1 분할 영역(최소 260px) 유지
         const rightPad = Math.max(window.innerWidth * 0.28, 260);
-        return { top: 30, bottom: 30, right: rightPad, left: 0 };
+        
+        // 💡 [핵심] 가로 모드일 때: 화면 전체 높이의 20% 만큼 지도를 아래로 내림
+        const topPad = window.innerHeight * 0.20; 
+        
+        return { top: topPad, bottom: 0, right: rightPad, left: 0 };
     }
     
-    // 세로 모드 기존 (여백 고정 유지)
-    const padTop = window.innerHeight < 700 ? 180 : 250; 
-    return { top: padTop, bottom: 30, right: 0, left: 0 };
+    // 💡 [핵심] 세로 모드일 때: 화면 전체 높이의 10% 만큼 지도를 아래로 내림
+    const topPad = window.innerHeight * 0.20;
+    
+    return { top: topPad, bottom: 0, right: 0, left: 0 };
 }
 function focusAndRotate(lng, lat, zoomLvl = 14, callback = null) {
     stopRotate();
@@ -357,9 +361,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.geolocateControl = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
         trackUserLocation: true, 
-        showUserHeading: false,
-        fitBoundsOptions: { maxZoom: 16, duration: 1500,padding: { bottom: 200, top: 0 } 
-        } 
+        showUserHeading: true,
+        fitBoundsOptions: { maxZoom: 16, duration: 1500 } 
     });
     map.addControl(window.geolocateControl, 'top-right');
 
@@ -1198,17 +1201,51 @@ function renderChallengeMapAndList() {
 }
 
 let inlineSearchTimer;
+
+// 🛡️ 보안/군사 시설 차단 및 등산/자연 위주 허용 필터 함수
+function filterSafePlaces(places) {
+    // 🚨 1. 절대 검색되면 안 되는 차단 키워드 (정규식)
+    const bannedKeywords = /군부대|군사|미사일|기지|보안|정수장|국방|훈련장|교도소|사단|여단|해군|공군|육군|방공/;
+
+    return places.filter(place => {
+        const fullName = place.display_name || "";
+
+        // [차단 조건 A] 주소나 이름에 금지어가 하나라도 들어가면 즉시 탈락
+        if (bannedKeywords.test(fullName)) return false;
+
+        // [차단 조건 B] OSM 자체 데이터 태그가 '군사(military)'인 경우 원천 차단
+        if (place.class === 'military' || place.type === 'military') return false;
+
+        // ✅ [허용 조건] 우리가 원하는 장소인지 확인 (둘 중 하나만 만족해도 통과)
+        // 1. 카테고리가 자연(natural), 레저(leisure), 관광(tourism) 인지 확인
+        const isAllowedCategory = ['natural', 'leisure', 'tourism'].includes(place.class);
+        
+        // 2. 주소나 이름에 우리가 원하는 키워드가 있는지 확인
+        const hasAllowedKeyword = /산|봉|령|재|등산|공원|휴양림|캠핑|야영|관광/.test(fullName);
+
+        // 허용 카테고리이거나, 우리가 원하는 키워드가 들어간 안전한 곳만 반환!
+        return isAllowedCategory || hasAllowedKeyword;
+    });
+}
 window.handleInlineSearch = function(e) {
     clearTimeout(inlineSearchTimer);
     inlineSearchTimer = setTimeout(() => {
         const query = e.target.value.trim(); const resultsUl = document.getElementById('inlineSearchResults');
         if(!query) { resultsUl.style.display = 'none'; return; }
         resultsUl.style.display = 'block'; resultsUl.innerHTML = '<li>검색 중... ⏳</li>';
-        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=kr&accept-language=ko&limit=5`)
-        .then(res => res.json()).then(data => {
+        
+        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=kr&accept-language=ko&limit=10`) // 💡 더 많이 가져와서 걸러내기 위해 limit을 10으로 늘림
+        .then(res => res.json()).then(rawData => {
+            
+            // 💡 [핵심] 여기서 데이터를 화면에 그리기 전에 필터를 거칩니다!
+            const safeData = filterSafePlaces(rawData);
+
             resultsUl.innerHTML = '';
-            if(!data || data.length === 0) { resultsUl.innerHTML = '<li style="color:#d32f2f;">결과 없음</li>'; return; }
-            data.forEach(place => {
+            // 💡 rawData가 아니라 필터링된 safeData를 기준으로 검사
+            if(!safeData || safeData.length === 0) { resultsUl.innerHTML = '<li style="color:#d32f2f;">안전한 검색 결과가 없습니다.</li>'; return; }
+            
+            // 💡 safeData를 잘라서(최대 5개) 화면에 뿌려줍니다.
+            safeData.slice(0, 5).forEach(place => {
                 const li = document.createElement('li'); 
                 const shortAddress = place.display_name.split(',').slice(1).join(',').trim();
                 const strong = document.createElement('strong');
@@ -1232,7 +1269,6 @@ window.handleInlineSearch = function(e) {
         });
     }, 800);
 }
-
 let tabSearchTimer;
 window.handleTabSearch = function(e) { 
     clearTimeout(tabSearchTimer); 
@@ -1243,11 +1279,18 @@ window.doTabSearch = function() {
     const query = document.getElementById('tabSearchInput').value.trim(); const resultsUl = document.getElementById('tabSearchResultsList');
     if(!query) return alert("산 이름을 적어주세요.");
     resultsUl.style.display = 'block'; resultsUl.innerHTML = '<li>조회 중... ⏳</li>';
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=kr&accept-language=ko&limit=10`)
-    .then(res => res.json()).then(data => {
+    
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=kr&accept-language=ko&limit=20`) // 💡 필터링 대비 limit 넉넉하게 20으로
+    .then(res => res.json()).then(rawData => {
+        
+        // 💡 [핵심] 여기서도 데이터를 화면에 그리기 전에 필터를 거칩니다!
+        const safeData = filterSafePlaces(rawData);
+
         resultsUl.innerHTML = '';
-        if (!data || data.length === 0) { resultsUl.innerHTML = '<li style="color:#d32f2f;">결과가 없습니다.</li>'; return; }
-        data.forEach(place => {
+        if (!safeData || safeData.length === 0) { resultsUl.innerHTML = '<li style="color:#d32f2f;">군사·보안 관련 시설은 검색할 수 없습니다. 산 이름을 검색해 주세요.)</li>'; return; }
+        
+        // 💡 필터링된 safeData를 사용합니다. (최대 10개 노출)
+        safeData.slice(0, 10).forEach(place => {
             const li = document.createElement('li'); 
             const shortAddress = place.display_name.split(',').slice(1).join(',').trim();
             const strong = document.createElement('strong');
@@ -1283,7 +1326,6 @@ window.doTabSearch = function() {
         });
     });
 }
-
 window.prepareSave = function(name, lat, lng) {
     document.getElementById('mountainInput').value = name; 
     document.getElementById('lat').value = lat; document.getElementById('lng').value = lng;
@@ -1575,8 +1617,14 @@ window.startHikingTrack = async function() {
                 trackRoute.push([lng, lat, alt]);
             }
             
+            // 유저가 화면을 터치하지 않았을 때만 내 위치를 부드럽게 추적
             if(!window.isMapTouched) {
-                map.panTo([lng, lat], { duration: 800, padding: { bottom: 200, top: 0 } });
+                map.easeTo({
+                    center: [lng, lat],
+                    duration: 1000,           // GPS 갱신 주기에 맞춰 1초 동안 부드럽게
+                    padding: getMapPadding(), // 위에서 만든 최적의 시야각 적용
+                    easing: (t) => t          // 덜컹거림 방지 (선형 이동)
+                });
             }
             
         }, err => console.log(err), { enableHighAccuracy: true, maximumAge: 3000 });
@@ -2131,6 +2179,7 @@ function finishReplay() {
     const record = window.replayState.record;
     const finalMaxAlt = window.replayState.maxHudAlt || 0;
 
+    // 최종 결과창 텍스트 미리 세팅
     const rfNameEl = document.getElementById('rfName');
     if (rfNameEl) rfNameEl.innerText = record.name;
     const rfDateEl = document.getElementById('rfDate');
@@ -2138,13 +2187,11 @@ function finishReplay() {
     document.getElementById('rfDist').innerText = record.distance + 'km';
     document.getElementById('rfTime').innerText = record.time;
     document.getElementById('rfAlt').innerText = finalMaxAlt + 'm'; 
-    
-    document.getElementById('replayTopHUD').style.display = 'none';
-    document.getElementById('replayFinal').style.display = 'block';
 
     let currentEndBearing = map.getBearing();
     const endPoint = window.replayState.route[window.replayState.route.length - 1];
 
+    // 🏆 도착 마커 즉시 생성 (마지막 장면 노출)
     const endEl = document.createElement('div');
     endEl.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center;">
         <div style="font-size:15px; font-weight:900; background:rgba(255,255,255,0.95); color:#D32F2F; padding:5px 12px; border-radius:8px; box-shadow:0 3px 6px rgba(0,0,0,0.5); white-space:nowrap; line-height:1; border: 2px solid #D32F2F;">🏆 도착</div>
@@ -2156,65 +2203,89 @@ function finishReplay() {
     if(!window.replayMarkers) window.replayMarkers = [];
     window.replayMarkers.push(window.replayEndMarker);
 
-    let startZoom = map.getZoom();
-    let targetZoom = startZoom - 1.5; 
-    let startPaddingTop = 0; 
-    let targetPaddingTop = window.innerHeight * 0.45; 
-    
-    let transitionStartTime = null; 
-    let transitionDuration = 2500; 
+   // ---------------------------------------------------------
+    // 🎬 1.2초 대기 후 바로 UI 전환 및 회전 시작 (플래시 제거)
+    // ---------------------------------------------------------
+    setTimeout(() => {
+        // 상단 진행바 숨기고 결과창 노출
+        document.getElementById('replayTopHUD').style.display = 'none';
+        document.getElementById('replayFinal').style.display = 'block';
 
-    function rotateEnd(timestamp) {
-        if(!window.replayState.active || !window.replayState.isEndRotation) return;
+        // 카메라 회전 애니메이션 발동
+        startFinaleAnimation();
 
-        if (!transitionStartTime) transitionStartTime = timestamp;
+    }, 300); // 💡 마지막 장면을 감상하는 시간 (1.2초 대기)
 
-        currentEndBearing += 0.10; 
 
-        let elapsed = timestamp - transitionStartTime;
-        let progress = Math.min(elapsed / transitionDuration, 1);
+
+   // ---------------------------------------------------------
+    // 🎥 피날레 회전 애니메이션 로직 (줌인 상태에서 시작해 줌아웃)
+    // ---------------------------------------------------------
+    function startFinaleAnimation() {
+        let baseZoom = map.getZoom(); // 도착 직후의 원래 줌 레벨
         
-        let easeOut = 1 - Math.pow(1 - progress, 3); 
-
-        let currentZoom = lerp(startZoom, targetZoom, easeOut);
-        let currentPaddingTop = lerp(startPaddingTop, targetPaddingTop, easeOut);
-
-        map.jumpTo({ 
-            center: endPoint, 
-            bearing: currentEndBearing, 
-            pitch: 65,
-            zoom: currentZoom,
-            padding: { top: currentPaddingTop } 
-        });
+        // 💡 [핵심] 시작 줌과 목표 줌을 다르게 설정합니다!
+        let startZoom = baseZoom + 2.5;  // 시작할 때: 산으로 1.5만큼 확 다가간 상태(줌인)에서 시작
+        let targetZoom = baseZoom - 0.4; // 끝날 때: 원래 줌보다 0.4만큼 뒤로 빠진 상태(줌아웃)로 마무리
         
+        let startPaddingBottom = 0; 
+        let targetPaddingBottom = window.innerHeight * 0.00; // 축 위로 올리기 설정
+
+        let transitionStartTime = null; 
+        let transitionDuration = 5000; // 도달하는 시간 (2.5초)
+
+        function rotateEnd(timestamp) {
+            if(!window.replayState.active || !window.replayState.isEndRotation) return;
+
+            if (!transitionStartTime) transitionStartTime = timestamp;
+
+            // 회전 속도 유지
+            currentEndBearing += 0.15; 
+
+            let elapsed = timestamp - transitionStartTime;
+            let progress = Math.min(elapsed / transitionDuration, 1);
+            
+            // 부드러운 감속 애니메이션(Ease Out)
+            let easeOut = 1 - Math.pow(1 - progress, 3); 
+
+            // 💡 여기서 startZoom(가까운 상태)에서 targetZoom(먼 상태)으로 스르륵 변합니다.
+            let currentZoom = lerp(startZoom, targetZoom, easeOut);
+            let currentPaddingBottom = lerp(startPaddingBottom, targetPaddingBottom, easeOut);
+
+            map.jumpTo({ 
+                center: endPoint, 
+                bearing: currentEndBearing, 
+                pitch: 45,
+                zoom: currentZoom, // 💡 애니메이션이 적용된 줌
+                padding: { top: 0, bottom: currentPaddingBottom, left: 0, right: 30 } 
+            });
+            
+            window.replayState.endRotationReqId = requestAnimationFrame(rotateEnd);
+        }
+
         window.replayState.endRotationReqId = requestAnimationFrame(rotateEnd);
     }
-
-    window.replayState.endRotationReqId = requestAnimationFrame(rotateEnd);
-
 }
-
-// 💡 화면 크기 변화 감지 및 가로 모드 시 한국 지도 줌 레벨 조절
+// 💡 화면 크기 변화 감지 및 가로/세로 모드 대응 (현재 위치 유지)
 window.addEventListener('resize', () => {
     if (typeof map !== 'undefined' && map) {
         setTimeout(() => {
             map.resize(); // 도화지는 화면에 꽉 차게 폄
             
             const isLandscape = window.innerWidth > window.innerHeight;
+            const currentZoom = map.getZoom(); // 현재 줌 레벨 저장
+            const currentCenter = map.getCenter(); // 💡 [핵심] 현재 보고 있는 위치 저장
+            
             let cameraOptions = { 
+                center: currentCenter, // 💡 회전해도 현재 위치를 강제로 유지함
                 padding: getMapPadding(), 
                 duration: 500 
             };
 
-            // 💡 현재 등산 기록 중(트래킹 모드)이 아닐 때만 한국 지도 크기 조정
-            if (isLandscape && !window.isTracking) {
-                // 중심점을 대한민국 중앙 부근으로 설정 (경도, 위도)
-                cameraOptions.center = [127.8, 35.0]; 
-                
-                // 💡 [핵심] 여기서 줌 레벨을 조절하여 지도의 크기를 맞춥니다.
-                // - 숫자가 작을수록(예: 5.5) 지도가 작아져서 한반도 전체가 보입니다.
-                // - 숫자가 클수록(예: 7.0) 지도가 커져서 도/시 단위로 가깝게 보입니다.
-                cameraOptions.zoom = 7.3; 
+            // 💡 전국 지도를 보고 있을 때(줌 아웃 상태, zoom 8 미만)만 한국 중앙으로 재정렬
+            if (!window.isTracking && currentZoom < 8) {
+                cameraOptions.center = [127.8, 35.2]; 
+                cameraOptions.zoom = isLandscape ? 7.3 : 5.6; 
             }
 
             map.easeTo(cameraOptions);
