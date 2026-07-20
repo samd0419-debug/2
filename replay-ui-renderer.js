@@ -1,25 +1,37 @@
-// 💡 가로모드 UI 깨짐 방지 및 깃발 튀어오르는 애니메이션 CSS 자동 주입
+// 💡 세로/가로 모드 UI 깨짐 방지 및 나가기 버튼 확보 CSS 자동 주입
 (function injectReplayCSS() {
     if(document.getElementById('replayDynamicCSS')) return;
     const style = document.createElement('style');
     style.id = 'replayDynamicCSS';
     style.innerHTML = `
-        @keyframes flagPop {
-            0% { transform: scale(0) translateY(40px); opacity: 0; }
-            60% { transform: scale(1.3) translateY(-10px); opacity: 1; }
-            100% { transform: scale(1) translateY(0); opacity: 1; }
+        /* 📱 세로모드(모바일): 버튼이 많아도 잘리지 않고 스와이프로 볼 수 있도록 스크롤 추가 */
+        .rc-buttons { 
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important; 
+            -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
+            scrollbar-width: none; 
+            gap: 8px !important;
+            padding-bottom: 2px;
         }
-        .flag-anim {
-            animation: flagPop 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.27) forwards;
-            transform-origin: bottom center;
+        .rc-buttons::-webkit-scrollbar { display: none; }
+        #replayControls button { 
+            flex-shrink: 0 !important; 
+            width: 52px !important; /* 모바일에 맞게 약간 축소 */
+        }
+        #replayControls .exit-btn {
+            width: auto !important;
+            min-width: 65px !important;
+            background: rgba(255,82,82,0.85) !important; /* 나가기 버튼 강조 */
+            color: white !important;
+            margin-left: auto !important;
         }
         
         /* 📱 가로모드: 컨트롤 바 넓게 쓰고, 재생바 크기 줄여서 버튼 확보 */
         @media (orientation: landscape) {
             #replayControls { width: 95% !important; max-width: none !important; flex-direction: row !important; align-items: center !important; padding: 10px 20px !important; }
-            .rc-buttons { flex: 1; justify-content: flex-start !important; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
-            .rc-buttons::-webkit-scrollbar { display: none; }
-            #replaySeekBar { flex: 1; min-width: 120px; margin-left: 20px; margin-top: 0 !important; }
+            .rc-buttons { flex: 1; justify-content: flex-start !important; }
+            #replaySeekBar { flex: 1; min-width: 120px; margin-left: 20px !important; margin-top: 0 !important; }
         }
     `;
     document.head.appendChild(style);

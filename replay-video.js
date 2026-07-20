@@ -88,7 +88,6 @@ window.startVideoExport = async function() {
         let sampleRate = 44100;
         const targetLength = Math.ceil(totalSec * sampleRate);
         let finalAudioChannels = [new Float32Array(targetLength), new Float32Array(targetLength)];
-        let isBgmLoaded = false;
 
         try {
             const response = await fetch('./bgm.mp3');
@@ -103,7 +102,6 @@ window.startVideoExport = async function() {
                     let vol = 1.0; if (i >= fadeOutStartFrames) vol = Math.max(0, 1.0 - ((i - fadeOutStartFrames) / (finalAudioChannels[0].length - fadeOutStartFrames)));
                     finalAudioChannels[0][i] = srcChannels[0][i % srcLength] * vol; finalAudioChannels[1][i] = srcChannels[1][i % srcLength] * vol;
                 }
-                isBgmLoaded = true;
             }
         } catch(e) { console.warn("BGM 로드 실패. 빈 무음 트랙 생성"); }
 
@@ -152,41 +150,32 @@ window.startVideoExport = async function() {
         let mapProgressFrame = 0; let totalEncodedFrames = 0;
         let activePhoto = null; let photoOverlayFrames = 0;
 
-        // 💡 [NaN 방어벽] 비디오용 줌/좌표 안전 세팅
-        const videoZoom80 = (s.zoom80 && !isNaN(s.zoom80)) ? s.zoom80 : 14.5;
+        const videoZoom80 = (s.trackZoom && !isNaN(s.trackZoom)) ? s.trackZoom : 16;
         const videoZoom50 = (s.zoom50 && !isNaN(s.zoom50)) ? s.zoom50 : 13.5;
+        
         let finaleInitialized = false; let currentEndBearing = 0;
         let endPoint = s.route[s.route.length - 1]; 
+        
         const boundsValid = s.route.reduce((b, coord) => b.extend(coord), new mapboxgl.LngLatBounds(s.route[0], s.route[0]));
-        const routeCenter = boundsValid.getCenter().toArray(); // 💡 피날레 중앙 회전용 중심점
+        const centerObj = boundsValid.getCenter();
+        const routeCenter = [centerObj.lng, centerObj.lat]; 
 
-        // 비디오 전용 스무스 카메라 함수 (튕김 방지 + 줌아웃)
         window.calculateReplayCamera = function(progress) {
             if (progress >= 1) progress = 1;
-            const startZoom = videoZoom80 + 2.5; 
-            let currentZoom = startZoom - ((startZoom - videoZoom80) * progress);
-            if (isNaN(currentZoom)) currentZoom = videoZoom80;
-
             const exactIdx = progress * (s.totalPoints - 1);
             const currentIdx = Math.floor(exactIdx);
-            let lookAheadIdx = Math.floor(currentIdx + (s.totalPoints * 0.05));
-            if (lookAheadIdx >= s.totalPoints) lookAheadIdx = s.totalPoints - 1;
+            
+            let targetBearing = window.getStableBearing(s.route, currentIdx);
+            if (targetBearing !== null) s.lastValidBearing = targetBearing;
+            else if (s.lastValidBearing === undefined) s.lastValidBearing = s.initialBearing || 0;
 
-            let targetBearing = s.lastValidBearing !== undefined ? s.lastValidBearing : (s.initialBearing || 0);
-            const p1 = s.route[currentIdx]; const p2 = s.route[lookAheadIdx];
-
-            if (p1 && p2 && (p1[0] !== p2[0] || p1[1] !== p2[1])) {
-                const b = turf.bearing(turf.point(p1), turf.point(p2));
-                if (!isNaN(b)) targetBearing = b;
-                s.lastValidBearing = targetBearing;
-            }
-
-            if (s.smoothedBearing === undefined || isNaN(s.smoothedBearing)) s.smoothedBearing = targetBearing;
-            let diff = targetBearing - s.smoothedBearing;
+            if (s.smoothedBearing === undefined || isNaN(s.smoothedBearing)) s.smoothedBearing = s.lastValidBearing;
+            
+            let diff = s.lastValidBearing - s.smoothedBearing;
             while (diff < -180) diff += 360; while (diff > 180) diff -= 360;
-            s.smoothedBearing += diff * 0.03; 
+            s.smoothedBearing += diff * 0.04; 
 
-            return { zoom: currentZoom, pitch: 60, bearing: s.smoothedBearing };
+            return { zoom: videoZoom80, pitch: 62, bearing: s.smoothedBearing };
         };
 
         function drawTopHUD(ctx, dist, time, alt) {
@@ -255,18 +244,15 @@ window.startVideoExport = async function() {
             } else {
                 if (!finaleInitialized) {
                     finaleInitialized = true; currentEndBearing = map.getBearing() || 0; 
-                    const endEl = document.createElement('div'); endEl.className = 'flag-anim';
-                    endEl.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center;"><div style="font-size:15px; font-weight:900; background:white; color:#D32F2F; padding:4px 10px; border-radius:8px; border:2px solid #D32F2F;">🏆 도착</div></div>`;
-                    window.tempExportEndMarker = new mapboxgl.Marker({element: endEl, anchor: 'bottom'}).setLngLat(endPoint).addTo(map);
+                    // 💡 도착 깃발 생성 로직 삭제 완료
                 }
 
                 let finaleProgress = (mapProgressFrame - routeFrames) / finaleFrames;
                 let easeOut = 1 - Math.pow(1 - finaleProgress, 3);
-                currentEndBearing += 0.15;
+                currentEndBearing += 0.2;
 
-                // 💡 [핵심] 스카이뷰 피날레: 도착점에서 전체 경로 중앙으로 시점 이동하며 50% 줌아웃
                 let currentZoom = videoZoom80 + (videoZoom50 - videoZoom80) * easeOut;
-                let currentPitch = 60 + (30 - 60) * easeOut;
+                let currentPitch = 62 + (30 - 62) * easeOut;
                 let currentCenter = [
                     endPoint[0] + (routeCenter[0] - endPoint[0]) * easeOut,
                     endPoint[1] + (routeCenter[1] - endPoint[1]) * easeOut
@@ -295,8 +281,6 @@ window.startVideoExport = async function() {
             videoEncoder.encode(frame, { keyFrame: isKeyFrame }); frame.close();
             totalEncodedFrames++;
         }
-
-        if (window.tempExportEndMarker) { window.tempExportEndMarker.remove(); window.tempExportEndMarker = null; }
 
         await videoEncoder.flush();
         if (chunkCount === 0) throw new Error("인코딩된 프레임이 없습니다.");
