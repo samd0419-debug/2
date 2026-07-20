@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<script src="https://unpkg.com/mp4-muxer/build/mp4-muxer.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
@@ -24,6 +25,7 @@
 <body>
 
     <div id="splash">
+
         <div id="splashCounterContainer">
             <div class="splash-alt-label">🔥 나의 누적 등반 고도</div>
             <div class="splash-alt-number-wrap">
@@ -60,12 +62,18 @@
 
     <div id="replayControls" style="display:none;">
         <div class="rc-buttons">
-            <button type="button" onclick="jumpReplay(-5)"><span class="icon">⏪</span><span class="txt">5초</span></button>
-            <button type="button" id="btnReplayPlay" onclick="toggleReplayPlay()"><span class="icon">▶️</span><span class="txt">재생</span></button>
-            <button type="button" onclick="stopReplay()"><span class="icon">⏹️</span><span class="txt">정지</span></button>
-            <button type="button" onclick="jumpReplay(5)"><span class="icon">⏩</span><span class="txt">5초</span></button>
-            <button type="button" onclick="exitReplay()" class="exit-btn">나가기</button>
+            <button type="button" onclick="window.jumpReplay(-5)"><span class="icon">⏪</span><span class="txt">5초</span></button>
+            <button type="button" id="btnReplayPlay" onclick="window.toggleReplayPlay()"><span class="icon">▶️</span><span class="txt">재생</span></button>
+            <button type="button" onclick="window.stopReplay()"><span class="icon">⏹️</span><span class="txt">정지</span></button>
+            <button type="button" onclick="window.jumpReplay(5)"><span class="icon">⏩</span><span class="txt">5초</span></button>
+            
+            <!-- 💡 BGM 소리 ON/OFF 토글 버튼 추가 -->
+            <button type="button" id="btnBgmToggle" onclick="window.toggleInAppBgm()" style="color: #03A9F4;"><span class="icon">🔊</span><span class="txt">소리 켬</span></button>
+            
+            <button type="button" id="btnExportVideo" onclick="window.startVideoExport()" style="color: #4CAF50;"><span class="icon">🎬</span><span class="txt">저장</span></button>
+            <button type="button" onclick="window.exitReplay()" class="exit-btn">나가기</button>
         </div>
+
         <input type="range" id="replaySeekBar" min="0" max="1000" value="0">
     </div>
 
@@ -198,6 +206,11 @@
     </div>
 
     <script src="./data.js?v=999"></script>
+    <script src="./replay-core.js?v=999"></script>
+    <script src="./replay-map-renderer.js?v=999"></script>
+    <script src="./replay-ui-renderer.js?v=999"></script>
+    <script src="./replay-player.js?v=999"></script>
+    <script src="./replay-video.js?v=999"></script>
     <script src="./app.js?v=999"></script>
     <script>
         if ('serviceWorker' in navigator) {
